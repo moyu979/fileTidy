@@ -1,3 +1,6 @@
 /*
 !.gitignore
-!.py
+!*.md
+!/core/
+
+/core/__pycache__
