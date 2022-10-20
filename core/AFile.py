@@ -14,22 +14,22 @@ class AFile:
 
         for para in paras:
             plist=para.split(":\t")
-            #md5¼ÍÂ¼Ïî(Î¨Ò»)
+            #md5çºªå½•é¡¹(å”¯ä¸€)
             if plist[0] == 'hashMd5':
                 self.hashMd5=plist[1]
-            #Ô­Ê¼Ä¿Â¼Ïî
+            #åŸå§‹ç›®å½•é¡¹
             if plist[0] == 'originPath':
                 self.originPath.append(plist[1])
-            #ÏàÍ¬Ïî(ÀúÊ·ÒÅÁô)
+            #ç›¸åŒé¡¹(å†å²é—ç•™)
             if plist[0] == 'sameAs':
                 self.originPath.append(plist[1])
-            #Â·¾¶±äÇ¨
+            #è·¯å¾„å˜è¿
             if plist[0] == 'changePath':
                 self.changePath.append(plist[1])
-            #½âÑ¹×Ô
+            #è§£å‹è‡ª
             if plist[0] == 'unzipFrom':
                 self.unzip.append(plist[1])
-            #Ñ¹Ëõµ½
+            #å‹ç¼©åˆ°
             if plist[0] == 'zipTo':
                 self.zip.append(plist[1])
 

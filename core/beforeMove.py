@@ -5,7 +5,6 @@ import hashlib
 
 destList=open("./workPath/destList/dest.txt",'w')
 
-class beforeMove:
 
 def run(nowPath,):
     lists=[]
