@@ -23,37 +23,59 @@ class FileList:
             else:
                 af.append(aline)
             aline=inFile.readline()
-
+            
+    
+    
     def sortBypath(self):
         self.fileList.sort(key=return_now_path)
+        
     def sortByHash(self):
         self.fileList.sort(key=return_hash)
+    #增
+    def combine(self,files):
+        for i in files:
+            self.addAFile(i)
+            
     def addAFile(self,paras):
-        a=AFile(paras)
-        self.fileList.append(a)
+        if not type(paras).__name__=="AFile":
+            a=AFile(paras)
+        else:
+            a=paras
+            
+        file=self.findHash(a.hashMd5)
+        
+        if not file==None:
+            file.insertOriginPath(a.originPath)
+            file.insertunzip(a.unzip)
+            file.insertzip(a.zip)
+            file.insertremoved(a.removed)
+        else:
+            self.fileList.append(a)
+        
+    #删
     def deleteByHash(self,Hash):
         i:AFile
         for i in self.fileList:
             if i.hashMd5==Hash:
                 self.fileList.remove(i)
+                
+    #查
+    def findHash(self,hash)->AFile:
+        for i in self.fileList:
+            if i.hashMd5==hash:
+                return i
+        return None
+    
     def outPut(self,path):
         outFile=open(path,'w',encoding="utf-8")
         for i in self.fileList:
             outFile.write(str(i))
         outFile.flush()
         outFile.close()
-
+        
     def pOutPut(self):
         for i in self.fileList:
             print(i)
-
-    def existHash(self,hash):
-        for i in self.fileList:
-            if i.hashMd5==hash:
-                return True
-        return False
-
-
 
 if __name__ =="__main__":
     print("this is a file list so dont use it")
