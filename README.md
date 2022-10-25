@@ -10,6 +10,9 @@
 |name|condition|
 |---|---|
 |AFile.py|finished|
+|FileList.py|finished|
+|generateHash.py|finished|
+
 ## 工作流程
 ### 下载文件后
 相关文件：
