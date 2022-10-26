@@ -27,4 +27,4 @@ class afterdownload:
     
 if __name__ == "__main__":
     if len(sys.argv)==1:
-        os.path.abspath(".")
+        print("请输入路径")
