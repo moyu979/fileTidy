@@ -31,6 +31,7 @@ class afterdownload:
             d.writelines(sameFile)
                   
 if __name__ == "__main__":
+<<<<<<< HEAD
     if len(sys.argv)==2:
         path=sys.argv[1]
     else:
@@ -39,3 +40,7 @@ if __name__ == "__main__":
         
     aft=afterdownload()
     aft.afterDownload(path)
+=======
+    if len(sys.argv)==1:
+        print("请输入路径")
+>>>>>>> fbf320b63b77a15141a457b04ed8f7351356c491
