@@ -1,35 +1,23 @@
 from posixpath import join
 import os
 import sys
-import hashlib
-
+from geneHash import * 
+from AFile import *
 destList=open("./workPath/destList/dest.txt",'w')
 
-
-def run(nowPath,):
-    lists=[]
+class beforeMove:
+    def __init__(self):
+        self.nowpath=""
+        self.moveto=""
+        
+    def setPath(self,nowPath,moveTo):
+        print("请输入现在文件存放位置")
+        print("请输入文件转移位置")
+        
+    def beforeMove(nowPath,movePath):
+        if os.path.isdir(nowPath):
+            for i in os.listdir(nowPath):
+                j=os.path.join(nowPath,i)
+                beforeMove(j)
     
-def beforeMove(nowPath,movePath):
-    if os.path.isdir(file):
-        for i in os.listdir(file):
-            j=os.path.join(file,i)
-            geneHash(j)
-    else:
-        if os.path.getsize(file)>1024**3:
-            print("more than 1G")
-            md5=hashlib.md5()
-            with open(file,'rb') as fp:
-                while True:
-                    data=fp.read(1024**3)
-                    if not data:
-                        break
-                    md5.update(data)
-            file_md5=md5.hexdigest()
-            goodlog.write("hashMd5:\t"+file_md5+"\n")
-            goodlog.write("originPath:\t"+file+"\n\n")
-        else:
-            with open(file,'rb') as fp:
-                data=fp.read()
-            file_md5=hashlib.md5(data).hexdigest()
-            goodlog.write("hashMd5:\t"+file_md5+"\n")
-            goodlog.write("originPath:\t"+file+"\n\n")
+        

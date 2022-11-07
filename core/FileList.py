@@ -7,6 +7,7 @@ def return_hash(elem:AFile):
 
 class FileList:
     def __init__(self,path=None) -> None:
+        self.itercount=0
         self.fileList:AFile=[]
         if not path==None:
             self.importFileList(path)
@@ -24,8 +25,6 @@ class FileList:
                 af.append(aline)
             aline=inFile.readline()
             
-    
-    
     def sortBypath(self):
         self.fileList.sort(key=return_now_path)
         
@@ -33,14 +32,18 @@ class FileList:
         self.fileList.sort(key=return_hash)
     #增
     def combine(self,files):
+        findsame=[]
         for i in files:
-            self.addAFile(i)
+            havesame,path1,path2=self.addAFile(i)
+            if havesame:
+                
+                findsame.append(path1)
+                findsame.append(path2)
+                findsame.append("\n")
+        return findsame
             
-    def addAFile(self,paras):
-        if not type(paras).__name__=="AFile":
-            a=AFile(paras)
-        else:
-            a=paras
+    #增加一个文件，返回值为true表示有相同文件，
+    def addAFile(self,a:AFile):
             
         file=self.findHash(a.hashMd5)
         
@@ -49,8 +52,10 @@ class FileList:
             file.insertunzip(a.unzip)
             file.insertzip(a.zip)
             file.insertremoved(a.removed)
+            return True,file.nowPath,a.nowPath
         else:
             self.fileList.append(a)
+            return False,None,None
         
     #删
     def deleteByHash(self,Hash):
@@ -76,6 +81,17 @@ class FileList:
     def pOutPut(self):
         for i in self.fileList:
             print(i)
-
+            
+    #重写迭代器
+    def __iter__(self):
+        self.itercount=0
+        return self
+    def __next__(self):
+        if self.i==len(self.fileList):
+            raise StopIteration
+        else:
+            self.i=self.i+1
+            return self.fileList[self.i-1]
+ 
 if __name__ =="__main__":
     print("this is a file list so dont use it")

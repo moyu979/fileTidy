@@ -141,18 +141,6 @@ class AFile:
             l.append("计划将类型为"+type(ori).__name__+"的参数写入\n")
             l.append("将内容："+ori.__str__+"\t写入:"+self.hashMd5+"\t中remove的项\n")
             log.write(l)
-                
-                
-                
-            
+                   
 if __name__ == "__main__":
     print ("这是一个基础数据单元，不能作为运行单元")
-
-
-
-        
-
-
-
-
-
