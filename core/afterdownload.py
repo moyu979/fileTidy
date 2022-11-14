@@ -1,46 +1,31 @@
-from distutils import filelist
-import time
-from FileList import *
-from geneHash import *
 import sys
-
-from numpy import may_share_memory
-class afterdownload:
-    def __init__(self):
+from FileList import *
+from generateHash import *
+from getFileTime import *
+class afterDownload:
+    def __init__(self,path=None):
         self.filelist=FileList()
-        
-    def afterDownload(self,path):
-        g=GeneHash()
-        files=g.geneHash(path)
-        self.filelist.importFileList("fileDirs/downloads/new.txt")
-        
-        sameFile=self.filelist.combine(files.fileList)
-        
-        time_tuple = time.localtime(time.time())
-        
-        name="fileDirs/downloads/"
-        for i in range(0,6):
-            name=name+str(time_tuple[i])
-        name=name+".txt"
-        
-        self.filelist.outPut(name)
-        self.filelist.outPut("fileDirs/downloads/new.txt")
+        if path:
+            self.doAfterDownload(path)
+            
+    def doAfterDownload(self,path):
+        #计算此次文件哈希值
+        hash=GeneHash()
+        self.filelist=hash.geneHash(path)
+        downloadList=FileList("./datas/downloadFile/new.txt")
+        sameFile=downloadList.combine(self.filelist.fileList)
+        for i in sameFile:
+            removeFile(i)
+        downloadList.outPut("./datas/downloadFile/new.txt")
+        downloadList.outPut("./datas/downloadFile/"+getFileTime())
         
         
-        with open("fileDirs/temp/samefile.txt",'w') as d:
-            d.writelines(sameFile)
-                  
+        
+        
 if __name__ == "__main__":
-<<<<<<< HEAD
     if len(sys.argv)==2:
         path=sys.argv[1]
     else:
         print("请输入下载文件存储路径")
         path=input()
-        
-    aft=afterdownload()
-    aft.afterDownload(path)
-=======
-    if len(sys.argv)==1:
-        print("请输入路径")
->>>>>>> fbf320b63b77a15141a457b04ed8f7351356c491
+    aft=afterDownload(path)

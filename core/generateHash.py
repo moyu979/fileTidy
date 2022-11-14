@@ -1,7 +1,8 @@
 from genericpath import isdir
 import hashlib
 from FileList import *
-#用于计算一个文件夹下所有文件的哈希值，返回一个记载所有文件信息的FileList
+
+#用于计算一个文件夹下所有文件的哈希值，返回一个记载所有文件信息的FileList(不去重)
 class GeneHash:
     def __init__(self):
         self.fileList=FileList()
@@ -33,10 +34,9 @@ class GeneHash:
                 af.append("hashMd5:\t"+file_md5+"\n")
                 af.append("originPath:\t"+file+"\n")
                 af.append("end\n")
-            self.fileList.addAFile(af)
+            f=AFile(af)
+            self.fileList.fileList.append(f)
         return self.fileList
-    
-
 if __name__ == "__main__":
     print("这个模块不会产生可存储输出，只会将结果输出到控制台，是否继续？")
     yon=input()
