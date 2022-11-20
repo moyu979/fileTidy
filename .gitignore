@@ -2,5 +2,6 @@
 !.gitignore
 !*.md
 !/core/
+!/mds/
 
 /core/__pycache__

@@ -12,8 +12,8 @@ def removeFile(file2:AFile):
         fp.write(file2Dir)
         fp.write("\n")
         fp.write("\n")
-    fp.write("hash:\t"+file2.hashMd5)
-    fp.write("name:\t"+file2.nowName)
+    fp.write("hash:\t"+file2.hashMd5+"\n")
+    fp.write("name:\t"+file2.nowName+"\n")
     fp.close()
     os.remove(file2Path)
     

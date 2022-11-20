@@ -11,13 +11,17 @@ class afterDownload:
     def doAfterDownload(self,path):
         #计算此次文件哈希值
         hash=GeneHash()
-        self.filelist=hash.geneHash(path)
-        downloadList=FileList("./datas/downloadFile/new.txt")
+        self.filelist=hash.start(path)
+        motherPath="./fileDirs/downloads/"
+        mpath=os.path.abspath(motherPath)
+        newPath=os.path.join(mpath,"new.txt")
+        timePath=os.path.join(mpath,getFileTime())
+        downloadList=FileList(newPath)
         sameFile=downloadList.combine(self.filelist.fileList)
         for i in sameFile:
             removeFile(i)
-        downloadList.outPut("./datas/downloadFile/new.txt")
-        downloadList.outPut("./datas/downloadFile/"+getFileTime())
+        downloadList.outPut(newPath)
+        downloadList.outPut(timePath)
         
         
         
@@ -28,4 +32,5 @@ if __name__ == "__main__":
     else:
         print("请输入下载文件存储路径")
         path=input()
+    path=os.path.abspath(path)
     aft=afterDownload(path)

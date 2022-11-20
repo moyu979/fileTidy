@@ -23,7 +23,7 @@ class FileList:
         aline:str=inFile.readline()
         while aline:
             #如果一行结束，增加一个文件
-            if aline.startswith("end\n") or aline == "\n":
+            if aline.startswith("end\n"):
                 if not af==[]:
                     self.fileList.append(AFile(af))
                 af=[]
@@ -46,8 +46,12 @@ class FileList:
     ##增加一个文件(去重),有重返回True
     def addAFile(self,a:AFile): 
         sameFile=self.findHash(a.hashMd5)
+        #如果找到了不相同的重复文件
         if sameFile:
-            if compareFile(sameFile.nowPath,a.nowPath):
+            #同一个文件，直接返回
+            if sameFile.nowPath==a.nowPath:
+                return False
+            elif compareFile(sameFile.nowPath,a.nowPath):
                 sameFile.addOriginPath(a.originPath)
                 sameFile.addZip(a.zip)
                 sameFile.addUnzip(a.unzip)
@@ -64,6 +68,7 @@ class FileList:
                     count=count+1    
                     same=self.findHash(a.hashMd5+str(count))
                 a.hashMd5=a.hashMd5+str(count)
+        
         self.fileList.append(a)
         return False
     ##将一个FileList添加到现有的FileList中，如果遇到相同的，不合并，而是将新旧两个文件进记录到findsame列表下，等待进一步处理
@@ -128,7 +133,7 @@ class FileList:
         count=0
         outFile=open(path,'w',encoding="utf-8")
         for i in self.fileList:
-            outFile.write("num:\t"+str(count))
+            outFile.write("num:\t"+str(count)+"\n")
             outFile.write(str(i))
             count=count+1
         outFile.flush()
