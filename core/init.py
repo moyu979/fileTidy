@@ -1,12 +1,13 @@
 import os
 import sys
-
+from getFileTime import *
 
 class init:
     def __init__(self,path:str):
         self.workPath=os.path.join(path,"fileDirs")
         if not os.path.exists(self.workPath):
             os.mkdir(self.workPath)
+            
     def initdownloadFile(self):
         destPath=os.path.join(self.workPath,"downloads")
         if not os.path.exists(destPath):
@@ -39,6 +40,16 @@ class init:
             with open(newly,"w") as f:
                 f.close()
             print(os.path.relpath(newly)+" inited")
+            
+    def initlog(self):
+        destPath=os.path.join(self.workPath,"logs.txt")
+        if not os.path.exists("log.txt"):
+            with open(destPath,"w") as f:
+                t=getFileTime()
+                f.write(t)
+                f.write("\n")
+                f.close()
+            print(os.path.relpath(destPath)+" inited")
         
             
     

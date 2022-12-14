@@ -2,6 +2,7 @@ from AFile import *
 import os
 #将f2的文件删除，在原地的“redirect.txt”文件中记录
 def removeFile(file2:AFile):
+    
     file2Path=file2.nowPath
     file2Dir=file2.nowPath.replace(file2.nowName,"")
     redirPath=file2Dir+"redirect.txt"
@@ -16,5 +17,10 @@ def removeFile(file2:AFile):
     fp.write("name:\t"+file2.nowName+"\n")
     fp.close()
     os.remove(file2Path)
+    
+    
+def removeFiles(file2):
+    for i in file2:
+        removeFile(i)
     
     

@@ -8,7 +8,7 @@ class GeneHash:
         self.fileList=FileList()
         self.totalSize:float=0
         self.finished:float=0
-    def start(self,file):
+    def start(self,file)->FileList:
         self.totalSize=self.takeSizes(file)
         print("total size: "+self.humanSize(self.totalSize))
         self.geneHash(file)
