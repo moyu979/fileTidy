@@ -6,6 +6,10 @@ class Log:
     def writeLog(self,string):
         self.logbuff.append(string+"\n")
         
+    def printLog(self,string):
+        print(string)
+        self.logbuff.append(string+"\n")
+        
     def __del__(self):
         self.logfile.writelines(self.logbuff)
         self.logfile.flush()

@@ -12,14 +12,19 @@ class afterDownload:
         #计算此次文件哈希值
         hash=GeneHash()
         self.filelist=hash.start(path)
+        
         motherPath="./fileDirs/downloads/"
         mpath=os.path.abspath(motherPath)
         newPath=os.path.join(mpath,"new.txt")
         timePath=os.path.join(mpath,getFileTime())
+        #读入已经存在的
         downloadList=FileList(newPath)
+        
         sameFile=downloadList.combine(self.filelist.fileList)
+        
         for i in sameFile:
             removeFile(i)
+            
         downloadList.outPut(newPath)
         downloadList.outPut(timePath)
         

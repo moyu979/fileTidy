@@ -1,6 +1,8 @@
 from AFile import *
 import os
+from log import *
 #将f2的文件删除，在原地的“redirect.txt”文件中记录
+log=Log()
 def removeFile(file2:AFile):
     
     file2Path=file2.nowPath
@@ -17,6 +19,7 @@ def removeFile(file2:AFile):
     fp.write("name:\t"+file2.nowName+"\n")
     fp.close()
     os.remove(file2Path)
+    log.writeLog("remove "+file2Path)
     
     
 def removeFiles(file2):

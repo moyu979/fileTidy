@@ -1,6 +1,7 @@
 from AFile import *
 from compareFile import *
 from removeSameFile import *
+from log import *
 
 #排序用函数
 def return_now_path(elem:AFile):
@@ -16,6 +17,7 @@ class FileList:
         #如果参数有path的话使用path初始化
         if not path==None:
             self.importFileList(path)
+            
     #加载路径记录的文件        
     def importFileList(self,path):
         inFile=open(path,encoding="utf-8")
@@ -23,7 +25,7 @@ class FileList:
         aline:str=inFile.readline()
         while aline:
             #如果一行结束，增加一个文件
-            if aline.startswith("end\n"):
+            if aline.startswith("end"):
                 if not af==[]:
                     self.fileList.append(AFile(af))
                 af=[]
@@ -51,26 +53,35 @@ class FileList:
             #同一个文件，直接返回
             if sameFile.nowPath==a.nowPath:
                 return False
+            #两个文件相同 直接combine
             elif compareFile(sameFile.nowPath,a.nowPath):
-                sameFile.addOriginPath(a.originPath)
-                sameFile.addZip(a.zip)
-                sameFile.addUnzip(a.unzip)
+                sameFile.combinewith(a)
                 return True
+            #找到了相同的哈希，但文件内容不同
+            #或者旧文件被删除了也会产生此错误
             else:
-                count=0
-                same=self.findHash(a.hashMd5+str(count))
-                while(same):
-                    if compareFile(same.nowPath,a.nowPath):
-                        same.addOriginPath(a.originPath)
-                        same.addZip(a.zip)
-                        same.addUnzip(a.unzip)
-                        return True
-                    count=count+1    
-                    same=self.findHash(a.hashMd5+str(count))
-                a.hashMd5=a.hashMd5+str(count)
-        
-        self.fileList.append(a)
-        return False
+                log=Log()
+                string="find files with same hash but not same \n"+"first is:"+sameFile.nowPath
+                string=string+"\n"+"second is:"+a.nowPath+"\n"
+                log.printLog(string)
+                return False
+            {
+                # else:
+            #     count=0
+            #     same=self.findHash(a.hashMd5+str(count))
+            #     while(same):
+            #         if compareFile(same.nowPath,a.nowPath):
+            #             same.addOriginPath(a.originPath)
+            #             same.addZip(a.zip)
+            #             same.addUnzip(a.unzip)
+            #             return True
+            #         count=count+1    
+            #         same=self.findHash(a.hashMd5+str(count))
+            #     a.hashMd5=a.hashMd5+str(count)
+            }
+        else:
+            self.fileList.append(a)
+            return False
     ##将一个FileList添加到现有的FileList中，如果遇到相同的，不合并，而是将新旧两个文件进记录到findsame列表下，等待进一步处理
     def combine(self,files):
         findsame=[]
@@ -121,5 +132,6 @@ class FileList:
         else:
             self.itercount=self.itercount+1
             return self.fileList[self.itercount-1]
+        
 if __name__ == "__main__":
     print ("这是一个基础数据单元，不能作为运行单元")
