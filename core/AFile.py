@@ -1,5 +1,5 @@
 import os.path
-
+from log import *
 class AFile:
     def __init__(self,paras:str=None) -> None:
         #特征组
@@ -20,6 +20,8 @@ class AFile:
         self.nowName=None
         self.nowPath=None
         self.removed=False
+        
+        self.log=Log()
         if(paras!=None):
             self.loadFile(paras)
             
@@ -108,16 +110,34 @@ class AFile:
             self.zip.add(zip)
         elif type(zip).__name__=="set":
             self.zip=self.zip|zip
+        elif type(zip).__name__=="list":
+            for i in zip:
+                self.zip.add(i)
+        else:
+            error="unknown type while combine zip of \""+self.hashMd5+" "+self.nowName+" \" "
+            self.log.writeLog(error)
     def addUnzip(self,unzip):
         if type(unzip).__name__=="str":
             self.unzip.add(unzip)
         elif type(unzip).__name__=="set":
             self.unzip=self.unzip|unzip
+        elif type(unzip).__name__=="list":
+            for i in unzip:
+                self.unzip.add(i)
+        else:
+            error="unknown type while combine Unzip of \""+self.hashMd5+" "+self.nowName+" \" "
+            self.log.writeLog(error)
     def addOriginPath(self,originPath):
         if type(originPath).__name__=="str":
             self.originPath.add(originPath)
         elif type(originPath).__name__=="set":
             self.originPath=self.originPath|originPath
+        elif type(originPath).__name__=="list":
+            for i in originPath:
+                self.originPath.add(i)
+        else:
+            error="unknown type while combine OriginPath of \""+self.hashMd5+" "+self.nowName+" \" "
+            self.log.writeLog(error)
     def addChangePath(self,changePath):
         for i in changePath:
             self.changePath.append(i)

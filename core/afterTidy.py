@@ -27,8 +27,78 @@ class AfterTidy:
         self.getUnzipList(path)
         self.getZipList(path)
         #将对应项调到final里
-        for i in self.zipList:
-            pass
+        unfind=FileList()
+        
+        #处理解压文件夹
+        middleList=[]
+        i:AZipFile        
+        for i in self.unzipList:
+            afile=AFile()
+            afile.hashMd5=i.zipHash
+            
+            unzipfile=i.fileList
+            for j in unzipfile:
+                afile.addUnzip(j)
+                
+                bfile=AFile()
+                bfile.hashMd5=j
+                
+                middleList.append(bfile)
+            
+            middleList.append(afile)
+        
+        #处理压缩文件夹
+        i:AZipFile        
+        for i in self.unzipList:
+            afile=AFile()
+            afile.hashMd5=i.zipHash
+            
+            unzipfile=i.fileList
+            for j in unzipfile:
+                
+                bfile=AFile()
+                bfile.hashMd5=j
+                bfile.addZip(afile.hashMd5)
+                
+                middleList.append(bfile)
+            
+            middleList.append(afile)
+            
+        #压缩和解压文件预取预设置        
+        for i in middleList:
+            file=self.downloadList.findHash(i.hashMd5)
+            if file:
+                #存在的话，提取，写入现在的信息，从download列表删除，加入final
+                self.downloadList.deleteByHash(file.hashMd5)
+                file.combinewith(i)
+                self.final.addAFile(file)
+            else:
+                #不存在的话直接加入
+                self.final.addAFile(i)
+                
+        #处理tidy文件夹
+        i:AFile
+        for i in self.tidyList:
+            file=self.downloadList.findHash(i.hashMd5)
+            if file:
+                #如果这个file存在于原始数据中（不是解压而来的或压缩而来的）
+                file.addChangePath(i.originPath)
+                self.downloadList.deleteByHash(i.hashMd5)
+            else:
+                #如果这个file是解压而来的或者压缩而来的,或者涉及到了压缩文件，则原本旧不会存在于downloadList，
+                #或是已经从download中删除
+                file=AFile()
+                file.hashMd5=i.hashMd5
+                #将生成哈希时的originPath改写为实际的changePath
+                file.addChangePath(i.originPath)
+            self.final.addAFile(file)
+                
+                
+        
+                
+                
+                
+                
         
                 
     def getTidyList(self,path):
