@@ -1,53 +1,58 @@
 import os
-from log import *
-from generateHash import *
+from Hash import *
+import Log
 
+
+#输入一个存有压缩文件-解压文件夹关系对的目录，生成压缩文件哈希和解压文件哈希关系
 class AZipFile:
-    
     def __init__(self,path) -> None:
         self.path=path
         self.zipHash=""
         self.fileList=[]
-        self.zipcount=0
-        self.filecount=0
         self.error=False
+
+        self.get(path)
         
-        self.get()
-        
-    def get(self):
+    def get(self,path):
+        zipcount=0
+        dircount=0
         
         inzipFile=os.listdir(self.path)
         
         #检查数据是否能匹配
         for i in inzipFile:
-            p=os.path.join(self.path,i)
+            p=os.path.join(path,i)
             if p.endswith(".zip") or p.endswith(".rar") or p.endswith(".7z"):
-                self.zipcount=self.zipcount+1
+                zipcount=zipcount+1
             if os.path.isdir(p):
-                self.filecount=self.filecount+1
+                dircount=dircount+1
                 
         #数据错误处理
-        if not self.zipcount==1:
+        if not zipcount==1:
             string=""
-            string=string+self.path+" has more than one zip file"
-            log.printLog(string)
+            string=string+self.path+" has more than one zip file, which is "+str(zipcount)
+            Log.printLog(string)
             self.error=True
             return
         
+        fileList=[]
         #获取数据
         for i in inzipFile:
-            p=os.path.join(self.path,i)
+            p=os.path.join(path,i)
             if p.endswith(".zip") or p.endswith(".rar") or p.endswith(".7z"):
                 self.zipHash=GeneHash(p).fileList.fileList[0].hashMd5
             else:
                 hash=GeneHash()
                 hashList=hash.start(p)
-                self.fileList.append(hashList)
-            
-        for i in range(1,self.filecount):
-            self.compare(self.fileList[0],self.fileList[i])
-                    
-    def compare(self,a,b):
+                fileList.append(hashList)
+        #对比多次解压的内容是否相同    
+        for i in range(1,dircount):
+            self.compare(fileList[0],fileList[i])
+        #提取解压文件的哈希值    
+        for i in fileList[0]:
+            self.fileList.append(i.hashMd5)    
+    #判别两个文件夹中的文件是否完全一致            
+    def compare(self,a:FileList,b:FileList):
         for i in a:
             hasSame=False
             for j in b:
@@ -65,8 +70,8 @@ class AZipFile:
             string="there is an error in "+self.path+" please check"
         else:
             string=string+self.zipHash+"\n"
-            for i in self.fileList[0]:
-                string=string+i.hashMd5+"\n"
+            for i in self.fileList:
+                string=string+i+"\n"
         return string
     
 if __name__=="__main__":

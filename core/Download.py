@@ -1,7 +1,8 @@
 import sys
 from FileList import *
-from generateHash import *
-from getFileTime import *
+from Hash import *
+from FileTime import *
+
 class afterDownload:
     def __init__(self,path=None):
         self.filelist=FileList()
@@ -16,7 +17,7 @@ class afterDownload:
         motherPath="./fileDirs/downloads/"
         mpath=os.path.abspath(motherPath)
         newPath=os.path.join(mpath,"new.txt")
-        timePath=os.path.join(mpath,getFileTime())
+        timePath=os.path.join(mpath,FileTime()+".txt")
         #读入已经存在的
         downloadList=FileList(newPath)
         
@@ -27,9 +28,6 @@ class afterDownload:
             
         downloadList.outPut(newPath)
         downloadList.outPut(timePath)
-        
-        
-        
         
 if __name__ == "__main__":
     if len(sys.argv)==2:

@@ -15,7 +15,16 @@ class GeneHash:
         self.totalSize=self.takeSizes(file)
         print("total size: "+self.humanSize(self.totalSize))
         self.geneHash(file)
+        print("\n")
         return self.fileList
+    
+    def humanSize(self,count:float)->str:
+        size=["B","K","M","G","T"]
+        sizelable=0
+        while count>1024 and sizelable<5:
+            count=count/1024
+            sizelable=sizelable+1
+        return "%.2f%s" % (count, size[sizelable])
     
     def takeSizes(self,file)->float:
         count:float=0
@@ -26,15 +35,7 @@ class GeneHash:
         else:
             count=count+os.path.getsize(file)
         return count
-        
-    def humanSize(self,count:float)->str:
-        size=["B","K","M","G","T"]
-        sizelable=0
-        while count>1024 and sizelable<5:
-            count=count/1024
-            sizelable=sizelable+1
-        return "%.2f%s" % (count, size[sizelable])
-        
+    
     def geneHash(self,file):
         print("\r nowfinish %f" % (self.finished/self.totalSize),flush=True,end="")
         af=[]
@@ -60,6 +61,7 @@ class GeneHash:
                 af.append("originPath:\t"+file)
                 af.append("nowPath:\t"+file)
                 af.append("end\n")
+                fp.close()
             else:
                 with open(file,"rb") as fp:
                     data=fp.read()
@@ -68,10 +70,11 @@ class GeneHash:
                 af.append("originPath:\t"+file)
                 af.append("nowPath:\t"+file)
                 af.append("end\n")
+                fp.close()
             f=AFile(af)
             self.fileList.fileList.append(f)
             self.finished=self.finished+filesize
-            
+    
 if __name__ == "__main__":
     print("这个模块不会产生可存储输出，只会将结果输出到控制台，是否继续？")
     yon=input()
@@ -82,5 +85,3 @@ if __name__ == "__main__":
         c=GeneHash()
         list=c.start(path)
         list.pOutPut()
-        
-        

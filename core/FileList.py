@@ -1,11 +1,13 @@
 from AFile import *
-from compareFile import *
-from removeSameFile import *
-from log import *
+from CompareFile import *
+from RemoveFile import *
+import Log
 
 #排序用函数
 def return_now_path(elem:AFile):
     return elem.nowPath
+def return_now_name(elem:AFile):
+    return elem.nowName
 def return_hash(elem:AFile):
     return elem.hashMd5
 
@@ -37,13 +39,16 @@ class FileList:
                 af.append(aline)
             #读新行
             aline=inFile.readline()
-            
     #排序        
     def sortBypath(self):
         self.fileList.sort(key=return_now_path)
         
     def sortByHash(self):
         self.fileList.sort(key=return_hash)
+        
+    def sortByName(self):
+        self.fileList.sort(key=return_now_name)
+        
     #增
     ##增加一个文件(去重),有重返回True
     def addAFile(self,a:AFile): 
@@ -63,33 +68,16 @@ class FileList:
                 log=Log()
                 string="find files with same hash but not same \n"+"first is:"+sameFile.nowPath
                 string=string+"\n"+"second is:"+a.nowPath+"\n"
-                log.printLog(string)
+                Log.printAndLog(string)
                 return False
-            {
-                # else:
-            #     count=0
-            #     same=self.findHash(a.hashMd5+str(count))
-            #     while(same):
-            #         if compareFile(same.nowPath,a.nowPath):
-            #             same.addOriginPath(a.originPath)
-            #             same.addZip(a.zip)
-            #             same.addUnzip(a.unzip)
-            #             return True
-            #         count=count+1    
-            #         same=self.findHash(a.hashMd5+str(count))
-            #     a.hashMd5=a.hashMd5+str(count)
-            }
         else:
             self.fileList.append(a)
             return False
+        
     ##将一个FileList添加到现有的FileList中，如果遇到相同的，不合并，而是将新旧两个文件进记录到findsame列表下，等待进一步处理
     def combine(self,files):
         findsame=[]
-        if type(files).__name__=="list":
-            fs=files
-        elif type(files).__name__=="FileList" :
-            fs=files.fileList
-        for i in fs:
+        for i in files:
             if self.addAFile(i):
                 findsame.append(i)
         return findsame
@@ -100,14 +88,14 @@ class FileList:
         for i in self.fileList:
             if i.hashMd5==Hash:
                 self.fileList.remove(i)
+                
     #查
     def findHash(self,hash)->AFile:
         for i in self.fileList:
             if i.hashMd5==hash:
                 return i
         return None
-   
-                
+    
     #输出
     def outPut(self,path):
         count=0
@@ -120,9 +108,9 @@ class FileList:
         outFile.close()
     def pOutPut(self):
         for i in self.fileList:
-            print(i)
-            
-    #重写迭代器
+            print(i)            
+    
+        #重写迭代器
     def __iter__(self):
         self.itercount=0
         return self

@@ -1,10 +1,12 @@
 import os.path
-from log import *
+from Log import *
+#AFile 模块，作为基本单元而存在，在不同函数之间传递消息通常使用这个
 class AFile:
     def __init__(self,paras:str=None) -> None:
         #特征组
         self.hashMd5=None
         self.sameHashCount=0
+        self.removed=False
         #初始目录组
         #此组至少有一个不为空，举例而言
         ##当解压来的文件，unzip不为空
@@ -19,22 +21,27 @@ class AFile:
         #如果removed为真，此文件处于被删除状态，则现在的路径和文件名皆为空
         self.nowName=None
         self.nowPath=None
-        self.removed=False
+
         
-        self.log=Log()
-        if(paras!=None):
+        if paras!=None:
             self.loadFile(paras)
             
     def loadFile(self,paras:str):    
         for para in paras:
+            #去除换行符并切分
             p=para.replace("\n","")
             plist=p.split(":\t")
+        #唯一标记
             #md5纪录项(唯一)
             if plist[0] == 'hashMd5':
                 self.hashMd5=plist[1]
             #处理减少哈希冲突的
             if plist[0] == 'sameHashCount':
                 self.sameHashCount=int(plist[1])
+            #是否已经被删除
+            if plist[0] == 'removed':
+                self.removed=True    
+        #来源        
             #原始目录项
             if plist[0] == 'originPath':
                 self.originPath.add(plist[1])
@@ -44,32 +51,35 @@ class AFile:
             #解压自
             if plist[0] == 'unzip':
                 self.unzip.add(plist[1])
+            if plist[0] == 'unzipFrom':
+                self.unzip.add(plist[1])
             #压缩到
             if plist[0] == 'zip':
                 self.zip.add(plist[1])
-                
+            if plist[0] == 'zipTo':
+                self.zip.add(plist[1])
+        #常用数据            
             #现在路径
             if plist[0] == 'nowPath':
                 self.nowPath=plist[1]  
             #路径变迁
             if plist[0] == 'changePath':
                 self.changePath.append(plist[1])
-            if plist[0] == 'removed':
-                self.removed=True
+        #自动更新一下
         self.autoupdate()
         
-    #自动更新now系列    
+    #自动更新 
     def autoupdate(self):
         #如果没被删除的话，自动生成现在的路径什么的
         if not self.removed:
             #将变化目录的最后一个（最近日期的目录）或原始目录（没有变化）视作现在的目录
-            ##当没有任何的changePath的时候，说明原文件没有移动，因此直接保留即可，同时因为新加入的文件会重定位到新的文件上，所以无需担心新文件将老文件踢掉
             if len(self.changePath)==0:
                 pass
             else:
                 self.nowPath=self.changePath[-1]
             #从现在的目录中提取出文件名
             self.nowName=os.path.basename(self.nowPath)
+    
     #字符串
     def __str__(self,adds="") -> str:
         self.autoupdate()
@@ -87,24 +97,18 @@ class AFile:
 
         for i in self.originPath:
             string=string+"originPath:\t"+i+"\n"
-
+        for i in self.unzip:
+            string=string+"unzipFrom:\t"+i+"\n"
+        for i in self.zip:
+            string=string+"zipTo:\t"+i+"\n"
+            
         for i in self.changePath:
             string=string+"changePath:\t"+i+"\n"
 
-        for i in self.unzip:
-            string=string+"unzip:\t"+i+"\n"
-
-        for i in self.zip:
-            string=string+"zip:\t"+i+"\n"
-
         string=string+"end\n"
         return string
-    
-    #重设哈希值
-    def resetHash(self,newHash):
-        self.hashMd5=newHash
-        
     #增加内容
+    #添加zip内容
     def addZip(self,zip):
         if type(zip).__name__=="str":
             self.zip.add(zip)
@@ -115,7 +119,8 @@ class AFile:
                 self.zip.add(i)
         else:
             error="unknown type while combine zip of \""+self.hashMd5+" "+self.nowName+" \" "
-            self.log.writeLog(error)
+            writeLog(error)
+            
     def addUnzip(self,unzip):
         if type(unzip).__name__=="str":
             self.unzip.add(unzip)
@@ -126,7 +131,8 @@ class AFile:
                 self.unzip.add(i)
         else:
             error="unknown type while combine Unzip of \""+self.hashMd5+" "+self.nowName+" \" "
-            self.log.writeLog(error)
+            writeLog(error)
+            
     def addOriginPath(self,originPath):
         if type(originPath).__name__=="str":
             self.originPath.add(originPath)
@@ -137,10 +143,17 @@ class AFile:
                 self.originPath.add(i)
         else:
             error="unknown type while combine OriginPath of \""+self.hashMd5+" "+self.nowName+" \" "
-            self.log.writeLog(error)
+            writeLog(error)
+            
     def addChangePath(self,changePath):
-        for i in changePath:
-            self.changePath.append(i)
+        if type(changePath).__name__=="str":
+            self.changePath.add(changePath)
+        elif type(changePath).__name__=="list":
+            for i in changePath:
+                self.changePath.append(i)
+        else:
+            error="unknown type while combine changePath of \""+self.hashMd5+" "+self.nowName+" \" "
+            writeLog(error)
             
     #将两个具有相同哈希值的合并
     def combinewith(self,A):
@@ -151,9 +164,8 @@ class AFile:
             self.addUnzip(A.unzip)
             self.addZip(A.zip)
             self.addChangePath(A.changePath)
-            
-            
-            
+            if A.removed:
+                self.removed=True
+
 if __name__ == "__main__":
     print ("这是一个基础数据单元，不能作为运行单元")
-    
