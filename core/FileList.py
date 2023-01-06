@@ -134,4 +134,9 @@ class FileList:
             return self.fileList[self.itercount-1]
         
 if __name__ == "__main__":
-    print ("这是一个基础数据单元，不能作为运行单元")
+    print ("这是一个基础数据单元，不能作为运行单元,当运行时，会读入并原样输出列表（主要用于列表的升级）")
+    path=input("请输入列表地址")
+    fileList=FileList()
+    fileList.importFileList(path)
+    path2=input("请输入输出地址")
+    fileList.outPut(path2)

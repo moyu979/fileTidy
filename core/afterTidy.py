@@ -3,6 +3,7 @@ from generateHash import *
 from AFile import *
 from log import *
 from AZipFile import *
+
 class AfterTidy:
     def __init__(self,path=None) -> None:
         #temp files
@@ -92,15 +93,7 @@ class AfterTidy:
                 #将生成哈希时的originPath改写为实际的changePath
                 file.addChangePath(i.originPath)
             self.final.addAFile(file)
-                
-                
-        
-                
-                
-                
-                
-        
-                
+                       
     def getTidyList(self,path):
         tidyPath=os.path.join(path,"tidy")
         tidyList=GeneHash().start(tidyPath) #生成整理后文件的文件列表

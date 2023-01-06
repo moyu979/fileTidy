@@ -35,7 +35,6 @@ if __name__ == "__main__":
     if len(sys.argv)==2:
         path=sys.argv[1]
     else:
-        print("请输入下载文件存储路径")
-        path=input()
+        path=input("请输入下载文件存储路径")
     path=os.path.abspath(path)
     aft=afterDownload(path)

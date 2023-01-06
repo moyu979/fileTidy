@@ -1,6 +1,7 @@
 import sys
 #当且仅当两个文件不是同一个但内容相同时返回True
 def compareFile(path1,path2)->bool:
+    #如果路径相同，说明文件重复，不视作相同文件
     if path1==path2:
         return False
     
@@ -10,9 +11,10 @@ def compareFile(path1,path2)->bool:
     while True:
         data1=f1.read(1024**2*512)
         data2=f2.read(1024**2*512)
+        #如果到尽头都相同，视作文件相同
         if not data1:
             return True
-        
+        #如果出现不同，视作文件不同
         if not data1==data2:
             return False
         

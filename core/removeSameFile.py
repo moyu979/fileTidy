@@ -2,9 +2,9 @@ from AFile import *
 import os
 from log import *
 #将f2的文件删除，在原地的“redirect.txt”文件中记录
-log=Log()
+
 def removeFile(file2:AFile):
-    
+    log=Log()
     file2Path=file2.nowPath
     file2Dir=file2.nowPath.replace(file2.nowName,"")
     redirPath=file2Dir+"redirect.txt"
