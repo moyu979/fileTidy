@@ -1,2 +1,0 @@
-import init
-init.testInit()
