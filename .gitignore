@@ -3,6 +3,10 @@
 !*.md
 !/core/
 !/mds/
+!/tests/
 
+/tests/*
+!/tests/*.py
+!/tests/answer
 
 /core/__pycache__

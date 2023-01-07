@@ -27,7 +27,7 @@ class FileList:
         aline:str=inFile.readline()
         while aline:
             #如果一行结束，增加一个文件
-            if aline.startswith("end"):
+            if aline.startswith("end") or aline=="\n":
                 if not af==[]:
                     self.fileList.append(AFile(af))
                 af=[]
@@ -126,5 +126,6 @@ if __name__ == "__main__":
     path=input("请输入列表地址")
     fileList=FileList()
     fileList.importFileList(path)
+    
     path2=input("请输入输出地址")
     fileList.outPut(path2)

@@ -56,7 +56,7 @@ class AFile:
             #压缩到
             if plist[0] == 'zip':
                 self.zip.add(plist[1])
-            if plist[0] == 'zipTo':
+            if plist[0] == 'zipFrom':
                 self.zip.add(plist[1])
         #常用数据            
             #现在路径
@@ -70,6 +70,9 @@ class AFile:
         
     #自动更新 
     def autoupdate(self):
+        if len(self.changePath)==0:
+            for i in self.originPath:
+                self.changePath.append(i)
         #如果没被删除的话，自动生成现在的路径什么的
         if not self.removed:
             #将变化目录的最后一个（最近日期的目录）或原始目录（没有变化）视作现在的目录
@@ -90,17 +93,18 @@ class AFile:
             string=string+"sameHashCount:\t"+str(self.sameHashCount)+"\n"
         if self.removed:
             string=string+"removed\n"
-        if self.nowName:
-            string=string+"nowName:\t"+self.nowName+"\n"
-        if self.nowPath:
-            string=string+"nowPath:\t"+self.nowPath+"\n"
+        else:
+            if self.nowName:
+                string=string+"nowName:\t"+self.nowName+"\n"
+            if self.nowPath:
+                string=string+"nowPath:\t"+self.nowPath+"\n"
 
         for i in self.originPath:
             string=string+"originPath:\t"+i+"\n"
         for i in self.unzip:
             string=string+"unzipFrom:\t"+i+"\n"
         for i in self.zip:
-            string=string+"zipTo:\t"+i+"\n"
+            string=string+"zipFrom:\t"+i+"\n"
             
         for i in self.changePath:
             string=string+"changePath:\t"+i+"\n"
@@ -147,7 +151,7 @@ class AFile:
             
     def addChangePath(self,changePath):
         if type(changePath).__name__=="str":
-            self.changePath.add(changePath)
+            self.changePath.append(changePath)
         elif type(changePath).__name__=="list":
             for i in changePath:
                 self.changePath.append(i)

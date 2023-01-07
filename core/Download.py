@@ -14,7 +14,7 @@ class afterDownload:
         hash=GeneHash()
         self.filelist=hash.start(path)
         
-        motherPath="./fileDirs/downloads/"
+        motherPath="./fileLogs/download/"
         mpath=os.path.abspath(motherPath)
         newPath=os.path.join(mpath,"new.txt")
         timePath=os.path.join(mpath,FileTime()+".txt")

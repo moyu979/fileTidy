@@ -16,9 +16,7 @@ class AfterTidy:
         self.downloadList=FileList()
         self.final=FileList()
         
-        self.log=Log()
-        
-        self.downloadList.importFileList("./fileDirs/downloads/new.txt")
+        self.downloadList.importFileList("./fileLogs/download/new.txt")
         
         if path:
             self.start(path)
@@ -38,8 +36,8 @@ class AfterTidy:
             k=AZipFile(dir)
             if not k.error:
                 self.unzipList.append(k)
-                remove(k.path)
-                
+            else:
+                Log.writeLog(k.path+" has error")
 
     def getZipList(self,path):
         zipPath=os.path.join(path,"zip")
@@ -49,8 +47,8 @@ class AfterTidy:
             k=AZipFile(dir)
             if not k.error:
                 self.zipList.append(k)      
-                remove(k.path)
-                  
+            else:
+                Log.writeLog(k.path+" has error")      
     def start(self,path):
         #计算整理好的文件的哈希
         self.getTidyList(path)
@@ -114,34 +112,38 @@ class AfterTidy:
         #处理tidy文件夹
         i:AFile
         for i in self.tidyList:
-            file=self.downloadList.findHash(i.hashMd5)
-            if file:
+            downLoadFile=self.downloadList.findHash(i.hashMd5)
+            finalFile=self.final.findHash(i.hashMd5)
+            if downLoadFile:
                 #如果这个file存在于原始数据中（不是解压而来的或压缩而来的）
-                file.addChangePath(i.originPath)
+                downLoadFile.addChangePath(i.changePath[0])
                 self.downloadList.deleteByHash(i.hashMd5)
+                self.final.addAFile(downLoadFile)
+            elif finalFile:
+                #如果i已经被放入finalFile(压缩过的什么的)
+                finalFile.addChangePath(i.changePath[0])
             else:
-                #如果这个file是解压而来的或者压缩而来的,或者涉及到了压缩文件，则原本旧不会存在于downloadList，
-                #或是已经从download中删除
-                file=AFile()
-                file.hashMd5=i.hashMd5
-                #将生成哈希时的originPath改写为实际的changePath
-                file.addChangePath(i.originPath)
-            
-            ffile=self.final.findHash(file.hashMd5)
-            if ffile:
-                ffile.combinewith(file)
-            else:
-                self.final.addAFile(file)
+                #新文件
+                l="not find "+i.hashMd5+" "+i.nowPath
+                Log.writeLog(l)
+
 
         dataname=FileTime()
     
-        dir="./fileDirs"
-        down1=dir+"/downloads/"+dataname+".txt"
-        down2=dir+"/downloads/new.txt"
-        tidy1=dir+"/tidys/"+dataname+".txt"
-        tidy2=dir+"/tidys/new.txt"
+        dir="./fileLogs"
+        down1=dir+"/download/"+dataname+".txt"
+        down2=dir+"/download/new.txt"
+        tidy1=dir+"/tidy/"+dataname+".txt"
+        tidy2=dir+"/tidy/new.txt"
         
         self.downloadList.outPut(down1)
         self.downloadList.outPut(down2)
         self.final.outPut(tidy1)
         self.final.outPut(tidy2)
+        
+if __name__=="__main__":
+    
+    print("请输入整理好的文件的存储位置")
+    tidyPath=input()
+    p=os.path.abspath(tidyPath)
+    afterTidy=AfterTidy(p)
