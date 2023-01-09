@@ -23,8 +23,7 @@ class afterDownload:
         
         sameFile=downloadList.combine(self.filelist)
         
-        for i in sameFile:
-            removeFile(i)
+        removeFiles(sameFile)
             
         downloadList.sortBypath()
         downloadList.outPut(newPath)

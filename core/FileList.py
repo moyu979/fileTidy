@@ -116,7 +116,7 @@ class FileList:
     
     #输出
     def outPut(self,path):
-        count=0
+        count=1
         outFile=open(path,'w',encoding="utf-8")
         for i in self.fileList:
             outFile.write("num:\t"+str(count)+"\n")

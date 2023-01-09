@@ -5,7 +5,7 @@ import Log
 
 #输入一个存有压缩文件-解压文件夹关系对的目录，生成压缩文件哈希和解压文件哈希关系
 class AZipFile:
-    def __init__(self,path) -> None:
+    def __init__(self,path):
         self.path=path
         self.zipHash=""
         self.fileList=[]

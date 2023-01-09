@@ -35,3 +35,17 @@ def remove(path):
         os.rmdir(path)
     else:
         os.remove(path)
+        
+def removeEmpty(path):
+    if not os.path.isdir(path):
+        return
+    else:
+        list=os.listdir(path)
+        for i in list:
+            dir=os.path.join(path,i)
+            removeEmpty(dir)
+        list=os.listdir(path)
+        if len(list)==0:
+            os.rmdir(path)
+            return
+        

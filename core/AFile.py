@@ -1,5 +1,6 @@
 import os.path
 from Log import *
+from HashSet import *
 #AFile 模块，作为基本单元而存在，在不同函数之间传递消息通常使用这个
 class AFile:
     def __init__(self,paras:str=None) -> None:
@@ -12,9 +13,12 @@ class AFile:
         ##当解压来的文件，unzip不为空
         ##压缩来的文件，zip不为空
         ##普通下载来的文件，originpath不为空
-        self.originPath=set()
-        self.unzipFrom=set()
-        self.zipFrom=set()
+        # self.originPath=set()
+        # self.unzipFrom=set()
+        # self.zipFrom=set()
+        self.originPath=HashSet()
+        self.unzipFrom=HashSet()
+        self.zipFrom=HashSet()
         #变化组
         self.changePath=[]
         #现状组
@@ -109,19 +113,38 @@ class AFile:
                 string=string+"nowName:\t"+self.nowName+"\n"
             if self.nowPath:
                 string=string+"nowPath:\t"+self.nowPath+"\n"
-
+        #保证set的顺序
+        li=[]
         for i in self.originPath:
+            li.append(i)
+        li.sort()
+        for i in li:
             string=string+"originPath:\t"+i+"\n"
+
+        
+        li=[]
         for i in self.unzipFrom:
-            string=string+"unzipFrom:\t"+i[0]
-            if len(i)>1:
-                string=string+"::"+i[1]
+            li.append(i)
+        li.sort()
+        for i in li:
+            string=string+"unzipFrom:\t"
+            for j in i:
+                string=string+j+"::"
+            string=string[:-2]
             string=string+"\n"
+                
+            
+        li=[]
         for i in self.zipFrom:
-            string=string+"zipFrom:\t"+i[0]
-            if len(i)>1:
-                string=string+"::"+i[1]
+            li.append(i)
+        li.sort()
+        for i in li:
+            string=string+"zipFrom:\t"
+            for j in i:
+                string=string+j+"::"
+            string=string[:-2]
             string=string+"\n"
+               
         for i in self.changePath:
             string=string+"changePath:\t"+i+"\n"
 

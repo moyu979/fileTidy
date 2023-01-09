@@ -5,6 +5,7 @@ from FileList import *
 #用于计算一个文件夹下所有文件的哈希值，返回一个记载所有文件信息的FileList(不去重)
 class GeneHash:
     def __init__(self,path=None):
+        
         self.fileList=FileList()
         self.totalSize:float=0
         self.finished:float=0
@@ -12,6 +13,7 @@ class GeneHash:
             self.start(path)
             
     def start(self,file)->FileList:
+        file=os.path.abspath(file)
         self.totalSize=self.takeSizes(file)
         print("total size: "+self.humanSize(self.totalSize))
         self.geneHash(file)
