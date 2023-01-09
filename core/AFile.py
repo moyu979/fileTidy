@@ -13,8 +13,8 @@ class AFile:
         ##压缩来的文件，zip不为空
         ##普通下载来的文件，originpath不为空
         self.originPath=set()
-        self.unzip=set()
-        self.zip=set()
+        self.unzipFrom=set()
+        self.zipFrom=set()
         #变化组
         self.changePath=[]
         #现状组
@@ -22,7 +22,8 @@ class AFile:
         self.nowName=None
         self.nowPath=None
 
-        
+        #遍历字段
+        self.visited=False
         if paras!=None:
             self.loadFile(paras)
             
@@ -50,14 +51,19 @@ class AFile:
                 self.originPath.add(plist[1])
             #解压自
             if plist[0] == 'unzip':
-                self.unzip.add(plist[1])
+                zlist=plist[1].split("::")
+                self.unzipFrom.add(zlist)
             if plist[0] == 'unzipFrom':
-                self.unzip.add(plist[1])
+                zlist=plist[1].split("::")
+                self.unzipFrom.add(zlist)
             #压缩到
             if plist[0] == 'zip':
-                self.zip.add(plist[1])
+                zlist=plist[1].split("::")
+                self.zipFrom.add(zlist)
+                
             if plist[0] == 'zipFrom':
-                self.zip.add(plist[1])
+                zlist=plist[1].split("::")
+                self.zipFrom.add(zlist)
         #常用数据            
             #现在路径
             if plist[0] == 'nowPath':
@@ -72,7 +78,12 @@ class AFile:
     def autoupdate(self):
         if len(self.changePath)==0:
             for i in self.originPath:
-                self.changePath.append(i)
+                if os.path.exists(i):
+                    self.changePath.append(i)
+        if len(self.changePath)==0:
+                for i in self.originPath:       
+                    self.changePath.append(i)
+                    break 
         #如果没被删除的话，自动生成现在的路径什么的
         if not self.removed:
             #将变化目录的最后一个（最近日期的目录）或原始目录（没有变化）视作现在的目录
@@ -101,75 +112,22 @@ class AFile:
 
         for i in self.originPath:
             string=string+"originPath:\t"+i+"\n"
-        for i in self.unzip:
-            string=string+"unzipFrom:\t"+i+"\n"
-        for i in self.zip:
-            string=string+"zipFrom:\t"+i+"\n"
-            
+        for i in self.unzipFrom:
+            string=string+"unzipFrom:\t"+i[0]
+            if len(i)>1:
+                string=string+"::"+i[1]
+            string=string+"\n"
+        for i in self.zipFrom:
+            string=string+"zipFrom:\t"+i[0]
+            if len(i)>1:
+                string=string+"::"+i[1]
+            string=string+"\n"
         for i in self.changePath:
             string=string+"changePath:\t"+i+"\n"
 
         string=string+"end\n"
         return string
-    #增加内容
-    #添加zip内容
-    def addZip(self,zip):
-        if type(zip).__name__=="str":
-            self.zip.add(zip)
-        elif type(zip).__name__=="set":
-            self.zip=self.zip|zip
-        elif type(zip).__name__=="list":
-            for i in zip:
-                self.zip.add(i)
-        else:
-            error="unknown type while combine zip of \""+self.hashMd5+" "+self.nowName+" \" "
-            writeLog(error)
-            
-    def addUnzip(self,unzip):
-        if type(unzip).__name__=="str":
-            self.unzip.add(unzip)
-        elif type(unzip).__name__=="set":
-            self.unzip=self.unzip|unzip
-        elif type(unzip).__name__=="list":
-            for i in unzip:
-                self.unzip.add(i)
-        else:
-            error="unknown type while combine Unzip of \""+self.hashMd5+" "+self.nowName+" \" "
-            writeLog(error)
-            
-    def addOriginPath(self,originPath):
-        if type(originPath).__name__=="str":
-            self.originPath.add(originPath)
-        elif type(originPath).__name__=="set":
-            self.originPath=self.originPath|originPath
-        elif type(originPath).__name__=="list":
-            for i in originPath:
-                self.originPath.add(i)
-        else:
-            error="unknown type while combine OriginPath of \""+self.hashMd5+" "+self.nowName+" \" "
-            writeLog(error)
-            
-    def addChangePath(self,changePath):
-        if type(changePath).__name__=="str":
-            self.changePath.append(changePath)
-        elif type(changePath).__name__=="list":
-            for i in changePath:
-                self.changePath.append(i)
-        else:
-            error="unknown type while combine changePath of \""+self.hashMd5+" "+self.nowName+" \" "
-            writeLog(error)
-            
-    #将两个具有相同哈希值的合并
-    def combinewith(self,A):
-        if A.hashMd5!=None and self.hashMd5!=A.hashMd5:
-            return False
-        else:
-            self.addOriginPath(A.originPath)
-            self.addUnzip(A.unzip)
-            self.addZip(A.zip)
-            self.addChangePath(A.changePath)
-            if A.removed:
-                self.removed=True
+
 
 if __name__ == "__main__":
     print ("这是一个基础数据单元，不能作为运行单元")

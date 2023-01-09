@@ -40,7 +40,7 @@ class AZipFile:
         for i in inzipFile:
             p=os.path.join(path,i)
             if p.endswith(".zip") or p.endswith(".rar") or p.endswith(".7z"):
-                self.zipHash=GeneHash(p).fileList.fileList[0].hashMd5
+                self.zipHash=[GeneHash(p).fileList.fileList[0].hashMd5,GeneHash(p).fileList.fileList[0].nowPath]
             else:
                 hash=GeneHash()
                 hashList=hash.start(p)
@@ -50,20 +50,31 @@ class AZipFile:
             self.compare(fileList[0],fileList[i])
         #提取解压文件的哈希值    
         for i in fileList[0]:
-            self.fileList.append(i.hashMd5)    
+            self.fileList.append([i.hashMd5,i.nowPath])    
     #判别两个文件夹中的文件是否完全一致            
     def compare(self,a:FileList,b:FileList):
         for i in a:
             hasSame=False
             for j in b:
-                if i==j:
+                if i.hashMd5==j.hashMd5:
+                    print("found")
                     hasSame=True
+                    b.deleteByHash(j.hashMd5)
+                    a.deleteByHash(j.hashMd5)
                     break
             if hasSame==False:
                 self.error=True
                 break
+        if len(a.fileList)!=0 or len(b.fileList)!=0:
+            self.error=True
         return self.error
-            
+    def hasHash(self,hash):
+        if self.zipHash==hash:
+            return True
+        for i in self.fileList:
+            if i[0]==hash:
+                return True
+        return False     
     def __str__(self) -> str:
         string=""
         if self.error:
@@ -71,7 +82,7 @@ class AZipFile:
         else:
             string=string+self.zipHash+"\n"
             for i in self.fileList:
-                string=string+i+"\n"
+                string=string+i[0]+"::"+i[1]+"\n"
         return string
     
 if __name__=="__main__":

@@ -52,7 +52,6 @@ class init:
                 t=FileTime()
                 f.write(t)
                 f.write("\n")
-                f.close()
             print(os.path.relpath(destPath)+" inited")
     
     def callInit(self):

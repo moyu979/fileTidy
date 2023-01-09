@@ -62,7 +62,6 @@ class GeneHash:
                 af.append("changePath:\t"+file)
                 af.append("nowPath:\t"+file)
                 af.append("end\n")
-                fp.close()
             else:
                 with open(file,"rb") as fp:
                     data=fp.read()
@@ -72,7 +71,6 @@ class GeneHash:
                 af.append("changePath:\t"+file)
                 af.append("nowPath:\t"+file)
                 af.append("end\n")
-                fp.close()
             f=AFile(af)
             self.fileList.fileList.append(f)
             self.finished=self.finished+filesize

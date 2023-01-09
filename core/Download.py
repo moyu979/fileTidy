@@ -21,11 +21,12 @@ class afterDownload:
         #读入已经存在的
         downloadList=FileList(newPath)
         
-        sameFile=downloadList.combine(self.filelist.fileList)
+        sameFile=downloadList.combine(self.filelist)
         
         for i in sameFile:
             removeFile(i)
             
+        downloadList.sortBypath()
         downloadList.outPut(newPath)
         downloadList.outPut(timePath)
         

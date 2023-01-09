@@ -6,13 +6,14 @@ from AZipFile import *
 import Log
 
 class AfterTidy:
+    #改，改成以tidyfile为核心的
     def __init__(self,path=None) -> None:
         #temp files
         #list of AZipList
         self.zipList=[]
         self.unzipList=[]
         self.tidyList=FileList()
-        
+        self.deleteList=FileList()
         self.downloadList=FileList()
         self.final=FileList()
         
@@ -48,84 +49,135 @@ class AfterTidy:
             if not k.error:
                 self.zipList.append(k)      
             else:
-                Log.writeLog(k.path+" has error")      
+                Log.writeLog(k.path+" has error") 
+    def getDeleteList(self,path):
+        deletePath=os.path.join(path,"delete")
+        h=GeneHash()     
+        self.zipList=h.start(deletePath)
     def start(self,path):
         #计算整理好的文件的哈希
         self.getTidyList(path)
         self.getUnzipList(path)
         self.getZipList(path)
-        
-
-        #将对应项调到final里
-        middleList=[]
-        #处理解压文件夹
-        i:AZipFile        
-        for i in self.unzipList:
-            
-            afile=AFile()
-            afile.hashMd5=i.zipHash
-            afile.removed=True
-        
-            unzipfile=i.fileList
-            for j in unzipfile:
-                
-                bfile=AFile()
-                bfile.hashMd5=j
-                bfile.addUnzip(afile.hashMd5)
-                
-                middleList.append(bfile)
-            
-            middleList.append(afile)
-        
-        #处理压缩文件夹
-        i:AZipFile        
-        for i in self.zipList:
-            afile=AFile()
-            afile.hashMd5=i.zipHash
-            
-            unzipfile=i.fileList
-            for j in unzipfile:
-                
-                bfile=AFile()
-                bfile.hashMd5=j
-                bfile.removed=True
-                afile.addZip(bfile.hashMd5)
-                middleList.append(bfile)
-            
-            middleList.append(afile)
-            
-        i:AFile
-            
-        #压缩和解压文件预取预设置        
-        for i in middleList:
-            file=self.downloadList.findHash(i.hashMd5)
-            if file:
-                #存在的话，提取，写入现在的信息，从download列表删除，加入final
-                self.downloadList.deleteByHash(file.hashMd5)
-                file.combinewith(i)
-                self.final.addAFile(file)
-            else:
-                print(i.hashMd5)
-                #不存在的话直接加入
-                self.final.addAFile(i)
-                
-        #处理tidy文件夹
+        self.getDeleteList(path)
         i:AFile
         for i in self.tidyList:
-            downLoadFile=self.downloadList.findHash(i.hashMd5)
-            finalFile=self.final.findHash(i.hashMd5)
-            if downLoadFile:
-                #如果这个file存在于原始数据中（不是解压而来的或压缩而来的）
-                downLoadFile.addChangePath(i.changePath[0])
-                self.downloadList.deleteByHash(i.hashMd5)
-                self.final.addAFile(downLoadFile)
-            elif finalFile:
-                #如果i已经被放入finalFile(压缩过的什么的)
-                finalFile.addChangePath(i.changePath[0])
+            dfile=self.downloadList.findHash(i.hashMd5)
+            zfile=[]
+            ufile=[]
+            j:AZipFile
+            for j in self.zipList:
+                if j.hasHash(i.hashMd5):
+                    zfile.append(j)
+            for j in self.unzipList:
+                if j.hasHash(i.hashMd5):
+                    ufile.append(j)
+            #原来就有,否则新建            
+            if dfile:
+                pass
+                #用visited字段做确认来源标记
+                dfile.visited=True
             else:
-                #新文件
-                l="not find "+i.hashMd5+" "+i.nowPath
-                Log.writeLog(l)
+                dfile=AFile()
+                dfile.hashMd5=i.hashMd5
+                
+        
+            j:AZipFile
+            for j in zfile:
+                if j.zipHash==i.hashMd5:
+                    for k in j.fileList:
+                        dfile.zipFrom.add(k)
+            
+            for j in ufile:
+                #不是压缩得到的，自然是解压来的
+                if j.zipHash!=i.hashMd5:
+                    dfile.unzipFrom.add(j.zipHash)
+                    
+            for s in i.originPath:
+                if os.path.exists(s):
+                    dfile.changePath.append(s)
+                
+            self.final.addAFile(dfile)
+        i:AFile    
+        j:AFile
+        for i in self.deleteList:
+            for j in self.downloadList:
+                j.removed=True
+                
+        
+                
+        
+                    
+        # #将对应项调到final里
+        # middleList=[]
+        # #处理解压文件夹
+        # i:AZipFile        
+        # for i in self.unzipList:
+            
+        #     afile=AFile()
+        #     afile.hashMd5=i.zipHash
+        #     afile.removed=True
+        
+        #     unzipfile=i.fileList
+        #     for j in unzipfile:
+                
+        #         bfile=AFile()
+        #         bfile.hashMd5=j
+        #         bfile.addUnzip(afile.hashMd5)
+                
+        #         middleList.append(bfile)
+            
+        #     middleList.append(afile)
+        
+        # #处理压缩文件夹
+        # i:AZipFile        
+        # for i in self.zipList:
+        #     afile=AFile()
+        #     afile.hashMd5=i.zipHash
+            
+        #     unzipfile=i.fileList
+        #     for j in unzipfile:
+                
+        #         bfile=AFile()
+        #         bfile.hashMd5=j
+        #         bfile.removed=True
+        #         afile.addZip(bfile.hashMd5)
+        #         middleList.append(bfile)
+            
+        #     middleList.append(afile)
+            
+        # i:AFile
+            
+        # #压缩和解压文件预取预设置        
+        # for i in middleList:
+        #     file=self.downloadList.findHash(i.hashMd5)
+        #     if file:
+        #         #存在的话，提取，写入现在的信息，从download列表删除，加入final
+        #         self.downloadList.deleteByHash(file.hashMd5)
+        #         file.combinewith(i)
+        #         self.final.addAFile(file)
+        #     else:
+        #         print(i.hashMd5)
+        #         #不存在的话直接加入
+        #         self.final.addAFile(i)
+                
+        # #处理tidy文件夹
+        # i:AFile
+        # for i in self.tidyList:
+        #     downLoadFile=self.downloadList.findHash(i.hashMd5)
+        #     finalFile=self.final.findHash(i.hashMd5)
+        #     if downLoadFile:
+        #         #如果这个file存在于原始数据中（不是解压而来的或压缩而来的）
+        #         downLoadFile.addChangePath(i.changePath[0])
+        #         self.downloadList.deleteByHash(i.hashMd5)
+        #         self.final.addAFile(downLoadFile)
+        #     elif finalFile:
+        #         #如果i已经被放入finalFile(压缩过的什么的)
+        #         finalFile.addChangePath(i.changePath[0])
+        #     else:
+        #         #新文件
+        #         l="not find "+i.hashMd5+" "+i.nowPath
+        #         Log.writeLog(l)
 
 
         dataname=FileTime()

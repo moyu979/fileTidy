@@ -39,6 +39,7 @@ class FileList:
                 af.append(aline)
             #读新行
             aline=inFile.readline()
+        inFile.close()
     #排序        
     def sortBypath(self):
         self.fileList.sort(key=return_now_path)
@@ -60,7 +61,9 @@ class FileList:
                 return False
             #两个文件相同 直接combine
             elif compareFile(sameFile.nowPath,a.nowPath):
-                sameFile.combinewith(a)
+                sameFile.originPath=sameFile.originPath|a.originPath
+                sameFile.zipFrom=sameFile.zipFrom|a.zipFrom
+                sameFile.unzipFrom=sameFile.unzipFrom|a.unzipFrom
                 return True
             #找到了相同的哈希，但文件内容不同
             #或者旧文件被删除了也会产生此错误
@@ -77,6 +80,7 @@ class FileList:
     ##将一个FileList添加到现有的FileList中，如果遇到相同的，不合并，而是将新旧两个文件进记录到findsame列表下，等待进一步处理
     def combine(self,files):
         findsame=[]
+        files.sortBypath()
         for i in files:
             if self.addAFile(i):
                 findsame.append(i)
@@ -88,7 +92,21 @@ class FileList:
         for i in self.fileList:
             if i.hashMd5==Hash:
                 self.fileList.remove(i)
+                self.itercount=self.itercount-1
                 
+    def deleteByNowPath(self,path):
+        i:AFile
+        for i in self.fileList:
+            if i.nowPath==path:
+                self.fileList.remove(i)
+                self.itercount=self.itercount-1            
+    #改
+    def removeAFile(self,Hash):
+        i:AFile
+        for i in self.fileList:
+            if i.hashMd5==Hash:
+                i.removed=True
+                            
     #查
     def findHash(self,hash)->AFile:
         for i in self.fileList:
@@ -109,13 +127,17 @@ class FileList:
     def pOutPut(self):
         for i in self.fileList:
             print(i)            
-    
+    #重置遍历标志：
+    def resetVisit(self):
+        i:AFile
+        for i in self.fileList:
+            i.visited=False
         #重写迭代器
     def __iter__(self):
         self.itercount=0
         return self
     def __next__(self):
-        if self.itercount==len(self.fileList):
+        if self.itercount>=len(self.fileList):
             raise StopIteration
         else:
             self.itercount=self.itercount+1
