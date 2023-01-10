@@ -19,7 +19,15 @@ class GeneHash:
         self.geneHash(file)
         print("\n")
         return self.fileList
-    
+    #传入列表，计算列表的哈希
+    def startFileList(self,lists):
+        for i in lists:
+            self.totalSize=self.totalSize+os.path.getsize(i)
+        print("total size: "+self.humanSize(self.totalSize))
+        for i in lists:
+            self.geneHash(i)
+            print("\r nowfinish %f" % (self.finished/self.totalSize),flush=True,end="")
+            
     def humanSize(self,count:float)->str:
         size=["B","K","M","G","T"]
         sizelable=0

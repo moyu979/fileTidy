@@ -113,6 +113,12 @@ class FileList:
             if i.hashMd5==hash:
                 return i
         return None
+
+    def findPath(self,path)->AFile:
+        for i in self.fileList:
+            if i.nowPath==path:
+                return i
+        return None
     
     #输出
     def outPut(self,path):
