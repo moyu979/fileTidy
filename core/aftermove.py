@@ -30,7 +30,18 @@ def aftermove(finalPath):
         file.changePath.append(i.changePath[0])
         #加到FinalList
         finalList.addAFile(file)
-        
+    
+    file=FileTime()+".txt"
+    final1="./fileLogs/final/new.txt"
+    final2="./fileLogs/final/"+file
+    tidy1="./fileLogs/tidy/new.txt"
+    tidy2="./fileLogs/tidy/"+file
+    
+    finalList.outPut(final1)
+    finalList.outPut(final2)
+    tidyList.outPut(tidy1)
+    tidyList.outPut(tidy2)
+    
 if __name__=="__main__":
     path=input("请输入final路径")
     aftermove(path)
