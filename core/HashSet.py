@@ -24,4 +24,8 @@ class HashSet:
         else:
             self.itercount=self.itercount+1
             return self.set[self.itercount-1]        
-        
+    def __str__(self) -> str:
+        string=""
+        for i in self.set:
+            string=string+" "+i[0]+" "+i[1]
+        return string
