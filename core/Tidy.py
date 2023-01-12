@@ -71,6 +71,7 @@ class AfterTidy:
             for j in self.zipList:
                 if j.hasHash(i.hashMd5):
                     zfile.append(j)
+                print(len(zfile))
             for j in self.unzipList:
                 if j.hasHash(i.hashMd5):
                     ufile.append(j)
@@ -84,16 +85,13 @@ class AfterTidy:
                 dfile=AFile()
                 dfile.hashMd5=i.hashMd5
                 
-        
+
             
             for j in zfile:
                 if j.zipHash==i.hashMd5:
                     for k in j.fileList:
                         dfile.zipFrom.add(k)
                         dfile.visited=True
-            print(len(zfile))            
-            for k in zfile:
-                print(k)
             for j in ufile:
                 #不是压缩文件，自然是解压来的
                 if j.zipHash!=i.hashMd5:
@@ -108,21 +106,78 @@ class AfterTidy:
             if not dfile.visited:    
                 Log.writeLog("[more file]\tfind no source File "+dfile.hashMd5+dfile.changePath[0])
             self.final.addAFile(dfile)
-            #查找解压文件夹有没有丢件
-            j:AZipFile
-            for j in zfile:
-                #k:[hash,path]
-                for k in j.fileList:
-                    if (not self.final.findHash(k[0])) and (not self.deleteList.findHash(k[0])):
-                        Log.writeLog("[loss file]\t "+k[0]+" "+k[1]) 
+            
+        #查找解压文件夹有没有丢件，并从download中删除原文件
+        ##解压文件丢件
+        j:AZipFile
+        for j in self.unzipList:
+            #查找存在件
+            k=j.zipHash
+            d=self.downloadList.findHash(k[0])
+            if d:
+                d.removed=True
+                self.final.addAFile(d)
+                self.downloadList.deleteByHash(d.hashMd5)
+            #查找丢件
+            #k:[hash,path]
+            for k in j.fileList:
+                if (not self.final.findHash(k[0])) and (not self.deleteList.findHash(k[0])):
+                    Log.writeLog("[loss file]\t "+k[0]+" "+k[1]) 
+                elif self.deleteList.findHash(k[0]):
+                    f=AFile()
+                    f.hashMd5=k[0]
+                    f.unzipFrom.add(j.zipHash)
+                    f.removed=True
+                    self.final.addAFile(f)
+                    self.deleteList.deleteByHash(f.hashMd5)
+            
+        ##压缩后文件丢件
+        for j in zfile:
+            k=j.zipHash
+            if (not self.final.findHash(k[0])) and (not self.deleteList.findHash(k[0])):
+                Log.writeLog("[loss file]\t "+k[0]+" "+k[1]) 
+            elif self.deleteList.findHash(k[0]):
+                f=AFile()
+                f.hashMd5=k[0]
+                for l in j.fileList:
+                    f.zipFrom.add(l)
+                f.removed=True
+                self.final.addAFile(l)
+                self.deleteList.deleteByHash(f.hashMd5)
+            #查找存在件
+            for k in j.fileList:
+                d=self.downloadList.findHash(j[0])
+                if d:
+                    d.removed=True
+                    self.final.addAFile(d)
+                    self.downloadList.deleteByHash(d.hashMd5)
+                    
+        for j in self.zipList:
+            dest=self.final.findHash(j.zipHash[0])
+            for k in j.fileList:
+                dest.zipFrom.add(k)
+                
+        for j in self.unzipList:
+            for k in j.fileList:
+                dest=self.final.findHash(k[0])
+                dest.unzipFrom.add(j.zipHash)
+                            
+                    
+                
         i:AFile    
         j:AFile
         for i in self.deleteList:
             de=copy.deepcopy(self.downloadList.findHash(i.hashMd5))
-            de.removed=True
-            self.final.addAFile(de)
+            #如果有de的话，否则就是移动过去（还在）或是解压来的（上一步）
+            if de:
+                de.removed=True
+                self.final.addAFile(de)
+                self.downloadList.deleteByHash(de.hashMd5)
+            
+                    
+                    
                 
-        
+                
         dataname=FileTime()
     
         dir="./fileLogs"
