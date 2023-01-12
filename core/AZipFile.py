@@ -80,7 +80,7 @@ class AZipFile:
         if self.error:
             string="there is an error in "+self.path+" please check"
         else:
-            string=string+self.zipHash+"\n"
+            string=string+self.zipHash[0]+"::"+self.zipHash[1]+"\n"
             for i in self.fileList:
                 string=string+i[0]+"::"+i[1]+"\n"
         return string

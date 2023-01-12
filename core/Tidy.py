@@ -4,7 +4,7 @@ from AFile import *
 from FileTime import *
 from AZipFile import *
 import Log
-
+import copy
 class AfterTidy:
     #改，改成以tidyfile为核心的
     def __init__(self,path=None) -> None:
@@ -47,7 +47,6 @@ class AfterTidy:
         for i in zips:
             dir=os.path.join(zipPath,i)
             k=AZipFile(dir)
-            print(type(k).__name__)
             if not k.error:
                 self.zipList.append(k)      
             else:
@@ -65,7 +64,7 @@ class AfterTidy:
         
         i:AFile
         for i in self.tidyList:
-            dfile=self.downloadList.findHash(i.hashMd5)
+            dfile=copy.deepcopy(self.downloadList.findHash(i.hashMd5))
             zfile=[]
             ufile=[]
             j:AZipFile
@@ -80,6 +79,7 @@ class AfterTidy:
                 pass
                 #用visited字段做确认来源标记
                 dfile.visited=True
+                self.downloadList.deleteByHash(dfile.hashMd5)
             else:
                 dfile=AFile()
                 dfile.hashMd5=i.hashMd5
@@ -91,27 +91,34 @@ class AfterTidy:
                     for k in j.fileList:
                         dfile.zipFrom.add(k)
                         dfile.visited=True
-            
+            print(len(zfile))            
+            for k in zfile:
+                print(k)
             for j in ufile:
-                #不是压缩得到的，自然是解压来的
+                #不是压缩文件，自然是解压来的
                 if j.zipHash!=i.hashMd5:
-                    print(type(j).__name__)
                     dfile.unzipFrom.add(j.zipHash)
                     dfile.visited=True
                     
+            #tidyList的orig就是现在的位置        
             for s in i.originPath:
                 if os.path.exists(s):
                     dfile.changePath.append(s)
                     
             if not dfile.visited:    
-                Log.writeLog("find no source File "+dfile.hashMd5)
+                Log.writeLog("[more file]\tfind no source File "+dfile.hashMd5+dfile.changePath[0])
             self.final.addAFile(dfile)
-
-                
+            #查找解压文件夹有没有丢件
+            j:AZipFile
+            for j in zfile:
+                #k:[hash,path]
+                for k in j.fileList:
+                    if (not self.final.findHash(k[0])) and (not self.deleteList.findHash(k[0])):
+                        Log.writeLog("[loss file]\t "+k[0]+" "+k[1]) 
         i:AFile    
         j:AFile
         for i in self.deleteList:
-            de=self.downloadList.findHash(i.hashMd5)
+            de=copy.deepcopy(self.downloadList.findHash(i.hashMd5))
             de.removed=True
             self.final.addAFile(de)
                 
