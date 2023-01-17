@@ -69,7 +69,7 @@ class AZipFile:
             self.error=True
         return self.error
     def hasHash(self,hash):
-        if self.zipHash==hash:
+        if self.zipHash[0]==hash:
             return True
         for i in self.fileList:
             if i[0]==hash:

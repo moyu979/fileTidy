@@ -47,5 +47,10 @@ def removeEmpty(path):
         list=os.listdir(path)
         if len(list)==0:
             os.rmdir(path)
+            with open ("./removeempty/new.txt","a") as f:
+                Log.writeLog("remove "+path)
             return
         
+if __name__ == "__main__":
+    p=input("请输入路径")
+    removeEmpty(p)
