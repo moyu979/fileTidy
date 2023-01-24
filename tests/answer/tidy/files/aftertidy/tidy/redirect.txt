@@ -1,6 +1,0 @@
-C:\Users\30278\Documents\code\filetidyup\tests\t\afterdownload\1\
-
-hash:	6512bd43d9caa6e02c990b0a82652dca
-name:	11.txt
-hash:	c20ad4d76fe97759aa27a0c99bff6710
-name:	12.txt

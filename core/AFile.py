@@ -151,6 +151,5 @@ class AFile:
         string=string+"end\n"
         return string
 
-
 if __name__ == "__main__":
     print ("这是一个基础数据单元，不能作为运行单元")

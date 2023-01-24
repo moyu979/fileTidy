@@ -20,7 +20,7 @@ def removeFile(file:AFile):
     fp.write("name:\t"+file.nowName+"\n")
     fp.close()
     os.remove(filePath)
-    Log.writeLog("remove "+filePath+"with hash "+file.hashMd5)
+    Log.writeLog("[remove file]remove "+filePath+"with hash "+file.hashMd5)
     
 def removeFiles(file2):
     for i in file2:
@@ -47,8 +47,7 @@ def removeEmpty(path):
         list=os.listdir(path)
         if len(list)==0:
             os.rmdir(path)
-            with open ("./removeempty/new.txt","a") as f:
-                Log.writeLog("remove "+path)
+            Log.writeLog("[remove empty]remove "+path)
             return
         
 if __name__ == "__main__":

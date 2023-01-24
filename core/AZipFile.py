@@ -30,7 +30,7 @@ class AZipFile:
         #数据错误处理
         if not zipcount==1:
             string=""
-            string=string+self.path+" has more than one zip file, which is "+str(zipcount)
+            string=string+self.path+"[more zip file] has more than one zip file, which is "+str(zipcount)
             Log.printLog(string)
             self.error=True
             return
@@ -53,21 +53,15 @@ class AZipFile:
             self.fileList.append([i.hashMd5,i.nowPath])    
     #判别两个文件夹中的文件是否完全一致            
     def compare(self,a:FileList,b:FileList):
-        for i in a:
-            hasSame=False
-            for j in b:
-                if i.hashMd5==j.hashMd5:
-                    print("found")
-                    hasSame=True
-                    b.deleteByHash(j.hashMd5)
-                    a.deleteByHash(j.hashMd5)
-                    break
-            if hasSame==False:
+        a.sortByHash()
+        b.sortByHash()
+        for i in range(0,len(a.fileList)):
+            if a.fileList[i].hashMd5!=b.fileList[i].hashMd5:
+                string="there is an error in \""+self.path+"\" please check"
+                Log.writeLog("[zip or unzip error]"+string)
                 self.error=True
                 break
-        if len(a.fileList)!=0 or len(b.fileList)!=0:
-            self.error=True
-        return self.error
+
     def hasHash(self,hash):
         if self.zipHash[0]==hash:
             return True
@@ -78,7 +72,7 @@ class AZipFile:
     def __str__(self) -> str:
         string=""
         if self.error:
-            string="there is an error in "+self.path+" please check"
+            string="there is an error in "+self.path+" please check\n"
         else:
             string=string+self.zipHash[0]+"::"+self.zipHash[1]+"\n"
             for i in self.fileList:

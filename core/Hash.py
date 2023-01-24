@@ -47,6 +47,8 @@ class GeneHash:
         return count
     
     def geneHash(self,file):
+        if self.totalSize==0:
+            return FileList()
         print("\r nowfinish %f" % (self.finished/self.totalSize),flush=True,end="")
         af=[]
         if os.path.isdir(file):

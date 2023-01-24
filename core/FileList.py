@@ -69,7 +69,7 @@ class FileList:
             #或者旧文件被删除了也会产生此错误
             else:
                 log=Log()
-                string="find files with same hash but not same \n"+"first is:"+sameFile.nowPath
+                string="[hash conflication]find files with same hash but not same \n"+"first is:"+sameFile.nowPath
                 string=string+"\n"+"second is:"+a.nowPath+"\n"
                 Log.printAndLog(string)
                 return False
@@ -122,6 +122,7 @@ class FileList:
     
     #输出
     def outPut(self,path):
+        #self.sortBypath()
         count=1
         outFile=open(path,'w',encoding="utf-8")
         for i in self.fileList:

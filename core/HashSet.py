@@ -3,13 +3,14 @@ class HashSet:
     def __init__(self):
         self.set=[]
         self.itercount=0
-        self.itercount=0
     def add(self,elem):
         if len(self.set)!=0:
             for i in self.set:
                 if i==elem:
                     return
         self.set.append(elem)
+    def len(self):
+        return len(self.set)
     def __or__(self, __t):
         for i in __t:
             self.add(i)

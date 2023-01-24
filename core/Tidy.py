@@ -39,7 +39,7 @@ class AfterTidy:
             if not k.error:
                 self.unzipList.append(k)
             else:
-                Log.writeLog(k.path+" has error")
+                Log.writeLog("[unzip error]"+k.path+" has error")
 
     def getZipList(self,path):
         zipPath=os.path.join(path,"zip")
@@ -50,7 +50,7 @@ class AfterTidy:
             if not k.error:
                 self.zipList.append(k)      
             else:
-                Log.writeLog(k.path+" has error") 
+                Log.writeLog("[zip error]"+k.path+" has error") 
     def getDeleteList(self,path):
         deletePath=os.path.join(path,"delete")
         h=GeneHash()     
@@ -77,7 +77,6 @@ class AfterTidy:
                     ufile.append(j)
             #原来就有,否则新建            
             if dfile:
-                pass
                 #用visited字段做确认来源标记
                 dfile.visited=True
                 self.downloadList.deleteByHash(dfile.hashMd5)
@@ -85,10 +84,9 @@ class AfterTidy:
                 dfile=AFile()
                 dfile.hashMd5=i.hashMd5
                 
-
-            
+            #压缩而来和解压而来的标记(zipfrom unzipfrom)    
             for j in zfile:
-                if j.zipHash==i.hashMd5:
+                if j.zipHash==dfile.hashMd5:
                     for k in j.fileList:
                         dfile.zipFrom.add(k)
                         dfile.visited=True
@@ -105,7 +103,9 @@ class AfterTidy:
                     
             if not dfile.visited:    
                 Log.writeLog("[more file]\tfind no source File "+dfile.hashMd5+dfile.changePath[0])
+                
             self.final.addAFile(dfile)
+        #————————————至此tidy文件夹内有的文件全部应当找到了对应项————————————————
             
         #查找解压文件夹有没有丢件，并从download中删除原文件
         ##解压文件丢件
@@ -118,6 +118,7 @@ class AfterTidy:
                 d.removed=True
                 self.final.addAFile(d)
                 self.downloadList.deleteByHash(d.hashMd5)
+                
             #查找丢件
             #k:[hash,path]
             for k in j.fileList:
@@ -132,7 +133,7 @@ class AfterTidy:
                     self.deleteList.deleteByHash(f.hashMd5)
             
         ##压缩后文件丢件
-        for j in zfile:
+        for j in self.zipList:
             k=j.zipHash
             if (not self.final.findHash(k[0])) and (not self.deleteList.findHash(k[0])):
                 Log.writeLog("[loss file]\t "+k[0]+" "+k[1]) 
@@ -141,14 +142,13 @@ class AfterTidy:
                 f.hashMd5=k[0]
                 for l in j.fileList:
                     f.zipFrom.add(l)
-                f.removed=True
-                self.final.addAFile(l)
+                self.final.addAFile(f)
                 self.deleteList.deleteByHash(f.hashMd5)
+                
             #查找存在件
             for k in j.fileList:
-                d=self.downloadList.findHash(j[0])
+                d=self.downloadList.findHash(k[0])
                 if d:
-                    d.removed=True
                     self.final.addAFile(d)
                     self.downloadList.deleteByHash(d.hashMd5)
                     
@@ -156,8 +156,10 @@ class AfterTidy:
             dest=self.final.findHash(j.zipHash[0])
             for k in j.fileList:
                 dest.zipFrom.add(k)
+                self.final.findHash(k[0]).removed=True
                 
         for j in self.unzipList:
+            self.final.findHash(j.zipHash[0]).removed=True
             for k in j.fileList:
                 dest=self.final.findHash(k[0])
                 dest.unzipFrom.add(j.zipHash)
@@ -173,11 +175,17 @@ class AfterTidy:
                 de.removed=True
                 self.final.addAFile(de)
                 self.downloadList.deleteByHash(de.hashMd5)
-            
-                    
-                    
-                
-                
+        
+        for i in self.final:
+            i.autoupdate()
+             
+        # for i in self.final:
+        #     p=i.nowPath
+        #     if os.path.exists(p):
+        #         i.removed=False
+        #     else:
+        #         i.removed=True
+                        
         dataname=FileTime()
     
         dir="./fileLogs"
