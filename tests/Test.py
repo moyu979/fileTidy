@@ -7,7 +7,7 @@ import shutil
 sys.path.append("..\\core")
 import AFile
 import Init
-import Log
+import log
 import Download
 import Tidy
 import AZipFile
@@ -45,10 +45,10 @@ class test(unittest.TestCase):
     def test_log(self):
         log1="aaa"
         log2=["bbb","ccc"]
-        Log.writeLog(log1)
-        Log.writeLogs(log2)
-        Log.printAndLog(log1)
-        Log.printAndLogs(log2)
+        log.writeLog(log1)
+        log.writeLogs(log2)
+        log.printAndLog(log1)
+        log.printAndLogs(log2)
         
         with open("./fileLogs/logs.txt") as result:
             res=result.readlines()
@@ -165,10 +165,6 @@ class test(unittest.TestCase):
             l=i.replace(abspath,"")
             k.append(l)
         self.assertAlmostEquals(k,a)
-    
-    
-        
-                
             
 if __name__ == "__main__":
     unittest.main() 
