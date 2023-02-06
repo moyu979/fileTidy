@@ -1,6 +1,6 @@
 import os
 from Hash import *
-import Log
+import log
 
 
 #输入一个存有压缩文件-解压文件夹关系对的目录，生成压缩文件哈希和解压文件哈希关系
@@ -31,7 +31,7 @@ class AZipFile:
         if not zipcount==1:
             string=""
             string=string+self.path+"[more zip file] has more than one zip file, which is "+str(zipcount)
-            Log.printLog(string)
+            log.writeLog(string)
             self.error=True
             return
         
@@ -43,7 +43,7 @@ class AZipFile:
                 self.zipHash=[GeneHash(p).fileList.fileList[0].hashMd5,GeneHash(p).fileList.fileList[0].nowPath]
             else:
                 hash=GeneHash()
-                hashList=hash.start(p)
+                hashList=hash.run(p)
                 fileList.append(hashList)
         #对比多次解压的内容是否相同    
         for i in range(1,dircount):
@@ -58,7 +58,7 @@ class AZipFile:
         for i in range(0,len(a.fileList)):
             if a.fileList[i].hashMd5!=b.fileList[i].hashMd5:
                 string="there is an error in \""+self.path+"\" please check"
-                Log.writeLog("[zip or unzip error]"+string)
+                log.writeLog("[zip or unzip error]"+string)
                 self.error=True
                 break
 

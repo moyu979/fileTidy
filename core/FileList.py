@@ -1,7 +1,7 @@
 from AFile import *
-from CompareFile import *
+from compareFile import *
 from RemoveFile import *
-import Log
+import log
 
 #排序用函数
 def return_now_path(elem:AFile):
@@ -52,7 +52,7 @@ class FileList:
         
     #增
     ##增加一个文件(去重),有重返回True
-    def addAFile(self,a:AFile): 
+    def addAFile(self,a:AFile,combineOri=True): 
         sameFile=self.findHash(a.hashMd5)
         #如果找到了不相同的重复文件
         if sameFile:
@@ -61,28 +61,28 @@ class FileList:
                 return False
             #两个文件相同 直接combine
             elif compareFile(sameFile.nowPath,a.nowPath):
-                sameFile.originPath=sameFile.originPath|a.originPath
+                if combineOri:
+                    sameFile.originPath=sameFile.originPath|a.originPath
                 sameFile.zipFrom=sameFile.zipFrom|a.zipFrom
                 sameFile.unzipFrom=sameFile.unzipFrom|a.unzipFrom
                 return True
             #找到了相同的哈希，但文件内容不同
             #或者旧文件被删除了也会产生此错误
             else:
-                log=Log()
                 string="[hash conflication]find files with same hash but not same \n"+"first is:"+sameFile.nowPath
                 string=string+"\n"+"second is:"+a.nowPath+"\n"
-                Log.printAndLog(string)
+                log.printAndLog(string)
                 return False
         else:
             self.fileList.append(a)
             return False
         
     ##将一个FileList添加到现有的FileList中，如果遇到相同的，不合并，而是将新旧两个文件进记录到findsame列表下，等待进一步处理
-    def combine(self,files):
+    def combine(self,files,combineOri=True):
         findsame=[]
         files.sortBypath()
         for i in files:
-            if self.addAFile(i):
+            if self.addAFile(i,combineOri):
                 findsame.append(i)
         return findsame
     

@@ -165,6 +165,6 @@ class test(unittest.TestCase):
             l=i.replace(abspath,"")
             k.append(l)
         self.assertAlmostEquals(k,a)
-            
+    #删除文件导致的文件丢失没考虑，随做随考虑把        
 if __name__ == "__main__":
     unittest.main() 

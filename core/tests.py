@@ -1,6 +1,11 @@
-s=[111,111,111]
-k=""
-for i in s:
-    k=k+str(i)+"::"
-k=k[:-1]
-print(k)
+import os
+
+nowFinalPath=[]
+path=input()
+
+for curDir, dirs, files in os.walk(path):
+    for file in files:
+        if file!="redirect.txt":
+            p=os.path.join(curDir, file)
+            nowFinalPath.append(os.path.abspath(p))
+            print(p)

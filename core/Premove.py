@@ -1,8 +1,9 @@
 from FileList import *
 from AFile import *
 from RemoveFile import *
-from CompareFile import *
+from compareFile import *
 from FileTime import *
+import log
 #只检查在tidy文件夹里的东西和final归档的是否相同，如果相同，直接搞
 def premove():
     finalList=FileList("./fileLogs/final/new.txt")
@@ -20,7 +21,10 @@ def premove():
                     same.zipFrom.add(j)
                 for j in i.unzipFrom:
                     same.unzipFrom.add(j)
-    
+                tidyList.deleteByHash(i.hashMd5)
+            else:
+                log.writeLog("[hash conflication] "+i.nowPath)
+                
     file=FileTime()+".txt"
     final1="./fileLogs/final/new.txt"
     final2="./fileLogs/final/"+file

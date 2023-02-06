@@ -10,15 +10,16 @@ class GeneHash:
         self.totalSize:float=0
         self.finished:float=0
         if path:
-            self.start(path)
+            self.run(path)
             
-    def start(self,file)->FileList:
+    def run(self,file)->FileList:
         file=os.path.abspath(file)
         self.totalSize=self.takeSizes(file)
         print("total size: "+self.humanSize(self.totalSize))
         self.geneHash(file)
         print("\n")
         return self.fileList
+    
     #传入列表，计算列表的哈希
     def startFileList(self,lists):
         for i in lists:
@@ -27,6 +28,7 @@ class GeneHash:
         for i in lists:
             self.geneHash(i)
             print("\r nowfinish %f" % (self.finished/self.totalSize),flush=True,end="")
+        return self.fileList
             
     def humanSize(self,count:float)->str:
         size=["B","K","M","G","T"]
@@ -86,14 +88,31 @@ class GeneHash:
             f=AFile(af)
             self.fileList.fileList.append(f)
             self.finished=self.finished+filesize
-    
+def getAHash(path):
+    if os.path.isdir(path):
+        return None
+    else:
+        md5=hashlib.md5()
+        with open(path,"rb") as fp:
+            while True:
+                data=fp.read(1024**3)
+                if not data:
+                    break
+                md5.update(data)
+        file_md5=md5.hexdigest()
+        return file_md5
+        
+        
 if __name__ == "__main__":
-    print("这个模块不会产生可存储输出，只会将结果输出到控制台，是否继续？")
-    yon=input()
-    if yon.startswith("y"):
-        print("好吧，请输入路径")
-        path=input()
-        path=os.path.abspath(path)
-        c=GeneHash()
-        list=c.start(path)
-        list.pOutPut()
+    # print("这个模块不会产生可存储输出，只会将结果输出到控制台，是否继续？")
+    # yon=input()
+    # if yon.startswith("y"):
+    #     print("好吧，请输入路径")
+    #     path=input()
+    #     path=os.path.abspath(path)
+    #     c=GeneHash()
+    #     list=c.start(path)
+    #     list.pOutPut()
+    path=input("请输入路径")
+    m=getAHash(path)
+    print(m)

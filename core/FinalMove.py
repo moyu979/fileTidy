@@ -1,7 +1,7 @@
 import os
 from FileList import *
 from Hash import *
-import Log
+import log
 #有一些问题，多Path移动没写
 def finalMove(path):
     notInList=[]
@@ -25,12 +25,12 @@ def finalMove(path):
             file.changePath.append(i.changePath[0])
             file.autoupdate()
         else:
-            Log.writeLog("[error] find not loged file "+i)
+            log.writeLog("[error] find not loged file "+i)
         
     
     for i in finalList:
         if not os.path.exists(i):
-            Log.writeLog("[error] find lost file "+i.hashMd5)
+            log.writeLog("[error] find lost file "+i.hashMd5)
         
 if __name__=="__main__":
     path=input("请输入final的文件夹")

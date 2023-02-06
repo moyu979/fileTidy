@@ -1,5 +1,5 @@
 import os.path
-from Log import *
+from log import *
 from HashSet import *
 #AFile 模块，作为基本单元而存在，在不同函数之间传递消息通常使用这个
 class AFile:
@@ -13,9 +13,6 @@ class AFile:
         ##当解压来的文件，unzip不为空
         ##压缩来的文件，zip不为空
         ##普通下载来的文件，originpath不为空
-        # self.originPath=set()
-        # self.unzipFrom=set()
-        # self.zipFrom=set()
         self.originPath=HashSet()
         self.unzipFrom=HashSet()
         self.zipFrom=HashSet()

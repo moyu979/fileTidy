@@ -10,9 +10,10 @@ class afterDownload:
             self.doAfterDownload(path)
             
     def doAfterDownload(self,path):
+        log.writeLog("Download:"+FileTime())
         #计算此次文件哈希值
         hash=GeneHash()
-        self.filelist=hash.start(path)
+        self.filelist=hash.run(path)
         
         motherPath="./fileLogs/download/"
         mpath=os.path.abspath(motherPath)
@@ -20,9 +21,9 @@ class afterDownload:
         timePath=os.path.join(mpath,FileTime()+".txt")
         #读入已经存在的
         downloadList=FileList(newPath)
-        
+        print("combining")
         sameFile=downloadList.combine(self.filelist)
-        
+        print("removing")
         removeFiles(sameFile)
             
         downloadList.sortBypath()

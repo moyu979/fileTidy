@@ -3,7 +3,7 @@ from Hash import *
 from AFile import *
 from FileTime import *
 from AZipFile import *
-import Log
+import log
 import copy
 class AfterTidy:
     #改，改成以tidyfile为核心的
@@ -24,13 +24,15 @@ class AfterTidy:
             self.start(path)
     
     def getTidyList(self,path):
+        print("get Tidy")
         tidyPath=os.path.join(path,"tidy")
-        tidyList=GeneHash().start(tidyPath) #生成整理后文件的文件列表
+        tidyList=GeneHash().run(tidyPath) #生成整理后文件的文件列表
         sameFile=self.tidyList.combine(tidyList) #获取相同文件表
         #删除文件
         removeFiles(sameFile)
     
     def getUnzipList(self,path):
+        print("get unzip")
         unzipPath=os.path.join(path,"unzip")
         unzips=os.listdir(unzipPath)
         for i in unzips:
@@ -39,9 +41,10 @@ class AfterTidy:
             if not k.error:
                 self.unzipList.append(k)
             else:
-                Log.writeLog("[unzip error]"+k.path+" has error")
+                log.writeLog("[unzip error]"+k.path+" has error")
 
     def getZipList(self,path):
+        print("get zip")
         zipPath=os.path.join(path,"zip")
         zips=os.listdir(zipPath)
         for i in zips:
@@ -50,12 +53,14 @@ class AfterTidy:
             if not k.error:
                 self.zipList.append(k)      
             else:
-                Log.writeLog("[zip error]"+k.path+" has error") 
+                log.writeLog("[zip error]"+k.path+" has error") 
     def getDeleteList(self,path):
+        print("get delete")
         deletePath=os.path.join(path,"delete")
         h=GeneHash()     
-        self.deleteList=h.start(deletePath)
+        self.deleteList=h.run(deletePath)
     def start(self,path):
+        log.writeLog("Tidy:"+FileTime())
         #计算整理好的文件的哈希
         self.getTidyList(path)
         self.getUnzipList(path)
@@ -102,7 +107,7 @@ class AfterTidy:
                     dfile.changePath.append(s)
                     
             if not dfile.visited:    
-                Log.writeLog("[more file]\tfind no source File "+dfile.hashMd5+dfile.changePath[0])
+                log.writeLog("[more file]\tfind no source File "+dfile.hashMd5+dfile.changePath[0])
                 
             self.final.addAFile(dfile)
         #————————————至此tidy文件夹内有的文件全部应当找到了对应项————————————————
@@ -123,7 +128,7 @@ class AfterTidy:
             #k:[hash,path]
             for k in j.fileList:
                 if (not self.final.findHash(k[0])) and (not self.deleteList.findHash(k[0])):
-                    Log.writeLog("[loss file]\t "+k[0]+" "+k[1]) 
+                    log.writeLog("[loss file]\t "+k[0]+" "+k[1]) 
                 elif self.deleteList.findHash(k[0]):
                     f=AFile()
                     f.hashMd5=k[0]
@@ -136,7 +141,7 @@ class AfterTidy:
         for j in self.zipList:
             k=j.zipHash
             if (not self.final.findHash(k[0])) and (not self.deleteList.findHash(k[0])):
-                Log.writeLog("[loss file]\t "+k[0]+" "+k[1]) 
+                log.writeLog("[loss file]\t "+k[0]+" "+k[1]) 
             elif self.deleteList.findHash(k[0]):
                 f=AFile()
                 f.hashMd5=k[0]
@@ -162,7 +167,10 @@ class AfterTidy:
             self.final.findHash(j.zipHash[0]).removed=True
             for k in j.fileList:
                 dest=self.final.findHash(k[0])
-                dest.unzipFrom.add(j.zipHash)
+                if dest:
+                    dest.unzipFrom.add(j.zipHash)
+                else:
+                    log.writeLog("[file lost] unzip "+k[0]+"::"+k[1])
                             
                     
                 
