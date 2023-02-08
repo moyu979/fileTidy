@@ -83,7 +83,6 @@ class AfterTidy:
         
         i:AFile
         for i in self.tidyFile:
-            
             zfile=[]
             ufile=[]
             j:AZipFile
@@ -125,99 +124,45 @@ class AfterTidy:
                 log.writeLog("[more file]\tfind no source File "+dfile.hashMd5+dfile.changePath[0])
                 
             self.tidyList.addAFile(dfile)
+            dfile.autoupdate()
         #————————————至此tidy文件夹内有的文件全部应当找到了对应项————————————————
-            
-        #查找解压文件夹有没有丢件，并从download中删除原文件
-        ##解压文件丢件
-        j:AZipFile
-        for j in self.unzipList:
-            #查找存在件
-            k=j.zipHash
-            d=self.downloadList.findHash(k[0])
-            if d:
-                d.removed=True
-                self.tidyList.addAFile(d)
-                self.downloadList.deleteByHash(d.hashMd5)
-                
-            #查找丢件
-            #k:[hash,path]
-            for k in j.fileList:
-                tL=self.tidyList.findHash(k[0])
-                delL=self.deleteList.findHash(k[0])
-                dowL=self.downloadList.findHash(k[0])
-                if tL and delL:
-                    tl.unzipFrom.add(j.zipHash)
-                if dl:
-                    if tl 
-                        
-                        
-                if (not self.final.findHash(k[0])) and (not ):
-                    log.writeLog("[loss file]\t "+k[0]+" "+k[1]) 
-                elif self.deleteList.findHash(k[0]):
-                    f=AFile()
-                    f.hashMd5=k[0]
-                    f.unzipFrom.add(j.zipHash)
-                    f.removed=True
-                    self.final.addAFile(f)
-                    self.deleteList.deleteByHash(f.hashMd5)
-            
-        ##压缩后文件丢件
-        for j in self.zipList:
-            k=j.zipHash
-            if (not self.final.findHash(k[0])) and (not self.deleteList.findHash(k[0])):
-                log.writeLog("[loss file]\t "+k[0]+" "+k[1]) 
-            elif self.deleteList.findHash(k[0]):
-                f=AFile()
-                f.hashMd5=k[0]
-                for l in j.fileList:
-                    f.zipFrom.add(l)
-                self.final.addAFile(f)
-                self.deleteList.deleteByHash(f.hashMd5)
-                
-            #查找存在件
-            for k in j.fileList:
-                d=self.downloadList.findHash(k[0])
-                if d:
-                    self.final.addAFile(d)
-                    self.downloadList.deleteByHash(d.hashMd5)
-                    
-        for j in self.zipList:
-            dest=self.final.findHash(j.zipHash[0])
-            for k in j.fileList:
-                dest.zipFrom.add(k)
-                self.final.findHash(k[0]).removed=True
-                
-        for j in self.unzipList:
-            self.final.findHash(j.zipHash[0]).removed=True
-            for k in j.fileList:
-                dest=self.final.findHash(k[0])
-                if dest:
-                    dest.unzipFrom.add(j.zipHash)
-                else:
-                    log.writeLog("[file lost] unzip "+k[0]+"::"+k[1])
-                            
-                    
-                
-        i:AFile    
-        j:AFile
+        #delete文件归入
         for i in self.deleteList:
-            de=copy.deepcopy(self.downloadList.findHash(i.hashMd5))
-            #如果有de的话，否则就是移动过去（还在）或是解压来的（上一步）
-            if de:
-                de.removed=True
-                self.final.addAFile(de)
-                self.downloadList.deleteByHash(de.hashMd5)
-        
-        for i in self.final:
-            i.autoupdate()
-             
-        # for i in self.final:
-        #     p=i.nowPath
-        #     if os.path.exists(p):
-        #         i.removed=False
-        #     else:
-        #         i.removed=True
-                        
+            file=self.tidyList.findHash(i.hashMd5)
+            file2=self.downloadList.findHash(i.hashMd5)
+            if file:
+                log.writeLog("[find removed] tidy file:"+file.nowPath+" removed in "+i.nowPath)
+            if file2:
+                self.downloadList.deleteByHash(file2.hashMd5)
+                file2.removed=True
+                self.tidyList.addAFile(file2)
+            if not file and not file2:
+                file3=AFile()
+                file3.hashMd5=i.hashMd5
+                file3.removed=True
+                self.tidyList.addAFile(file3)  
+        #unzip文件扫尾
+        i:AZipFile
+        for i in self.unzipList:
+            zipFile=i.zipHash
+            for j in i.fileList:
+                file=self.tidyList.findHash(j[0])
+                if file:
+                    file.unzipFrom.add(zipFile)
+                else:
+                    log.writeLog("[unzipfile lost ]"+j[0]+"::"+j[1])
+                    
+        #zip文件扫尾        
+        i:AZipFile
+        for i in self.zipList:
+            zipFile=i.zipHash
+            file=self.tidyList.findHash(zipFile[0])
+            if file:
+                for j in i.fileList:
+                    file.zipFrom.add(j)
+            else:
+                log.writeLog("[zipfile lost ]"+zipFile[0]+"::"+zipFile[1])
+   
         dataname=FileTime()
     
         dir="./fileLogs"

@@ -1,7 +1,7 @@
 from AFile import *
 import os
 import log
-
+import sys
 #将f2的文件删除，在原地的“redirect.txt”文件中记录
 def removeFile(file:AFile):
     filePath=file.nowPath

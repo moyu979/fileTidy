@@ -19,7 +19,8 @@ class HashSet:
             return True
         else:
             return False
-        
+    def clear(self):
+        self.set=[]    
     def __or__(self, __t):
         for i in __t:
             self.add(i)
