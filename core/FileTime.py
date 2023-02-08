@@ -8,5 +8,3 @@ def FileTime():
     name=name[:-1]
     return name
         
-if __name__=="__main__":
-    print("现在的时间是："+FileTime())

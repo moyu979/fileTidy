@@ -1,4 +1,5 @@
 import os
+from FileTime import *
 def writeLog(string):
     logfile=open("./fileLogs/logs.txt","a",encoding="utf-8")
     logfile.write(string+"\n")
@@ -6,7 +7,7 @@ def writeLog(string):
 def writeTemp(string,temps="temps.txt"):
     if not os.path.exists("./fileLogs/"+temps):
         with open("./fileLogs/"+temps,"w",encoding="utf-8") as s:
-            s.write("d")
+            s.write(FileTime())
     logfile=open("./fileLogs/"+temps,"a",encoding="utf-8")
     logfile.write(string+"\n")
     logfile.close()

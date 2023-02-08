@@ -2,11 +2,11 @@ from FileList import *
 from AFile import *
 from Hash import *
 import os
-#查看某个文件夹下的文件是否在download中
+#查看某个文件夹下的文件是否在tidy中
 class Check:
     def __init__(self,path) -> None:
-        self.downloadList=FileList("./fileLogs/download/new.txt")
-        self.res=open("./fileLogs/inDownload.txt",'w',encoding="utf-8")
+        self.downloadList=FileList("./fileLogs/tidy/new.txt")
+        self.res=open("./fileLogs/inTidy.txt",'w',encoding="utf-8")
         self.check(path)
     def check(self,path:str):
         if os.path.isdir(path):

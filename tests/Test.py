@@ -8,7 +8,7 @@ sys.path.append("..\\core")
 import AFile
 import Init
 import log
-import Download
+import download
 import Tidy
 import AZipFile
 def AFileSame(a:AFile,b:AFile):
@@ -62,8 +62,8 @@ class test(unittest.TestCase):
         dest="./testFiles"
         shutil.copytree(source,dest)
         #重复两遍看效果
-        Download.afterDownload(dest)
-        Download.afterDownload(dest)
+        download.afterDownload(dest)
+        download.afterDownload(dest)
         with open("./fileLogs/download/new.txt",encoding="utf-8") as res:
             r=res.readlines()
         with open("testExamples/download/new.txt",encoding="utf-8") as ans:
@@ -102,7 +102,7 @@ class test(unittest.TestCase):
         source="testExamples/tidy_zip/files"
         dest="./testFiles"
         shutil.copytree(source,dest)
-        Download.afterDownload(dest+"/download")
+        download.afterDownload(dest+"/download")
         Tidy.AfterTidy(dest+"/tidy")
         with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
             r=res.readlines()
@@ -119,7 +119,7 @@ class test(unittest.TestCase):
         source="testExamples/tidy_unzip/files"
         dest="./testFiles"
         shutil.copytree(source,dest)
-        Download.afterDownload(dest+"/download")
+        download.afterDownload(dest+"/download")
         Tidy.AfterTidy(dest+"/tidy")
         with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
             r=res.readlines()
@@ -136,7 +136,7 @@ class test(unittest.TestCase):
         source="testExamples/tidy_mutilunzip/files"
         dest="./testFiles"
         shutil.copytree(source,dest)
-        Download.afterDownload(dest+"/download")
+        download.afterDownload(dest+"/download")
         Tidy.AfterTidy(dest+"/tidy")
         with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
             r=res.readlines()
@@ -153,7 +153,7 @@ class test(unittest.TestCase):
         source="testExamples/tidy_delete/files"
         dest="./testFiles"
         shutil.copytree(source,dest)
-        Download.afterDownload(dest+"/download")
+        download.afterDownload(dest+"/download")
         Tidy.AfterTidy(dest+"/tidy")
         with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
             r=res.readlines()

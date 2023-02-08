@@ -8,6 +8,8 @@ class AFile:
         self.hashMd5=None
         self.sameHashCount=0
         self.removed=False
+        self.lossFile=False
+        self.noSourceFile=False
         #初始目录组
         #此组至少有一个不为空，举例而言
         ##当解压来的文件，unzip不为空
@@ -27,7 +29,7 @@ class AFile:
         self.visited=False
         if paras!=None:
             self.loadFile(paras)
-            
+    #使用字符串构造一个变量        
     def loadFile(self,paras:str):    
         for para in paras:
             #去除换行符并切分
@@ -42,7 +44,11 @@ class AFile:
                 self.sameHashCount=int(plist[1])
             #是否已经被删除
             if plist[0] == 'removed':
-                self.removed=True    
+                self.removed=True  
+            if plist[0] == 'lossFile':
+                self.lossFile=True  
+            if plist[0] == 'noSourceFile':
+                self.noSourceFile=True    
         #来源        
             #原始目录项
             if plist[0] == 'originPath':
@@ -61,7 +67,6 @@ class AFile:
             if plist[0] == 'zip':
                 zlist=plist[1].split("::")
                 self.zipFrom.add(zlist)
-                
             if plist[0] == 'zipFrom':
                 zlist=plist[1].split("::")
                 self.zipFrom.add(zlist)
@@ -103,6 +108,10 @@ class AFile:
         string=string+"hashMd5:\t"+self.hashMd5+"\n"
         if self.sameHashCount!=0:
             string=string+"sameHashCount:\t"+str(self.sameHashCount)+"\n"
+        if self.noSourceFile:
+            string=string+"noSourceFile\n"
+        if self.lossFile:
+            string=string+"lossFile\n"
         if self.removed:
             string=string+"removed\n"
         else:
@@ -110,20 +119,21 @@ class AFile:
                 string=string+"nowName:\t"+self.nowName+"\n"
             if self.nowPath:
                 string=string+"nowPath:\t"+self.nowPath+"\n"
+        
         #保证set的顺序
-        li=[]
+        temp=[]
         for i in self.originPath:
-            li.append(i)
-        li.sort()
-        for i in li:
+            temp.append(i)
+        temp.sort()
+        for i in temp:
             string=string+"originPath:\t"+i+"\n"
 
         
-        li=[]
+        temp=[]
         for i in self.unzipFrom:
-            li.append(i)
-        li.sort()
-        for i in li:
+            temp.append(i)
+        temp.sort()
+        for i in temp:
             string=string+"unzipFrom:\t"
             for j in i:
                 string=string+j+"::"
@@ -131,11 +141,11 @@ class AFile:
             string=string+"\n"
                 
             
-        li=[]
+        temp=[]
         for i in self.zipFrom:
-            li.append(i)
-        li.sort()
-        for i in li:
+            temp.append(i)
+        temp.sort()
+        for i in temp:
             string=string+"zipFrom:\t"
             for j in i:
                 string=string+j+"::"
@@ -148,5 +158,3 @@ class AFile:
         string=string+"end\n"
         return string
 
-if __name__ == "__main__":
-    print ("这是一个基础数据单元，不能作为运行单元")

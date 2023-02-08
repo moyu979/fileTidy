@@ -61,8 +61,7 @@ class FileList:
                 return False
             #两个文件相同 直接combine
             elif compareFile(sameFile.nowPath,a.nowPath):
-                if combineOri:
-                    sameFile.originPath=sameFile.originPath|a.originPath
+                sameFile.originPath=sameFile.originPath|a.originPath
                 sameFile.zipFrom=sameFile.zipFrom|a.zipFrom
                 sameFile.unzipFrom=sameFile.unzipFrom|a.unzipFrom
                 return True
@@ -99,14 +98,7 @@ class FileList:
         for i in self.fileList:
             if i.nowPath==path:
                 self.fileList.remove(i)
-                self.itercount=self.itercount-1            
-    #改
-    def removeAFile(self,Hash):
-        i:AFile
-        for i in self.fileList:
-            if i.hashMd5==Hash:
-                i.removed=True
-                            
+                self.itercount=self.itercount-1                                        
     #查
     def findHash(self,hash)->AFile:
         for i in self.fileList:
@@ -122,7 +114,7 @@ class FileList:
     
     #输出
     def outPut(self,path):
-        #self.sortBypath()
+        self.sortBypath()
         count=1
         outFile=open(path,'w',encoding="utf-8")
         for i in self.fileList:
@@ -131,9 +123,15 @@ class FileList:
             count=count+1
         outFile.flush()
         outFile.close()
-    def pOutPut(self):
+        
+    def print(self):
+        self.sortBypath()
+        count=1
         for i in self.fileList:
-            print(i)            
+            print("num:\t"+str(count))
+            print(str(i))
+            count=count+1
+
     #重置遍历标志：
     def resetVisit(self):
         i:AFile
@@ -150,11 +148,3 @@ class FileList:
             self.itercount=self.itercount+1
             return self.fileList[self.itercount-1]
         
-if __name__ == "__main__":
-    print ("这是一个基础数据单元，不能作为运行单元,当运行时，会读入并原样输出列表（主要用于列表的升级）")
-    path=input("请输入列表地址")
-    fileList=FileList()
-    fileList.importFileList(path)
-    
-    path2=input("请输入输出地址")
-    fileList.outPut(path2)

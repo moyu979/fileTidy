@@ -7,28 +7,63 @@ class GeneHash:
     def __init__(self,path=None):
         
         self.fileList=FileList()
+        
         self.totalSize:float=0
         self.finished:float=0
+        
         if path:
             self.run(path)
-            
-    def run(self,file)->FileList:
-        file=os.path.abspath(file)
-        self.totalSize=self.takeSizes(file)
-        print("total size: "+self.humanSize(self.totalSize))
-        self.geneHash(file)
-        print("\n")
+    
+    def run(self,path)->FileList:
+        if type(path).__name__=='list':
+            for i in path:
+                self.totalSize=self.totalSize+self.calTotalSize(i)
+            print("total size: "+self.humanSize(self.totalSize))
+            self.listHash(path)
+        elif type(path).__name__=='str':
+            if(os.path.isdir(path)):
+                self.totalSize=self.calTotalSize(path)
+                print("total size: "+self.humanSize(self.totalSize))
+                self.dirHash(path)
+            else:
+                self.fileHash(path)
+        else:
+            return None
         return self.fileList
     
-    #传入列表，计算列表的哈希
-    def startFileList(self,lists):
-        for i in lists:
-            self.totalSize=self.totalSize+os.path.getsize(i)
-        print("total size: "+self.humanSize(self.totalSize))
-        for i in lists:
-            self.geneHash(i)
+    def listHash(self,path):
+        for i in path:
+            self.dirHash(i)
+            
+    def fileHash(self,path):
+        md5=getAHash(path)
+        file=AFile()
+        file.hashMd5=md5
+        file.nowPath=path
+        file.changePath.append(path)
+        self.fileList.addAFile(file)
+        if self.totalSize!=0:
+            self.finished=self.finished+os.path.getsize(path)
             print("\r nowfinish %f" % (self.finished/self.totalSize),flush=True,end="")
-        return self.fileList
+    
+    def dirHash(self,path):
+        if(os.path.isdir(path)):
+            for i in os.listdir(path):
+                newPath=os.path.join(path,i)
+                self.dirHash(newPath)
+        else:
+            self.fileHash(path)
+        
+        
+    def calTotalSize(self,file)->float:
+        count:float=0
+        if os.path.isdir(file):
+            for i in os.listdir(file):
+                j=os.path.join(file,i)
+                count=count+self.calTotalSize(j)
+        else:
+            count=count+os.path.getsize(file)
+        return count
             
     def humanSize(self,count:float)->str:
         size=["B","K","M","G","T"]
@@ -38,56 +73,6 @@ class GeneHash:
             sizelable=sizelable+1
         return "%.2f%s" % (count, size[sizelable])
     
-    def takeSizes(self,file)->float:
-        count:float=0
-        if os.path.isdir(file):
-            for i in os.listdir(file):
-                j=os.path.join(file,i)
-                count=count+self.takeSizes(j)
-        else:
-            count=count+os.path.getsize(file)
-        return count
-    
-    def geneHash(self,file):
-        if self.totalSize==0:
-            return FileList()
-        print("\r nowfinish %f" % (self.finished/self.totalSize),flush=True,end="")
-        af=[]
-        if os.path.isdir(file):
-            for i in os.listdir(file):
-                j=os.path.join(file,i)
-                self.geneHash(j)
-        else:
-            #忽略掉所有的redirect文件
-            if os.path.basename(file)=="redirect.txt":
-                return
-            filesize=os.path.getsize(file)
-            if filesize>1024**3:
-                md5=hashlib.md5()
-                with open(file,"rb") as fp:
-                    while True:
-                        data=fp.read(1024**3)
-                        if not data:
-                            break
-                        md5.update(data)
-                file_md5=md5.hexdigest()
-                af.append("hashMd5:\t"+file_md5)
-                af.append("originPath:\t"+file)
-                af.append("changePath:\t"+file)
-                af.append("nowPath:\t"+file)
-                af.append("end\n")
-            else:
-                with open(file,"rb") as fp:
-                    data=fp.read()
-                file_md5=hashlib.md5(data).hexdigest()
-                af.append("hashMd5:\t"+file_md5)
-                af.append("originPath:\t"+file)
-                af.append("changePath:\t"+file)
-                af.append("nowPath:\t"+file)
-                af.append("end\n")
-            f=AFile(af)
-            self.fileList.fileList.append(f)
-            self.finished=self.finished+filesize
 def getAHash(path):
     if os.path.isdir(path):
         return None
@@ -102,17 +87,11 @@ def getAHash(path):
         file_md5=md5.hexdigest()
         return file_md5
         
-        
 if __name__ == "__main__":
-    # print("这个模块不会产生可存储输出，只会将结果输出到控制台，是否继续？")
-    # yon=input()
-    # if yon.startswith("y"):
-    #     print("好吧，请输入路径")
-    #     path=input()
-    #     path=os.path.abspath(path)
-    #     c=GeneHash()
-    #     list=c.start(path)
-    #     list.pOutPut()
-    path=input("请输入路径")
-    m=getAHash(path)
-    print(m)
+    if len(sys.argv)==2:
+        path=sys.argv[1]
+    else:
+        path=input("请输入要计算哈希的文件或文件夹")
+    path=os.path.abspath(path)
+    res=GeneHash().run(path)
+    res.print()

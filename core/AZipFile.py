@@ -40,7 +40,8 @@ class AZipFile:
         for i in inzipFile:
             p=os.path.join(path,i)
             if p.endswith(".zip") or p.endswith(".rar") or p.endswith(".7z"):
-                self.zipHash=[GeneHash(p).fileList.fileList[0].hashMd5,GeneHash(p).fileList.fileList[0].nowPath]
+                hash=getAHash(path)
+                self.zipHash=[hash,path]
             else:
                 hash=GeneHash()
                 hashList=hash.run(p)
@@ -69,6 +70,7 @@ class AZipFile:
             if i[0]==hash:
                 return True
         return False     
+    
     def __str__(self) -> str:
         string=""
         if self.error:
@@ -79,10 +81,4 @@ class AZipFile:
                 string=string+i[0]+"::"+i[1]+"\n"
         return string
     
-if __name__=="__main__":
-    path=input("请输入文件路径")
-    path=os.path.abspath(path)
-    print(path)
-    zipfile=AZipFile(path)
-    print(zipfile)
     

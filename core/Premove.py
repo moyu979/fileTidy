@@ -12,29 +12,8 @@ def premove():
     for i in tidyList:
         same=finalList.findHash(i.hashMd5)
         if same:
-            #如果相同 并且对比相同，执行合并，否则不管
-            if compareFile(same.nowPath,i.nowPath):
-                removeFile(i)
-                for j in i.originPath:
-                    same.originPath.add(i)
-                for j in i.zipFrom:
-                    same.zipFrom.add(j)
-                for j in i.unzipFrom:
-                    same.unzipFrom.add(j)
-                tidyList.deleteByHash(i.hashMd5)
-            else:
-                log.writeLog("[hash conflication] "+i.nowPath)
+            log.writeTemp(same.hashMd5+"\n"+same.nowPath+"\n"+i.nowPath,"tidyFinalSame.txt")
                 
-    file=FileTime()+".txt"
-    final1="./fileLogs/final/new.txt"
-    final2="./fileLogs/final/"+file
-    tidy1="./fileLogs/tidy/new.txt"
-    tidy2="./fileLogs/tidy/"+file
-    
-    finalList.outPut(final1)
-    finalList.outPut(final2)
-    tidyList.outPut(tidy1)
-    tidyList.outPut(tidy2)
                     
 if __name__=="__main__":
     premove()

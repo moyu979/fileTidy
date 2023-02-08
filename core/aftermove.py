@@ -4,13 +4,17 @@ import os
 from FileTime import *
 from Hash import GeneHash
 import log
-
+from numpy import argsort
+import sys
 def aftermove(finalPath):
+    
     log.writeLog(FileTime()+"")
     finalList=FileList("./fileLogs/final/new.txt")
     tidyList=FileList("./fileLogs/tidy/new.txt")
+    
     nowFinalPath=[]
     notExist=[]
+    #收集目录下所有文件路径
     for curDir, dirs, files in os.walk(path):
         for file in files:
             if file!="redirect.txt":
@@ -22,8 +26,9 @@ def aftermove(finalPath):
             pass
         else:
             notExist.append(i)
-     
+    #生成不存在文件的哈希 
     notExistHash=GeneHash().startFileList(notExist)
+    #在tidy找到
     i:AFile
     for i in notExistHash:
         #从tidyList取出
@@ -40,6 +45,7 @@ def aftermove(finalPath):
         if i.removed:
             finalList.addAFile(i)
             tidyList.deleteByHash(i.hashMd5)
+            
     file=FileTime()+".txt"
     final1="./fileLogs/final/new.txt"
     final2="./fileLogs/final/"+file
@@ -52,5 +58,8 @@ def aftermove(finalPath):
     tidyList.outPut(tidy2)
     
 if __name__=="__main__":
-    path="/mnt/anime8T1/animes"
+    if len(sys.argv==1):
+        path=input("请输入测试路径")
+    else:
+        path=sys.argv[1]
     aftermove(path)

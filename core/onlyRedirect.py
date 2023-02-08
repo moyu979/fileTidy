@@ -1,9 +1,11 @@
 import os
+import sys
 from RemoveFile import *
 class onlyRedirect:
-    def __init__(self) -> None:
+    def __init__(self,path) -> None:
         self.logfile=open("./onlyredirect.txt","w")
-        pass
+        if path!=None:
+            self.get(path)
     def get(self,path):
         #print("check:"+path)
         #文件的话直接返回
@@ -20,8 +22,10 @@ class onlyRedirect:
                 np=os.path.join(path,i)
                 self.get(np)
 
-if __name__=="__main__":
-    o=onlyRedirect()
-    p=input("请输入目录")
-    o.get(p)
-        
+if __name__ == "__main__":
+    if len(sys.argv)==2:
+        path=sys.argv[1]
+    else:
+        path=input("请输入要检查的文件或文件夹")
+    path=os.path.abspath(path)
+    onlyRedirect(path)

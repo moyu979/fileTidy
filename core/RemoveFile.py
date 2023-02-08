@@ -19,9 +19,9 @@ def removeFile(file:AFile):
     fp.write("hash:\t"+file.hashMd5+"\n")
     fp.write("name:\t"+file.nowName+"\n")
     fp.close()
-    os.remove(filePath)
     log.writeLog("[remove file]remove "+filePath+"with hash "+file.hashMd5)
-    
+    os.remove(filePath)
+        
 def removeFiles(file2):
     for i in file2:
         removeFile(i)
@@ -34,8 +34,9 @@ def remove(path):
             remove(absp)
         os.rmdir(path)
     else:
-        os.remove(path)
         log.writeLog("[remove file]remove "+path)
+        os.remove(path)
+        
         
 def removeEmpty(path):
     if not os.path.isdir(path):
@@ -48,9 +49,13 @@ def removeEmpty(path):
         list=os.listdir(path)
         if len(list)==0:
             os.rmdir(path)
-            log.writeLog("[remove empty]remove "+path)
+            log.writeTemp("[remove empty]remove "+path,"removeEmpty.txt")
             return
         
 if __name__ == "__main__":
-    p=input("请输入路径")
-    removeEmpty(p)
+    if len(sys.argv)==2:
+        path=sys.argv[1]
+    else:
+        path=input("请输入要检查的文件或文件夹")
+    path=os.path.abspath(path)
+    removeEmpty(path)

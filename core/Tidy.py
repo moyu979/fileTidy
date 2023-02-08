@@ -5,20 +5,20 @@ from FileTime import *
 from AZipFile import *
 import log
 import copy
+import os
 class AfterTidy:
-    #改，改成以tidyfile为核心的
     def __init__(self,path=None) -> None:
         #temp files
         #list of AZipList
         self.zipList=[]
         self.unzipList=[]
         
-        self.tidyList=FileList()
+        self.tidyFile=FileList()
         self.deleteList=FileList()
-        self.downloadList=FileList()
-        self.final=FileList()
+        self.downloadList=FileList("./fileLogs/download/new.txt")
+        self.tidyList=FileList("./fileLogs/tidy/new.txt")
         
-        self.downloadList.importFileList("./fileLogs/download/new.txt")
+        self.downloadList.importFileList()
         
         if path:
             self.start(path)
@@ -26,39 +26,53 @@ class AfterTidy:
     def getTidyList(self,path):
         print("get Tidy")
         tidyPath=os.path.join(path,"tidy")
-        tidyList=GeneHash().run(tidyPath) #生成整理后文件的文件列表
-        sameFile=self.tidyList.combine(tidyList) #获取相同文件表
-        #删除文件
-        removeFiles(sameFile)
+        if os.path.exists(tidyPath):
+            tidyFile=GeneHash().run(tidyPath) #生成整理后文件的文件列表
+            sameFile=self.tidyFile.combine(tidyFile) #获取相同文件表
+            #删除文件
+            removeFiles(sameFile)
+        else:
+            log.writeLog("no tidy file")
     
     def getUnzipList(self,path):
         print("get unzip")
         unzipPath=os.path.join(path,"unzip")
-        unzips=os.listdir(unzipPath)
-        for i in unzips:
-            dir=os.path.join(unzipPath,i)
-            k=AZipFile(dir)
-            if not k.error:
-                self.unzipList.append(k)
-            else:
-                log.writeLog("[unzip error]"+k.path+" has error")
+        if os.path.exists(unzipPath):
+            unzips=os.listdir(unzipPath)
+            for i in unzips:
+                dir=os.path.join(unzipPath,i)
+                k=AZipFile(dir)
+                if not k.error:
+                    self.unzipList.append(k)
+                else:
+                    log.writeLog("[unzip error]"+k.path+" has error")
+        else:
+            log.writeLog("no unzip file")
 
     def getZipList(self,path):
         print("get zip")
         zipPath=os.path.join(path,"zip")
-        zips=os.listdir(zipPath)
-        for i in zips:
-            dir=os.path.join(zipPath,i)
-            k=AZipFile(dir)
-            if not k.error:
-                self.zipList.append(k)      
-            else:
-                log.writeLog("[zip error]"+k.path+" has error") 
+        if os.path.exists(zipPath):
+            zips=os.listdir(zipPath)
+            for i in zips:
+                dir=os.path.join(zipPath,i)
+                k=AZipFile(dir)
+                if not k.error:
+                    self.zipList.append(k)
+                else:
+                    log.writeLog("[zip error]"+k.path+" has error")
+        else:
+            log.writeLog("no zip file")
+            
     def getDeleteList(self,path):
         print("get delete")
         deletePath=os.path.join(path,"delete")
-        h=GeneHash()     
-        self.deleteList=h.run(deletePath)
+        if os.path.exists(deletePath):
+            h=GeneHash()     
+            self.deleteList=h.run(deletePath)
+        else:
+            log.writeLog("no delete file")
+            
     def start(self,path):
         log.writeLog("Tidy:"+FileTime())
         #计算整理好的文件的哈希
@@ -68,18 +82,18 @@ class AfterTidy:
         self.getDeleteList(path)
         
         i:AFile
-        for i in self.tidyList:
-            dfile=copy.deepcopy(self.downloadList.findHash(i.hashMd5))
+        for i in self.tidyFile:
+            
             zfile=[]
             ufile=[]
             j:AZipFile
             for j in self.zipList:
                 if j.hasHash(i.hashMd5):
                     zfile.append(j)
-                print(len(zfile))
             for j in self.unzipList:
                 if j.hasHash(i.hashMd5):
                     ufile.append(j)
+            dfile=copy.deepcopy(self.downloadList.findHash(i.hashMd5))
             #原来就有,否则新建            
             if dfile:
                 #用visited字段做确认来源标记
@@ -91,13 +105,13 @@ class AfterTidy:
                 
             #压缩而来和解压而来的标记(zipfrom unzipfrom)    
             for j in zfile:
-                if j.zipHash==dfile.hashMd5:
+                if j.zipHash[0]==dfile.hashMd5:
                     for k in j.fileList:
                         dfile.zipFrom.add(k)
                         dfile.visited=True
             for j in ufile:
                 #不是压缩文件，自然是解压来的
-                if j.zipHash!=i.hashMd5:
+                if j.zipHash[0]!=i.hashMd5:
                     dfile.unzipFrom.add(j.zipHash)
                     dfile.visited=True
                     
@@ -107,9 +121,10 @@ class AfterTidy:
                     dfile.changePath.append(s)
                     
             if not dfile.visited:    
+                dfile.noSourceFile=True
                 log.writeLog("[more file]\tfind no source File "+dfile.hashMd5+dfile.changePath[0])
                 
-            self.final.addAFile(dfile)
+            self.tidyList.addAFile(dfile)
         #————————————至此tidy文件夹内有的文件全部应当找到了对应项————————————————
             
         #查找解压文件夹有没有丢件，并从download中删除原文件
@@ -121,13 +136,22 @@ class AfterTidy:
             d=self.downloadList.findHash(k[0])
             if d:
                 d.removed=True
-                self.final.addAFile(d)
+                self.tidyList.addAFile(d)
                 self.downloadList.deleteByHash(d.hashMd5)
                 
             #查找丢件
             #k:[hash,path]
             for k in j.fileList:
-                if (not self.final.findHash(k[0])) and (not self.deleteList.findHash(k[0])):
+                tL=self.tidyList.findHash(k[0])
+                delL=self.deleteList.findHash(k[0])
+                dowL=self.downloadList.findHash(k[0])
+                if tL and delL:
+                    tl.unzipFrom.add(j.zipHash)
+                if dl:
+                    if tl 
+                        
+                        
+                if (not self.final.findHash(k[0])) and (not ):
                     log.writeLog("[loss file]\t "+k[0]+" "+k[1]) 
                 elif self.deleteList.findHash(k[0]):
                     f=AFile()
