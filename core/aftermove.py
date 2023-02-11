@@ -15,7 +15,7 @@ def aftermove(finalPath):
     nowFinalPath=[]
     notExist=[]
     #收集目录下所有文件路径
-    for curDir, dirs, files in os.walk(path):
+    for curDir, dirs, files in os.walk(finalPath):
         for file in files:
             if file!="redirect.txt":
                 p=os.path.join(curDir, file)
@@ -27,7 +27,8 @@ def aftermove(finalPath):
         else:
             notExist.append(i)
     #生成不存在文件的哈希 
-    notExistHash=GeneHash().startFileList(notExist)
+    h=GeneHash()
+    notExistHash=h.run(notExist)
     #在tidy找到
     i:AFile
     for i in notExistHash:
@@ -40,6 +41,12 @@ def aftermove(finalPath):
             #加到FinalList
             finalList.addAFile(file)
         else:
+            file=AFile()
+            file.hashMd5=i.hashMd5
+            file.nowPath=i.nowPath
+            file.changePath=i.changePath
+            finalList.addAFile(file)
+            file.noSourceFile=True
             log.writeLog("[afterremove more file]"+i.nowPath)
     for i in tidyList:
         if i.removed:
@@ -58,7 +65,7 @@ def aftermove(finalPath):
     tidyList.outPut(tidy2)
     
 if __name__=="__main__":
-    if len(sys.argv==1):
+    if len(sys.argv)==1:
         path=input("请输入测试路径")
     else:
         path=sys.argv[1]

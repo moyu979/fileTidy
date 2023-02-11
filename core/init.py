@@ -44,6 +44,16 @@ class init:
             with open(newly,"w") as f:
                 f.close()
             print(os.path.relpath(newly)+" inited")
+    def initpremove(self):
+        destPath=os.path.join(self.workPath,"premove")
+        if not os.path.exists(destPath):
+            os.mkdir(destPath)
+            print(os.path.relpath(destPath)+" inited")  
+        newly=os.path.join(destPath,"new.txt")
+        if not os.path.exists(newly):
+            with open(newly,"w") as f:
+                f.close()
+            print(os.path.relpath(newly)+" inited")
             
     def initlog(self):
         destPath=os.path.join(self.workPath,"logs.txt")

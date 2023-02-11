@@ -8,12 +8,16 @@ import log
 def premove():
     finalList=FileList("./fileLogs/final/new.txt")
     tidyList=FileList("./fileLogs/tidy/new.txt")
+    filename="Same"+FileTime()+".txt"
+    with open ("./fileLogs/premove/"+filename,"w") as p:
+        p.write("")
     i:AFile
     for i in tidyList:
         same=finalList.findHash(i.hashMd5)
         if same:
-            log.writeTemp(same.hashMd5+"\n"+same.nowPath+"\n"+i.nowPath,"tidyFinalSame.txt")
-                
+            print("-------------")
+            log.writeTemp(same.hashMd5+"\n"+same.nowPath+"\n"+i.nowPath+"\n","premove/"+filename)
+    return filename            
                     
 if __name__=="__main__":
     premove()

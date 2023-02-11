@@ -1,5 +1,5 @@
 def makeText(path=""):
-    for i in range(0,3):
+    for i in range(7,9):
         dir=path+"/"+str(i)+".txt"
         with open(dir,"w") as f:
             f.writelines(str(i))

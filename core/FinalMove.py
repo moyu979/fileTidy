@@ -20,7 +20,7 @@ def finalMove(path):
             notInList.append(i)
             
     notInListHash=GeneHash().run(notInList)
-    i:AFile
+    i:AFile 
     for i in notInListHash:
         file=tidyList.findHash(i.hashMd5)
         if file:
