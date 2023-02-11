@@ -91,7 +91,7 @@ class AFile:
                     self.changePath.append(i)
                     break 
         #如果没被删除的话，自动生成现在的路径什么的
-        if not self.removed:
+        if not self.removed and not self.noSourceFile:
             #将变化目录的最后一个（最近日期的目录）或原始目录（没有变化）视作现在的目录
             if len(self.changePath)==0:
                 pass

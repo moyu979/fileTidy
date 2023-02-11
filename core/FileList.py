@@ -5,6 +5,14 @@ import log
 
 #排序用函数
 def return_now_path(elem:AFile):
+    elem.autoupdate()
+    if elem.removed:
+        return "removed"
+    if elem.noSourceFile:
+        return "noSourceFile"
+    # elif elem.nowPath==None:
+    #     elem.nowPath="None"
+    #     print(elem.hashMd5)
     return elem.nowPath
 def return_now_name(elem:AFile):
     return elem.nowName
@@ -52,7 +60,7 @@ class FileList:
         
     #增
     ##增加一个文件(去重),有重返回True
-    def addAFile(self,a:AFile,combineOri=True): 
+    def addAFile(self,a:AFile): 
         sameFile=self.findHash(a.hashMd5)
         #如果找到了不相同的重复文件
         if sameFile:
@@ -77,11 +85,11 @@ class FileList:
             return False
         
     ##将一个FileList添加到现有的FileList中，如果遇到相同的，不合并，而是将新旧两个文件进记录到findsame列表下，等待进一步处理
-    def combine(self,files,combineOri=True):
+    def combine(self,files):
         findsame=[]
         files.sortBypath()
         for i in files:
-            if self.addAFile(i,combineOri):
+            if self.addAFile(i):
                 findsame.append(i)
         return findsame
     

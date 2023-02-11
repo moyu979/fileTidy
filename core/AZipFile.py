@@ -40,8 +40,8 @@ class AZipFile:
         for i in inzipFile:
             p=os.path.join(path,i)
             if p.endswith(".zip") or p.endswith(".rar") or p.endswith(".7z"):
-                hash=getAHash(path)
-                self.zipHash=[hash,path]
+                hash=getAHash(p)
+                self.zipHash=[hash,p]
             else:
                 hash=GeneHash()
                 hashList=hash.run(p)

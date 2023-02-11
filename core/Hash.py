@@ -29,6 +29,7 @@ class GeneHash:
                 self.fileHash(path)
         else:
             return None
+        print("")
         return self.fileList
     
     def listHash(self,path):
@@ -36,12 +37,15 @@ class GeneHash:
             self.dirHash(i)
             
     def fileHash(self,path):
+        if(path.endswith("redirect.txt")):
+            return
         md5=getAHash(path)
         file=AFile()
         file.hashMd5=md5
-        file.nowPath=path
         file.changePath.append(path)
-        self.fileList.addAFile(file)
+        file.originPath.add(path)
+        file.autoupdate()
+        self.fileList.fileList.append(file)
         if self.totalSize!=0:
             self.finished=self.finished+os.path.getsize(path)
             print("\r nowfinish %f" % (self.finished/self.totalSize),flush=True,end="")

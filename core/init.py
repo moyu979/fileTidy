@@ -62,7 +62,6 @@ class init:
     
 if __name__ =="__main__":
     if len(sys.argv)!=2:
-        #print(len(sys.argv),"argvs "+"not match")
         x=init(os.path.abspath("."))
     else:
         x=init(sys.argv[1])

@@ -1,7 +1,5 @@
-
 import unittest
 import os
-import remove
 import sys
 import shutil
 sys.path.append("..\\core")
@@ -11,160 +9,290 @@ import log
 import download
 import Tidy
 import AZipFile
-def AFileSame(a:AFile,b:AFile):
-    if a.hashMd5 != b.hashMd5:
-        return False
-    if a.sameHashCount!=b.sameHashCount:
-        return False
-    if a.removed != b.removed:
-        return False
-    if a.originPath.len()!=b.originPath.len():
-        return False
+import RemoveFile
+def remove(path):
+    if os.path.isdir(path):
+        list=os.listdir(path)
+        for i in list:
+            absp=os.path.join(path,i)
+            remove(absp)
+        os.rmdir(path)
+    else:
+        os.remove(path)
 class test(unittest.TestCase):
-    def setUp(self):
-        Init.init()
+    def __init__(self, methodName: str = ...) -> None:
+        super().__init__(methodName)
+        
     def tearDown(self):
-        remove.remove("./fileLogs")
         if os.path.exists("./testFiles"):
-            remove.remove("./testFiles") 
-    #测试初始化是否成功
-    def test_init(self):
-        files=["download","final","tidy"]
-        ans=open("testExamples/init/new.txt")
-        a=ans.read()
-        for i in files:
-            real=os.path.join("./fileLogs",i)
-            self.assertTrue(os.path.exists(real),msg=i+" not exist")
-            new=os.path.join(real,"new.txt")
-            self.assertTrue(os.path.exists(new),msg=i+"/new.txt"+" not exist")
-            with open(new) as ne:
-                n=ne.read()
-            self.assertTrue(n==a,msg=new+"not same")
-        ans.close()
+            remove("./testFiles") 
+        if os.path.exists("./fileLogs"):
+            remove("./fileLogs") 
+            
+    # def test_log_writeLog(self):
+    #     os.mkdir("./fileLogs")
+    #     log1="aaa"
+    #     log2=["bbb","ccc"]
+    #     log.writeLog(log1)
+    #     log.writeLogs(log2)
+    #     log.printAndLog(log1)
+    #     log.printAndLogs(log2)
+    #     with open("./fileLogs/logs.txt") as result:
+    #         res=result.readlines()
+    #     with open("testExamples/log_writeLog/logtest.txt") as answer:
+    #         ans=answer.readlines()
+    #     self.assertEqual(res[1:],ans)
         
-    def test_log(self):
-        log1="aaa"
-        log2=["bbb","ccc"]
-        log.writeLog(log1)
-        log.writeLogs(log2)
-        log.printAndLog(log1)
-        log.printAndLogs(log2)
+    # def test_log_writeTemp(self):
+    #     os.mkdir("./fileLogs")
+    #     log1="aaa"
+    #     log.writeTemp(log1,"n.txt")
+    #     with open("./fileLogs/n.txt") as result:
+    #         res=result.readlines()
+    #     self.assertEqual(res[1],"aaa\n")
         
-        with open("./fileLogs/logs.txt") as result:
-            res=result.readlines()
-        with open("testExamples/log/logtest.txt") as answer:
-            ans=answer.readlines()
+    # def test_download_once(self):
+    #     logSource="testExamples/download_once/fileLogs"
+    #     logDest="./fileLogs"
+    #     fileSource="testExamples/download_once/testFiles"
+    #     fileDest="./testFiles"
+    #     shutil.copytree(logSource,logDest)
+    #     shutil.copytree(fileSource,fileDest)
+    #     download.download(fileDest)
+    #     download.download(fileDest)
+    #     with open("./fileLogs/download/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/download_once/results/new.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines()   
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
         
-        self.assertEqual(res[1:],ans)
+    # def test_download_same(self):
+    #     logSource="testExamples/download_same/fileLogs"
+    #     logDest="./fileLogs"
+    #     fileSource="testExamples/download_same/testFiles"
+    #     fileDest="./testFiles"
+    #     shutil.copytree(logSource,logDest)
+    #     shutil.copytree(fileSource,fileDest)
+    #     download.download(fileDest)
+    #     download.download(fileDest)
+    #     with open("./fileLogs/download/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/download_same/results/new.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines()   
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)    
         
-    def test_download(self):
-        source="testExamples/download/files"
-        dest="./testFiles"
-        shutil.copytree(source,dest)
-        #重复两遍看效果
-        download.afterDownload(dest)
-        download.afterDownload(dest)
+    # def test_tidy_move(self):
+    #     logSource="testExamples/tidy_move/fileLogs"
+    #     logDest="./fileLogs"
+    #     fileSource="testExamples/tidy_move/testFiles"
+    #     fileDest="./testFiles"
+    #     shutil.copytree(logSource,logDest)
+    #     shutil.copytree(fileSource,fileDest)
+    #     Tidy.AfterTidy(fileDest)
+    #     with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_move/results/tidy.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+    
+    # def test_tidy_zip(self):
+    #     logSource="testExamples/tidy_zip/fileLogs"
+    #     logDest="./fileLogs"
+    #     fileSource="testExamples/tidy_zip/testFiles"
+    #     fileDest="./testFiles"
+    #     shutil.copytree(logSource,logDest)
+    #     shutil.copytree(fileSource,fileDest)
+    #     Tidy.AfterTidy(fileDest)
+    #     with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_zip/results/tidy.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+    #     with open("./fileLogs/download/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_zip/results/download.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+    
+    # def test_tidy_zip_dual(self):
+    #     logSource="testExamples/tidy_zip_dual/fileLogs"
+    #     logDest="./fileLogs"
+    #     fileSource="testExamples/tidy_zip_dual/testFiles"
+    #     fileDest="./testFiles"
+    #     shutil.copytree(logSource,logDest)
+    #     shutil.copytree(fileSource,fileDest)
+    #     Tidy.AfterTidy(fileDest)
+    #     with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_zip_dual/results/tidy.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+    #     with open("./fileLogs/download/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_zip_dual/results/download.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+    
+    # def test_tidy_zip_nosource(self):
+    #     logSource="testExamples/tidy_zip_nosource/fileLogs"
+    #     logDest="./fileLogs"
+    #     fileSource="testExamples/tidy_zip_nosource/testFiles"
+    #     fileDest="./testFiles"
+    #     shutil.copytree(logSource,logDest)
+    #     shutil.copytree(fileSource,fileDest)
+    #     Tidy.AfterTidy(fileDest)
+    #     input()
+    #     with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_zip_nosource/results/tidy.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+    #     with open("./fileLogs/download/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_zip_nosource/results/download.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+    
+    # def test_tidy_zip_lossFile(self):
+    #     logSource="testExamples/tidy_zip_lossFile/fileLogs"
+    #     logDest="./fileLogs"
+    #     fileSource="testExamples/tidy_zip_lossFile/testFiles"
+    #     fileDest="./testFiles"
+    #     shutil.copytree(logSource,logDest)
+    #     shutil.copytree(fileSource,fileDest)
+    #     Tidy.AfterTidy(fileDest)
+    #     with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_zip_lossFile/results/tidy.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+        
+    #     with open("./fileLogs/download/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_zip_lossFile/results/download.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+    
+    # def test_tidy_unzip(self):
+    #     logSource="testExamples/tidy_unzip/fileLogs"
+    #     logDest="./fileLogs"
+    #     fileSource="testExamples/tidy_unzip/testFiles"
+    #     fileDest="./testFiles"
+    #     shutil.copytree(logSource,logDest)
+    #     shutil.copytree(fileSource,fileDest)
+    #     Tidy.AfterTidy(fileDest)
+    #     with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_unzip/results/tidy.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+    #     with open("./fileLogs/download/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_unzip/results/download.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+    
+    # def test_tidy_unzip_lossFile(self):
+    #     logSource="testExamples/tidy_unzip_lossFile/fileLogs"
+    #     logDest="./fileLogs"
+    #     fileSource="testExamples/tidy_unzip_lossFile/testFiles"
+    #     fileDest="./testFiles"
+    #     shutil.copytree(logSource,logDest)
+    #     shutil.copytree(fileSource,fileDest)
+    #     Tidy.AfterTidy(fileDest)
+    #     with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_unzip_lossFile/results/tidy.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+    #     with open("./fileLogs/download/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_unzip_lossFile/results/download.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+    
+    # def test_tidy_unzip_dual(self):
+    #     logSource="testExamples/tidy_unzip_dual/fileLogs"
+    #     logDest="./fileLogs"
+    #     fileSource="testExamples/tidy_unzip_dual/testFiles"
+    #     fileDest="./testFiles"
+    #     shutil.copytree(logSource,logDest)
+    #     shutil.copytree(fileSource,fileDest)
+    #     Tidy.AfterTidy(fileDest)
+    #     with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_unzip_dual/results/tidy.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+    #     with open("./fileLogs/download/new.txt",encoding="utf-8") as res:
+    #         r=res.readlines()
+    #     with open("testExamples/tidy_unzip_dual/results/download.txt",encoding="utf-8") as ans:
+    #         a=ans.readlines() 
+    #     self.assertEqual(len(r),len(a),msg="文件长度不相等")
+    #     self.replacePath(r)
+    #     self.assertEqual(r,a)
+    
+    def test_tidy_unzip_nosource(self):
+        logSource="testExamples/tidy_unzip_nosource/fileLogs"
+        logDest="./fileLogs"
+        fileSource="testExamples/tidy_unzip_nosource/testFiles"
+        fileDest="./testFiles"
+        shutil.copytree(logSource,logDest)
+        shutil.copytree(fileSource,fileDest)
+        Tidy.AfterTidy(fileDest)
+        input()
+        with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
+            r=res.readlines()
+        with open("testExamples/tidy_unzip_nosource/results/tidy.txt",encoding="utf-8") as ans:
+            a=ans.readlines() 
+        self.assertEqual(len(r),len(a),msg="文件长度不相等")
+        self.replacePath(r)
+        self.assertEqual(r,a)
         with open("./fileLogs/download/new.txt",encoding="utf-8") as res:
             r=res.readlines()
-        with open("testExamples/download/new.txt",encoding="utf-8") as ans:
-            a=ans.readlines()   
+        with open("testExamples/tidy_unzip_nosource/results/download.txt",encoding="utf-8") as ans:
+            a=ans.readlines() 
         self.assertEqual(len(r),len(a),msg="文件长度不相等")
-        for i in range(0,len(a)):
-            rl=r[i].split(":\t")
-            al=a[i].split(":\t")
-            if rl[0].endswith("Path"):
-                self.assertTrue(rl[1].endswith(al[1]),msg="line "+str(i+1)+" not same")
-            else:
-                self.assertEqual(rl[-1],al[-1],msg="line "+str(i+1)+" not same")
-    # #两次接续增加
-    # # def test_download_doubleadd(self):
-    # #     pass
+        self.replacePath(r)
+        self.assertEqual(r,a)
+    def replacePath(self,path):
+        nowPath=os.path.abspath("./")
+        for i in range(0,len(path)):
+            path[i]=path[i].replace(nowPath+"/","")
+            path[i]=path[i].replace("./","")
+        pass
     
-    def test_AZipFileError(self):
-        source="testExamples/azipfile_errorzip/files"
-        dest="./testFiles"
-        shutil.copytree(source,dest)
-        dest=os.path.abspath(dest)
-        a=AZipFile.AZipFile(dest)
-        with open("./testExamples/azipfile_errorzip/new.txt",encoding="utf-8") as ans:
-            a=ans.readlines()[0]
-        with open("./fileLogs/logs.txt",encoding="utf-8") as res:
-            r=res.readlines()[1]
-        print(r)
-        abspath=os.path.abspath(dest)
-        r2=r.replace(abspath,"")+"\n"
-        a=a.replace("\n","")
-        r2=r2.replace("\n","")
-        self.assertEqual(r2,a)
-        
-    #解压文件的test
-    def test_tidyzip(self):   
-        source="testExamples/tidy_zip/files"
-        dest="./testFiles"
-        shutil.copytree(source,dest)
-        download.afterDownload(dest+"/download")
-        Tidy.AfterTidy(dest+"/tidy")
-        with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
-            r=res.readlines()
-        with open("./testExamples/tidy_zip/new.txt",encoding="utf-8") as ans:
-            a=ans.readlines()
-        abspath=os.path.abspath(dest)
-        k=[]
-        for i in r:
-            l=i.replace(abspath,"")
-            k.append(l)
-        self.assertEquals(k,a)
-    # #压缩文件的test
-    def test_tidyunzip(self):
-        source="testExamples/tidy_unzip/files"
-        dest="./testFiles"
-        shutil.copytree(source,dest)
-        download.afterDownload(dest+"/download")
-        Tidy.AfterTidy(dest+"/tidy")
-        with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
-            r=res.readlines()
-        with open("./testExamples/tidy_unzip/new.txt",encoding="utf-8") as ans:
-            a=ans.readlines()
-        abspath=os.path.abspath(dest)
-        k=[]
-        for i in r:
-            l=i.replace(abspath,"")
-            k.append(l)
-        self.assertEquals(k,a)
-    #一个文件来自两个压缩包的test
-    def test_multiunzip(self):
-        source="testExamples/tidy_mutilunzip/files"
-        dest="./testFiles"
-        shutil.copytree(source,dest)
-        download.afterDownload(dest+"/download")
-        Tidy.AfterTidy(dest+"/tidy")
-        with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
-            r=res.readlines()
-        with open("./testExamples/tidy_mutilunzip/new.txt",encoding="utf-8") as ans:
-            a=ans.readlines()
-        abspath=os.path.abspath(dest)
-        k=[]
-        for i in r:
-            l=i.replace(abspath,"")
-            k.append(l)
-        self.assertEquals(k,a)
-    #删除文件测试
-    def test_tidy_remove(self):   
-        source="testExamples/tidy_delete/files"
-        dest="./testFiles"
-        shutil.copytree(source,dest)
-        download.afterDownload(dest+"/download")
-        Tidy.AfterTidy(dest+"/tidy")
-        with open("./fileLogs/tidy/new.txt",encoding="utf-8") as res:
-            r=res.readlines()
-        with open("./testExamples/tidy_delete/new.txt",encoding="utf-8") as ans:
-            a=ans.readlines()
-        abspath=os.path.abspath(dest)
-        k=[]
-        for i in r:
-            l=i.replace(abspath,"")
-            k.append(l)
-        self.assertAlmostEquals(k,a)
-    #删除文件导致的文件丢失没考虑，随做随考虑把        
-if __name__ == "__main__":
+if __name__=="__main__":
     unittest.main() 

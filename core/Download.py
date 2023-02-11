@@ -8,7 +8,6 @@ def download(path):
     #计算此次文件哈希值
     hash=GeneHash()
     filelist=hash.run(path)
-        
     motherPath="./fileLogs/download/"
     mpath=os.path.abspath(motherPath)
     

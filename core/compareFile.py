@@ -2,7 +2,9 @@ import sys
 import os
 
 def compareFiles(path1,path2):
-    if path1==path2:
+    if path1==None and path2==None:
+        return True
+    elif path1==path2:
         return False
     elif os.path.isdir(path1) and os.path.isdir(path2):    
         f1=os.path.listdir(path1)
