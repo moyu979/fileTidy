@@ -1,0 +1,34 @@
+num:	1
+hashMd5:	cfcd208495d565ef66e7dff9f98764da
+nowName:	0.txt
+nowPath:	testFiles\tidy\0.txt
+unzipFrom:	a48bd61b47c641ffe1ba1d731942ddab::testFiles\unzip\1\0.zip
+changePath:	testFiles\tidy\0.txt
+end
+num:	2
+hashMd5:	c4ca4238a0b923820dcc509a6f75849b
+nowName:	1.txt
+nowPath:	testFiles\tidy\1.txt
+unzipFrom:	a48bd61b47c641ffe1ba1d731942ddab::testFiles\unzip\1\0.zip
+unzipFrom:	e44cea61f973277d4c2d3a849213eba1::testFiles\unzip\2\1.zip
+changePath:	testFiles\tidy\1.txt
+end
+num:	3
+hashMd5:	c81e728d9d4c2f636f067f89cc14862c
+nowName:	2.txt
+nowPath:	testFiles\tidy\2.txt
+unzipFrom:	e44cea61f973277d4c2d3a849213eba1::testFiles\unzip\2\1.zip
+changePath:	testFiles\tidy\2.txt
+end
+num:	4
+hashMd5:	a48bd61b47c641ffe1ba1d731942ddab
+removed
+originPath:	testFiles\0.zip
+changePath:	testFiles\0.zip
+end
+num:	5
+hashMd5:	e44cea61f973277d4c2d3a849213eba1
+removed
+originPath:	testFiles\1.zip
+changePath:	testFiles\1.zip
+end

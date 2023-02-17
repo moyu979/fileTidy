@@ -1,0 +1,20 @@
+num:	1
+hashMd5:	e44cea61f973277d4c2d3a849213eba1
+lossFile
+nowName:	2.zip
+nowPath:	testFiles\zip\1\2.zip
+zipFrom:	c4ca4238a0b923820dcc509a6f75849b::testFiles\zip\1\新建文件夹\1.txt
+zipFrom:	c81e728d9d4c2f636f067f89cc14862c::testFiles\zip\1\新建文件夹\2.txt
+end
+num:	2
+hashMd5:	c4ca4238a0b923820dcc509a6f75849b
+removed
+originPath:	testFiles\1.txt
+changePath:	testFiles\1.txt
+end
+num:	3
+hashMd5:	c81e728d9d4c2f636f067f89cc14862c
+removed
+originPath:	testFiles\2.txt
+changePath:	testFiles\2.txt
+end

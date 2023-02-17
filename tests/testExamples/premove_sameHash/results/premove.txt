@@ -1,0 +1,12 @@
+cfcd208495d565ef66e7dff9f98764da
+testFiles\0.txt
+testFiles\0.txt
+
+c4ca4238a0b923820dcc509a6f75849b
+testFiles\1.txt
+testFiles\1.txt
+
+c81e728d9d4c2f636f067f89cc14862c
+testFiles\2.txt
+testFiles\2.txt
+

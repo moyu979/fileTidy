@@ -1,0 +1,14 @@
+num:	1
+hashMd5:	a48bd61b47c641ffe1ba1d731942ddab
+nowName:	0.zip
+nowPath:	testFiles\0.zip
+originPath:	testFiles\0.zip
+changePath:	testFiles\0.zip
+end
+num:	2
+hashMd5:	e44cea61f973277d4c2d3a849213eba1
+nowName:	1.zip
+nowPath:	testFiles\1.zip
+originPath:	testFiles\1.zip
+changePath:	testFiles\1.zip
+end

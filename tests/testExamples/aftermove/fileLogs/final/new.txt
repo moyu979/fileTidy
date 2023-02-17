@@ -1,0 +1,28 @@
+num:	1
+hashMd5:	e4da3b7fbbce2345d7772b0674a318d5
+nowName:	5.txt
+nowPath:	testFiles\final\5.txt
+originPath:	testFiles\final\5.txt
+changePath:	testFiles\final\5.txt
+end
+num:	2
+hashMd5:	1679091c5a880faf6fb5e6087eb1b2dc
+nowName:	6.txt
+nowPath:	testFiles\final\6.txt
+originPath:	testFiles\final\6.txt
+changePath:	testFiles\final\6.txt
+end
+num:	3
+hashMd5:	8f14e45fceea167a5a36dedd4bea2543
+nowName:	7.txt
+nowPath:	testFiles\final\7.txt
+originPath:	testFiles\final\7.txt
+changePath:	testFiles\final\7.txt
+end
+num:	4
+hashMd5:	c9f0f895fb98ab9159f51fd0297e236d
+nowName:	8.txt
+nowPath:	testFiles\final\8.txt
+originPath:	testFiles\final\8.txt
+changePath:	testFiles\final\8.txt
+end

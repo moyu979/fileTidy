@@ -1,0 +1,20 @@
+num:	1
+hashMd5:	c4ca4238a0b923820dcc509a6f75849b
+nowName:	1.txt
+nowPath:	testFiles\tidy\1.txt
+unzipFrom:	e44cea61f973277d4c2d3a849213eba1::testFiles\unzip\1\2.zip
+changePath:	testFiles\tidy\1.txt
+end
+num:	2
+hashMd5:	c81e728d9d4c2f636f067f89cc14862c
+nowName:	2.txt
+nowPath:	testFiles\tidy\2.txt
+unzipFrom:	e44cea61f973277d4c2d3a849213eba1::testFiles\unzip\1\2.zip
+changePath:	testFiles\tidy\2.txt
+end
+num:	3
+hashMd5:	e44cea61f973277d4c2d3a849213eba1
+removed
+originPath:	testFiles\download\2.zip
+changePath:	testFiles\download\2.zip
+end
