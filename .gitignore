@@ -8,5 +8,6 @@
 /tests/*
 !/tests/*.py
 !/tests/answer
+!/tests/testExamples
 
 /core/__pycache__
