@@ -2,6 +2,7 @@
 !.gitignore
 !*.md
 !/core/
+!/core2/
 !/mds/
 !/tests/
 
@@ -11,3 +12,4 @@
 !/tests/testExamples
 
 /core/__pycache__
+/core2/__pycache__

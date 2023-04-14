@@ -1,28 +1,35 @@
 import sys
 from FileList import *
 from Hash import *
-from FileTime import *
-         
+from fileTime import *
+from RemoveFile import * 
+from Log import *        
 def download(path):
-    log.writeLog("Download:"+FileTime())
+    Log.writeLog("Download:\n")
     #计算此次文件哈希值
     hash=GeneHash()
     filelist=hash.run(path)
     motherPath="./fileLogs/download/"
+
     mpath=os.path.abspath(motherPath)
     
     newPath=os.path.join(mpath,"new.txt")
-    timePath=os.path.join(mpath,FileTime()+".txt")
+    timePath=os.path.join(mpath,fileTime()+".txt")
     
     #读入已经存在的
     downloadList=FileList(newPath)
+
     print("combining")
-    sameFile=downloadList.combine(filelist)
+    sameFile,notExistFile=downloadList.combineNoSame(filelist)
     print("removing")
     removeFiles(sameFile)
-          
+    if len(notExistFile)!=0:      
+        lossSame=FileList()
+        lossSame.fileList=notExistFile
+        lossSame.outPut(timePath.replace(".txt","_loss.txt"))
     downloadList.outPut(newPath)
     downloadList.outPut(timePath)
+    
         
 if __name__ == "__main__":
     if len(sys.argv)==2:

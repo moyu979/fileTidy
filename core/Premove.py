@@ -1,7 +1,7 @@
 from FileList import *
 from AFile import *
-from RemoveFile import *
-from compareFile import *
+from core2.RemoveFile import *
+from core2.compareFile import *
 from FileTime import *
 import log
 #只检查在tidy文件夹里的东西和final归档的是否相同，如果相同，直接搞

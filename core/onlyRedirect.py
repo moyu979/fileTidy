@@ -1,6 +1,6 @@
 import os
 import sys
-from RemoveFile import *
+from core2.RemoveFile import *
 class onlyRedirect:
     def __init__(self,path) -> None:
         self.logfile=open("./onlyredirect.txt","w")
