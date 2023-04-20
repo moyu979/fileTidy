@@ -1,6 +1,6 @@
 from FileList import *
 from Hash import *
-from AFile import *
+from _AFile import *
 from FileTime import *
 from AZipFile import *
 import log

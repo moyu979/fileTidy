@@ -1,4 +1,4 @@
-from AFile import *
+from _AFile import *
 import os
 import Log
 import sys

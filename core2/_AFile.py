@@ -15,9 +15,9 @@ class AFile:
         ##当解压来的文件，unzip不为空
         ##压缩来的文件，zip不为空
         ##普通下载来的文件，originpath不为空
-        self.originPath=HashSet()
-        self.unzipFrom=HashSet()
-        self.zipFrom=HashSet()
+        self.originPath=set()
+        self.unzipFrom=set()
+        self.zipFrom=set()
         #变化组
         self.changePath=[]
         #现状组
@@ -58,18 +58,14 @@ class AFile:
                 self.originPath.add(plist[1])
             #解压自
             if plist[0] == 'unzip':
-                zlist=plist[1].split("::")
-                self.unzipFrom.add(zlist)
+                self.unzipFrom.add(plist[1])
             if plist[0] == 'unzipFrom':
-                zlist=plist[1].split("::")
-                self.unzipFrom.add(zlist)
+                self.unzipFrom.add(plist[1])
             #压缩到
             if plist[0] == 'zip':
-                zlist=plist[1].split("::")
-                self.zipFrom.add(zlist)
+                self.zipFrom.add(plist[1])
             if plist[0] == 'zipFrom':
-                zlist=plist[1].split("::")
-                self.zipFrom.add(zlist)
+                self.zipFrom.add(plist[1])
         #常用数据            
             #现在路径
             if plist[0] == 'nowPath':
@@ -118,10 +114,8 @@ class AFile:
         if self.removed:
             string=string+"removed\n"
         else:
-            if self.nowName:
-                string=string+"nowName:\t"+self.nowName+"\n"
-            if self.nowPath:
-                string=string+"nowPath:\t"+self.nowPath+"\n"
+            string=string+"nowName:\t"+self.nowName+"\n"
+            string=string+"nowPath:\t"+self.nowPath+"\n"
         
         #保证set的顺序
         temp=[]
@@ -137,11 +131,8 @@ class AFile:
             temp.append(i)
         temp.sort()
         for i in temp:
-            string=string+"unzipFrom:\t"
-            for j in i:
-                string=string+j+"::"
-            string=string[:-2]
-            string=string+"\n"
+            string=string+"unzipFrom:\t"+i+"\n"
+
                 
             
         temp=[]
@@ -149,11 +140,7 @@ class AFile:
             temp.append(i)
         temp.sort()
         for i in temp:
-            string=string+"zipFrom:\t"
-            for j in i:
-                string=string+j+"::"
-            string=string[:-2]
-            string=string+"\n"
+            string=string+"zipFrom:\t"+i+"\n"
                
         for i in self.changePath:
             string=string+"changePath:\t"+i+"\n"

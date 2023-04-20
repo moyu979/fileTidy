@@ -1,4 +1,4 @@
-from AFile import *
+from _AFile import *
 from FileList import FileList
 import os
 from fileTime import *
@@ -37,23 +37,32 @@ def aftermove(finalPath):
     i:AFile
     for i in notExistHash:
         #从tidyList取出
-        file=tidyList.findHash(i.hashMd5)
-        if file:
+        tidyfile=tidyList.findHash(i.hashMd5)
+        finalfile=finalList.findHash(i.hashMd5)
+        #如果final里有这个，说明被标记成removed了
+        if tidyfile and finalfile:
+            tidyList.deleteByHash(i.hashMd5)
+            finalfile.removed=False
+            finalfile.autoupdate()
+            if tidyfile.nowPath!=finalfile.nowPath:
+                finalfile.changePath.append(file.nowPath)
+            finalfile.originPath.add(file.originPath)
+        elif tidyfile:
             tidyList.deleteByHash(i.hashMd5)
             #添加变化路径(输出时会重新生成nowPath)
-            file.changePath.append(i.changePath[0])
+            tidyfile.changePath.append(i.changePath[0])
             #加到FinalList
-            middleList.append(file)
+            middleList.append(tidyfile)
         else:
-            file=AFile()
-            file.hashMd5=i.hashMd5
-            file.nowPath=i.nowPath
-            file.changePath=i.changePath
-            file.noSourceFile=True
+            tidyfile=AFile()
+            tidyfile.hashMd5=i.hashMd5
+            tidyfile.nowPath=i.nowPath
+            tidyfile.changePath=i.changePath
+            tidyfile.noSourceFile=True
 
-            middleList.append(file)
+            middleList.append(tidyfile)
             
-            log.writeLog("[afterremove more file]"+i.nowPath)
+            Log.writeLog("[afterremove more file]"+i.nowPath)
     #tidy中删除的归到middle
     for i in tidyList:
         if i.removed:
@@ -63,7 +72,7 @@ def aftermove(finalPath):
     conflict=FileList()
     
             
-    file=FileTime()+".txt"
+    file=fileTime()+".txt"
     final1="./fileLogs/final/new.txt"
     final2="./fileLogs/final/"+file
     tidy1="./fileLogs/tidy/new.txt"

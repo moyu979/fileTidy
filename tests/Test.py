@@ -3,7 +3,7 @@ import os
 import sys
 import shutil
 #sys.path.append("..\\core2")
-import AFile
+import _AFile
 import init
 import Log
 import Download

@@ -1,5 +1,5 @@
 from FileList import *
-from AFile import *
+from _AFile import *
 from Hash import *
 import os
 #查看某个文件夹下的文件是否在download中

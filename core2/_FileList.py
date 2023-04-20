@@ -1,4 +1,4 @@
-from AFile import *
+from _AFile import *
 from compareFile import *
 from RemoveFile import *
 import Log

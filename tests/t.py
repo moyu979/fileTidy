@@ -3,6 +3,9 @@
 # ap=os.path.abspath(p)
 # print(ap)
 
-A="AAaaBUD"
-print(A.lower())
-print(A)
+s=set()
+s.add("a")
+s.add("b")
+s.add("c")
+for i in s:
+    print(i)
