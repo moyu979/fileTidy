@@ -18,6 +18,7 @@ class Log:
         for i in string:
             cls.logfile.write(i+"\n")
         cls.logFile.flush()
+        
 if __name__=="__main__":
     while(True):
         i=input("请输入测试字段，以q结束")

@@ -1,6 +1,6 @@
 from _AFile import *
 import os
-import Log
+import _Log
 import sys
 #将f2的文件删除，在原地的“redirect.txt”文件中记录
 def removeFile(file:AFile):
@@ -19,7 +19,7 @@ def removeFile(file:AFile):
     fp.write("hash:\t"+file.hashMd5+"\n")
     fp.write("name:\t"+file.nowName+"\n")
     fp.close()
-    Log.writeLog("[remove file]remove "+filePath+"with hash "+file.hashMd5)
+    _Log.writeLog("[remove file]remove "+filePath+"with hash "+file.hashMd5)
     os.remove(filePath)
         
 def removeFiles(files):
@@ -34,7 +34,7 @@ def remove(path):
             remove(absp)
         os.rmdir(path)
     else:
-        Log.writeLog("[remove file]remove "+path)
+        _Log.writeLog("[remove file]remove "+path)
         os.remove(path)
         
         
@@ -49,7 +49,7 @@ def removeEmpty(path):
         list=os.listdir(path)
         if len(list)==0:
             os.rmdir(path)
-            Log.writeTemp("[remove empty]remove "+path,"removeEmpty.txt")
+            _Log.writeTemp("[remove empty]remove "+path,"removeEmpty.txt")
             return
         
 if __name__ == "__main__":

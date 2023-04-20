@@ -1,6 +1,6 @@
 from genericpath import isdir
 import hashlib
-from FileList import *
+from _FileList import *
 import sys
 #用于计算一个文件夹下所有文件的哈希值，返回一个记载所有文件信息的FileList(不去重)
 class GeneHash:

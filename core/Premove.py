@@ -1,4 +1,4 @@
-from FileList import *
+from _FileList import *
 from _AFile import *
 from core2.RemoveFile import *
 from core2.compareFile import *

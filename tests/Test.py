@@ -5,7 +5,7 @@ import shutil
 #sys.path.append("..\\core2")
 import _AFile
 import init
-import Log
+import _Log
 import Download
 import Tidy
 import AZipFile

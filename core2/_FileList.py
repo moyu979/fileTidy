@@ -1,7 +1,7 @@
 from _AFile import *
 from compareFile import *
 from RemoveFile import *
-import Log
+from _Log import *
 
 #排序用函数
 def return_now_path(elem:AFile):
@@ -34,13 +34,19 @@ class FileList:
 
     #加载路径记录的文件        
     def importFileList(self,path):
+        lineCount=0
         inFile=open(path,encoding="utf-8")
         af=[]
         aline:str=inFile.readline()
+        lineCount+=1
         while aline:
             #如果一行结束，增加一个文件
             if aline.startswith("end") or aline=="\n":
-                if not af==[]:
+                if af==[]:
+                    Log.writeLog("[fileList]\tmulti end in line "+lineCount+"\n")
+                elif not af[0].startswith("hashMd5"):
+                    Log.writeLog("[fileList]\tno hash file in line "+lineCount+"\n")
+                else:
                     self.fileList.append(AFile(af))
                 af=[]
             #剥去filelist增加的辅助元素
@@ -51,6 +57,7 @@ class FileList:
                 af.append(aline)
             #读新行
             aline=inFile.readline()
+            lineCount+=1
         inFile.close()
 
     #排序        
@@ -70,17 +77,19 @@ class FileList:
         self.fileList.append(element)   
 
     ##将一个FileList添加到现有的FileList中，如果遇到相同的，不合并，而是将新旧两个文件进记录到findsame列表下，等待进一步处理
+    ##返回值为重复的文件和-找到重复文件，但重复文件丢失-两种文件的列表
     def combineNoSame(self,files):
-        findsame=[]
-        losssame=[]
+        findSame=[]
+        lostedSame=[]
         files.sortBypath()
+        self.sortBypath()
         for i in files:
-            same,sameLoss=self.appendNoSame(i)
-            if same and sameLoss:
-                losssame.append(i)
-            elif same:
-                findsame.append(i)
-        return findsame,losssame
+            hashSameFile,lostSameFile=self.appendNoSame(i)
+            if hashSameFile and lostSameFile:
+                lostedSame.append(i)
+            elif hashSameFile:
+                findSame.append(i)
+        return findSame,lostedSame
     
     ##增加一个文件(去重),有重返回True
     def appendNoSame(self,a:AFile): 
@@ -90,6 +99,7 @@ class FileList:
             #如果之前的文件被删了,用现在的替换即可
             if(sameFile.removed):
                 self.deleteByHash(sameFile.hashMd5)
+                #sameFile的删除情况此时视a而定
                 a.originPath=sameFile.originPath|a.originPath
                 a.zipFrom=sameFile.zipFrom|a.zipFrom
                 a.unzipFrom=sameFile.unzipFrom|a.unzipFrom
@@ -120,7 +130,9 @@ class FileList:
                         sameHashs.append(i)
                 sameHashs.sort(key=return_sameHashCount)
                 for i in sameHashs:
-                    if compareFile(i.nowPath,a.nowPath):
+                    if(i.removed):
+                        pass
+                    elif compareFile(i.nowPath,a.nowPath):
                         i.originPath=sameFile.originPath|a.originPath
                         i.zipFrom=sameFile.zipFrom|a.zipFrom
                         i.unzipFrom=sameFile.unzipFrom|a.unzipFrom

@@ -1,8 +1,8 @@
-from FileList import *
+from _FileList import *
 from Hash import *
 from _AFile import *
 from FileTime import *
-from AZipFile import *
+from _AZipFile import *
 import log
 import copy
 import os

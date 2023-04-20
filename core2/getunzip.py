@@ -1,6 +1,6 @@
-from FileList import *
-from AZipFile import *
-from Log import *
+from _FileList import *
+from _AZipFile import *
+from _Log import *
 def getunzip(fileList:FileList,path,writeable=True):
     paths=os.listdir(path)
     unzipList=[]
@@ -16,9 +16,9 @@ def getunzip(fileList:FileList,path,writeable=True):
             fileList.append(zfile)
             zfile.hashMd5=i.zipFile[0]
             zfile.noSourceFile=True
-            Log.writeLog=("[getUnzip]\t"+i.zipFile[0]+"::"+i.zipFile[0])        
+            _Log.writeLog=("[getUnzip]\t"+i.zipFile[0]+"::"+i.zipFile[0])        
 
-        for j in i.fileList:
+        for j in i.unzipFileList:
             uzFile=fileList.findHash(j[0])
             if not uzFile:
                 fileList.append(uzFile)

@@ -1,9 +1,9 @@
 from _AFile import *
-from FileList import FileList
+from _FileList import FileList
 import os
 from fileTime import *
 from Hash import GeneHash
-from Log import *
+from _Log import *
 import sys
 
 def aftermove(finalPath):

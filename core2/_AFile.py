@@ -1,5 +1,5 @@
 import os.path
-from Log import *
+from _Log import *
 from HashSet import *
 #AFile 模块，作为基本单元而存在，在不同函数之间传递消息通常使用这个
 class AFile:
@@ -81,23 +81,6 @@ class AFile:
         if not self.removed:
             self.nowPath=self.changePath[-1]
             self.nowName=os.path.basename(self.nowPath)
-    #     if len(self.changePath)==0:
-    #         for i in self.originPath:
-    #             if os.path.exists(i):
-    #                 self.changePath.append(i)
-    #     if len(self.changePath)==0:
-    #             for i in self.originPath:       
-    #                 self.changePath.append(i)
-    #                 break 
-    #     #如果没被删除的话，自动生成现在的路径什么的
-    #     if not self.removed and not self.noSourceFile:
-    #         #将变化目录的最后一个（最近日期的目录）或原始目录（没有变化）视作现在的目录
-    #         if len(self.changePath)==0:
-    #             pass
-    #         else:
-    #             self.nowPath=self.changePath[-1]
-    #         #从现在的目录中提取出文件名
-    #         self.nowName=os.path.basename(self.nowPath)
     
     #字符串
     def __str__(self,adds="") -> str:
