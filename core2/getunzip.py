@@ -16,7 +16,7 @@ def getunzip(fileList:FileList,path,writeable=True):
             fileList.append(zfile)
             zfile.hashMd5=i.zipFile[0]
             zfile.noSourceFile=True
-            _Log.writeLog=("[getUnzip]\t"+i.zipFile[0]+"::"+i.zipFile[0])        
+            Log.writeLog=("[getUnzip]\t"+i.zipFile[0]+"::"+i.zipFile[0])        
 
         for j in i.unzipFileList:
             uzFile=fileList.findHash(j[0])

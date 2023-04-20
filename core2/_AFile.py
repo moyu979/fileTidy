@@ -1,6 +1,5 @@
 import os.path
 from _Log import *
-from HashSet import *
 #AFile 模块，作为基本单元而存在，在不同函数之间传递消息通常使用这个
 class AFile:
     def __init__(self,paras:str=None) -> None:

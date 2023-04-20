@@ -8,7 +8,7 @@ import init
 import _Log
 import Download
 import Tidy
-import AZipFile
+import _AZipFile
 import RemoveFile
 import Premove
 import aftermove

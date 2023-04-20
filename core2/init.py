@@ -54,7 +54,11 @@ class init:
             with open(newly,"w") as f:
                 f.close()
             print(os.path.relpath(newly)+" inited")
-    
+    def initlog(self):
+        destPath=os.path.join(self.workPath,"log")
+        if not os.path.exists(destPath):
+            os.mkdir(destPath)
+            print(os.path.relpath(destPath)+" inited")  
     def callInit(self):
         for i,j in init.__dict__.items():
             if callable(j) and i!="__init__" and i!="callInit":

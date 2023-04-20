@@ -1,5 +1,5 @@
 from _FileList import *
-from Hash import *
+from _Hash import *
 from _AFile import *
 from FileTime import *
 from _AZipFile import *

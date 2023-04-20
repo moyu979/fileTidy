@@ -2,7 +2,7 @@ from _AFile import *
 from _FileList import FileList
 import os
 from fileTime import *
-from Hash import GeneHash
+from _Hash import GeneHash
 from _Log import *
 import sys
 

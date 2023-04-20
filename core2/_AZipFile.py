@@ -1,5 +1,5 @@
 import os
-from Hash import *
+from _Hash import *
 from _Log import *
 
 

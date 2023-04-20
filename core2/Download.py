@@ -1,11 +1,11 @@
 import sys
 from _FileList import *
-from Hash import *
+from _Hash import *
 from fileTime import *
 from RemoveFile import * 
 from _Log import *        
 def download(path):
-    _Log.writeLog("Download: "+path)
+    Log.writeLog("Download: "+path)
     #计算此次文件哈希值
     hash=GeneHash()
     filelist=hash.run(path)

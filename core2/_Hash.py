@@ -6,11 +6,9 @@ import sys
 class GeneHash:
     def __init__(self):        
         self.fileList=FileList()
-        
         self.totalSize:float=0
         self.finished:float=0
     
-
     def run(self,path)->FileList:
         if type(path).__name__=='list':
             self.getListSize(path)
@@ -29,7 +27,7 @@ class GeneHash:
     def getListSize(self,path):
         for i in path:
             self.calTotalSize(i)
-        print("total size: "+self.humanSize(self.totalSize))
+        print("total size: "+self.humanSize(self.totalSize))        
     def listHash(self,path):
         for i in path:
             self.dirHash(i)
