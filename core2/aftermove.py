@@ -1,14 +1,14 @@
 from AFile import *
 from FileList import FileList
 import os
-from FileTime import *
+from fileTime import *
 from Hash import GeneHash
-import log
+from Log import *
 import sys
 
 def aftermove(finalPath):
     
-    log.writeLog("afterMove")
+    Log.writeLog("afterMove "+finalPath)
 
     finalList=FileList("./fileLogs/final/new.txt")
     tidyList=FileList("./fileLogs/tidy/new.txt")

@@ -1,6 +1,6 @@
 import os
 import sys
-from FileTime import *
+from fileTime import *
 #初始化用于记录文件的目录，命名为fileLogs，仅需要在初始化时调用
 #主目录下有记录下载文件的“download”，记录整理中文件的“tidy”和记录文件的final，
 class init:
@@ -54,15 +54,6 @@ class init:
             with open(newly,"w") as f:
                 f.close()
             print(os.path.relpath(newly)+" inited")
-            
-    def initlog(self):
-        destPath=os.path.join(self.workPath,"logs.txt")
-        if not os.path.exists("log.txt"):
-            with open(destPath,"w") as f:
-                t=FileTime()
-                f.write(t)
-                f.write("\n")
-            print(os.path.relpath(destPath)+" inited")
     
     def callInit(self):
         for i,j in init.__dict__.items():

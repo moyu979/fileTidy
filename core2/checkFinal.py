@@ -1,6 +1,8 @@
 from FileList import *
 from AFile import *
+from Log import *
 def checkFinal(finalPath):
+    Log.writeLog("afterMove "+finalPath)
     finalRecord=FileList("./fileLog/final/new.txt")
     wrongRemove=[]
     nowFinalPath=[] 

@@ -3,6 +3,7 @@
         "C:\\ProgramData\\Anaconda3\\Lib\\site-packages",
         "C:\\ProgramData\\Anaconda3\\Scripts",
         "./core",
-        "./tests"
+        "./tests",
+        "./core2"
     ]
 }
