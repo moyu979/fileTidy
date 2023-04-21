@@ -1,7 +1,7 @@
 from _FileList import *
 from _AZipFile import *
 from _Log import *
-def getunzip(fileList:FileList,path,writeable=True):
+def unzip(fileList:FileList,path,writeable=True):
     paths=os.listdir(path)
     unzipList=[]
     for i in paths:

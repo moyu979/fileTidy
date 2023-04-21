@@ -5,7 +5,6 @@ from fileTime import *
 from RemoveFile import * 
 from _Log import *        
 def download(path):
-    Log.writeLog("Download: "+path)
     #计算此次文件哈希值
     hash=GeneHash()
     filelist=hash.run(path)
@@ -32,6 +31,7 @@ def download(path):
     
         
 if __name__ == "__main__":
+    Log.writeLog("Download: "+path)
     if len(sys.argv)==2:
         path=sys.argv[1]
     else:

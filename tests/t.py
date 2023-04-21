@@ -3,9 +3,6 @@
 # ap=os.path.abspath(p)
 # print(ap)
 
-s=set()
-s.add("a")
-s.add("b")
-s.add("c")
-for i in s:
-    print(i)
+a="aa/ss/dd/ff/gg"
+b=a.split("/")
+print(b)

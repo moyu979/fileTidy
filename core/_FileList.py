@@ -27,6 +27,7 @@ class FileList:
     def __init__(self,path=None) -> None:
         self.itercount=0
         self.fileList=[]
+        self.path=path
         #如果参数有path的话使用path初始化
         if not path==None:
             self.importFileList(path)
@@ -185,7 +186,11 @@ class FileList:
             count=count+1
         outFile.flush()
         outFile.close()
-        
+    def writeBack(self):
+        oriPath:str=self.path
+        timePath=oriPath.replace("new.txt",fileTime()+".txt")
+        self.outPut(oriPath)
+        self.outPut(timePath)    
     def print(self):
         self.sortBypath()
         count=1
