@@ -6,7 +6,7 @@ import shutil
 import _AFile
 import init
 import _Log
-import Download
+import writeDownload
 import Tidy
 import _AZipFile
 import RemoveFile
@@ -60,8 +60,8 @@ class test(unittest.TestCase):
         fileDest="./testFiles"
         shutil.copytree(logSource,logDest)
         shutil.copytree(fileSource,fileDest)
-        Download.download(fileDest)
-        Download.download(fileDest)
+        writeDownload.download(fileDest)
+        writeDownload.download(fileDest)
         with open("./fileLogs/download/new.txt",encoding="utf-8") as res:
             r=res.readlines()
         with open("testExamples/download_once/results/new.txt",encoding="utf-8") as ans:
