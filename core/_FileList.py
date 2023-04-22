@@ -24,7 +24,7 @@ def return_sameHashCount(elem:AFile):
 
 class FileList:
     #初始化
-    def __init__(self,path=None) -> None:
+    def __init__(self,path:str=None) -> None:
         self.itercount=0
         self.fileList=[]
         self.path=path
@@ -171,7 +171,7 @@ class FileList:
 
     def findPath(self,path)->AFile:
         for i in self.fileList:
-            if i.nowPath==path:
+            if os.path.abspath(i.nowPath)==os.path.abspath(path):
                 return i
         return None
     

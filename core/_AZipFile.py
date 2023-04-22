@@ -34,7 +34,7 @@ class AZipFile:
             self.error=True
             return
         
-        fileList=[]
+        fileLists=[]
 
         #获取数据
         for i in inZipDir:
@@ -47,12 +47,12 @@ class AZipFile:
             else:
                 hash=GeneHash()
                 hashList=hash.run(p)
-                fileList.append(hashList)
+                fileLists.append(hashList)
         #对比多次解压的内容是否相同    
         for i in range(1,dircount):
-            self.compare(fileList[0],fileList[i])
+            self.compareFileList(fileLists[0],fileLists[i])
         #提取解压文件的哈希值    
-        self.unzipFileList=fileList[0]
+        self.unzipFileList=fileLists[0]
 
     #判别两个文件夹中的文件是否完全一致            
     def compare(self,a:FileList,b:FileList):
