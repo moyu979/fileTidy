@@ -4,7 +4,7 @@ from _Hash import *
 from _Log import *
 
 #返回多出来的文件列表和哈希值
-def getMoreFile(fileList:FileList,path,writable=False):
+def getMoreFile(fileList:FileList,path):
     nowInFile=[]
     notInFileList=[]
     #收集目录下所有文件路径
