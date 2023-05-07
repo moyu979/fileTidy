@@ -42,7 +42,6 @@ def update(path,dataList):
             #存在删除
             else:
                 fileList.appendNoSame(notLogedFile)
-                print("qqq")
                 removeFile(notLogedFile)
 
 

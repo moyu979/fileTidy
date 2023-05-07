@@ -60,7 +60,7 @@ class GeneHash:
         self.showProgress()    
 
     def showProgress(self):
-        print("\r nowfinish %f" % (self.finished/self.totalSize),flush=True,end="")    
+        print("\r nowfinish %f " % (self.finished/self.totalSize),flush=True,end="")    
         
     def calTotalSize(self,file)->float:
         if os.path.isdir(file):

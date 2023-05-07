@@ -12,14 +12,14 @@ def removeFile(file:AFile):
         fp=open(redirPath,"a",encoding="utf-8")
     else:
         fp=open(redirPath,"w",encoding="utf-8")
-        fp.write(fileDir)
+        fp.write(fileDir.replace("\\","/"))
         fp.write("\n")
         fp.write("\n")
         
     fp.write("hash:\t"+file.hashMd5+"\n")
     fp.write("name:\t"+file.nowName+"\n")
     fp.close()
-    _Log.writeLog("[remove file]remove "+filePath+"with hash "+file.hashMd5)
+    Log.writeLog("[remove file] remove\t"+filePath.replace("\\","/")+"\twith hash\t"+file.hashMd5+"\n")
     os.remove(filePath)
         
 def removeFiles(files):

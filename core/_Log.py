@@ -24,6 +24,7 @@ class Log:
     def closeLog(cls):
         if cls.logFile!=None:
             cls.logFile.close()    
+        cls.logFile=None
 if __name__=="__main__":
     while(True):
         i=input("请输入测试字段，以q结束")
