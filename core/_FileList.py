@@ -171,7 +171,9 @@ class FileList:
 
     def findPath(self,path)->AFile:
         for i in self.fileList:
-            if os.path.abspath(i.nowPath)==os.path.abspath(path):
+            if i.nowPath==None:
+                pass
+            elif os.path.abspath(i.nowPath)==os.path.abspath(path):
                 return i
         return None
     

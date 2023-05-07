@@ -20,7 +20,9 @@ def update(path,dataList):
             if file!="redirect.txt" and not fileList.findPath(p):
                 notLogedPath.append(p)
 
-    notLogedHash=GeneHash().run(notLogedHash)
+        
+    notLogedHash=GeneHash().run(notLogedPath)
+
     notLogedFile:AFile
     for notLogedFile in notLogedHash:
         inLog:AFile=fileList.findHash(notLogedFile.hashMd5)
@@ -28,14 +30,21 @@ def update(path,dataList):
             notLogedFile.noSourceFile=alladd
             fileList.append(notLogedFile)
         else:
+            #删除文件复活
             if inLog.removed:
                 inLog.removed=False
                 inLog.changePath.append(notLogedFile.nowPath)
+                Log.writeLog("[awake removed File]\t"+notLogedFile.nowPath.replace("\\","/")+"\t"+notLogedFile.hashMd5+"\n")
+            #移动了
             elif not os.path.exists(inLog.nowPath):
                 inLog.removed=False
                 inLog.changePath.append(notLogedFile.nowPath)
+            #存在删除
             else:
                 fileList.appendNoSame(notLogedFile)
+                print("qqq")
+                removeFile(notLogedFile)
+
 
     fileList.writeBack()
             

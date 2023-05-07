@@ -74,12 +74,17 @@ class AFile:
                 self.changePath.append(plist[1])
         #自动更新一下
         self.autoupdate()
-        
+    def getNowPath(self)->str:
+        return self.nowPath.replace("\\","/")
+
     #自动更新 
     def autoupdate(self):
         if not self.removed:
             self.nowPath=self.changePath[-1]
             self.nowName=os.path.basename(self.nowPath)
+        else:
+            self.nowPath=None
+            self.nowName=None
     
     #字符串
     def __str__(self,adds="") -> str:
@@ -128,5 +133,6 @@ class AFile:
             string=string+"changePath:\t"+i+"\n"
 
         string=string+"end\n"
+        string=string.replace("\\","/")
         return string
 
