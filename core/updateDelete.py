@@ -5,7 +5,14 @@ from fileTime import *
 from RemoveFile import * 
 from _Log import *   
 
-def delete(fileList:FileList,path):
+def delete(path,dataList):
+    if dataList=="download":
+        fileList=FileList("./fileLogs/download/new.txt")
+    elif dataList=="finish":
+        fileList=FileList("./fileLogs/tidy/new.txt")
+    else:
+        fileList=None
+
     todelete=GeneHash().run(path)
     i:AFile
     for i in todelete:

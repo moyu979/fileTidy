@@ -5,7 +5,7 @@ from _getMoreFile import *
 def unzip(fileList:FileList,path,fileStoragePath):
 
     moreFile=getMoreFile(fileList,fileStoragePath)
-
+    moreFile=GeneHash.run(moreFile)
     paths=os.listdir(path)
     unzipList=[]
     for i in paths:

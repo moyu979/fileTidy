@@ -21,9 +21,9 @@ def getMoreFile(fileList:FileList,path):
         else:
             notInFileList.append(f)
 
-    FileNotInList:FileList=GeneHash().run(notInFileList)
+    #FileNotInList:FileList=GeneHash().run(notInFileList)
     
-    return FileNotInList
+    return notInFileList
 
 
 
