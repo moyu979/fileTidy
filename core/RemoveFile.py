@@ -1,6 +1,6 @@
-from AFile import *
+from _AFile import *
 import os
-import log
+import _Log
 import sys
 #将f2的文件删除，在原地的“redirect.txt”文件中记录
 def removeFile(file:AFile):
@@ -12,18 +12,18 @@ def removeFile(file:AFile):
         fp=open(redirPath,"a",encoding="utf-8")
     else:
         fp=open(redirPath,"w",encoding="utf-8")
-        fp.write(fileDir)
+        fp.write(fileDir.replace("\\","/"))
         fp.write("\n")
         fp.write("\n")
         
     fp.write("hash:\t"+file.hashMd5+"\n")
     fp.write("name:\t"+file.nowName+"\n")
     fp.close()
-    log.writeLog("[remove file]remove "+filePath+"with hash "+file.hashMd5)
+    Log.writeLog("[remove file] remove\t"+filePath.replace("\\","/")+"\twith hash\t"+file.hashMd5+"\n")
     os.remove(filePath)
         
-def removeFiles(file2):
-    for i in file2:
+def removeFiles(files):
+    for i in files:
         removeFile(i)
         
 def remove(path):
@@ -34,7 +34,7 @@ def remove(path):
             remove(absp)
         os.rmdir(path)
     else:
-        log.writeLog("[remove file]remove "+path)
+        _Log.writeLog("[remove file]remove "+path)
         os.remove(path)
         
         
@@ -49,7 +49,7 @@ def removeEmpty(path):
         list=os.listdir(path)
         if len(list)==0:
             os.rmdir(path)
-            log.writeTemp("[remove empty]remove "+path,"removeEmpty.txt")
+            _Log.writeTemp("[remove empty]remove "+path,"removeEmpty.txt")
             return
         
 if __name__ == "__main__":

@@ -1,7 +1,0 @@
-num:	1
-hashMd5:	e44cea61f973277d4c2d3a849213eba1
-nowName:	2.zip
-nowPath:	testFiles\download\2.zip
-originPath:	testFiles\download\2.zip
-changePath:	testFiles\download\2.zip
-end

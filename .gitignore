@@ -2,12 +2,11 @@
 !.gitignore
 !*.md
 !/core/
-!/mds/
-!/tests/
+!/test/
 
-/tests/*
-!/tests/*.py
-!/tests/answer
-!/tests/testExamples
+/test/__pycache__
+/test/examples/toCheck
+
 
 /core/__pycache__
+
