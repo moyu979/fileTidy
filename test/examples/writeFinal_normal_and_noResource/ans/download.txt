@@ -1,0 +1,7 @@
+num:	1
+hashMd5:	cfcd208495d565ef66e7dff9f98764da
+nowName:	0.txt
+nowPath:	./testFiles/0.txt
+originPath:	./testFiles/0.txt
+changePath:	./testFiles/0.txt
+end

@@ -1,12 +1,12 @@
 import sys
 import os
+from _FileList import *
+from _AFile import *
 
 def compareFiles(path1,path2):
-    if path1==None and path2==None:
-        return True
-    elif path1==path2:
-        return False
-    elif os.path.isdir(path1) and os.path.isdir(path2):    
+    path1=os.path.abspath(path1)
+    path2=os.path.abspath(path2)
+    if os.path.isdir(path1) and os.path.isdir(path2):    
         f1=os.path.listdir(path1)
         f2=os.path.listdir(path2)
         allTrue=True
@@ -16,7 +16,7 @@ def compareFiles(path1,path2):
             else:
                 absSubPath1=os.path.join(path1,i)
                 absSubPath2=os.path.join(path2,i)
-                if compareFiles(absSubPath1,absSubPath2):
+                if compareFiles(absSubPath1,absSubPath2) and allTrue:
                     allTrue=True
                 else:
                     allTrue=False
@@ -24,9 +24,14 @@ def compareFiles(path1,path2):
     elif os.path.isdir(path1) ^ os.path.isdir(path2):
         return False
     else:
-        compareFile(path1,path2)
+        return compareFile(path1,path2)
         
-                
+def compareFileList(list1,list2):
+    i:AFile
+    for i in list1:
+        if not list2.findHash(i.hashMd5):
+            return False
+    return True                
                 
 #当且仅当两个文件不是同一个但内容相同时返回True    
 def compareFile(path1,path2)->bool:
@@ -52,8 +57,7 @@ def compareFile(path1,path2)->bool:
         #如果出现不同，视作文件不同
         if not data1==data2:
             ret=False
-            break
-        
+            break        
     f1.close()
     f2.close()
     return ret
