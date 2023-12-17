@@ -1,73 +1,74 @@
+import sqlite3
 import os
-import sys
-from fileTime import *
-#初始化用于记录文件的目录，命名为fileLogs，仅需要在初始化时调用
-#主目录下有记录下载文件的“download”，记录整理中文件的“tidy”和记录文件的final，
-class init:
-    def __init__(self,path:str="."):
-        path=os.path.abspath(path)
-        #记录主目录
-        self.workPath=os.path.join(path,"fileLogs")
-        if not os.path.exists(self.workPath):
-            os.mkdir(self.workPath)
-        self.callInit()
-            
-    def initdownloadFile(self):
-        destPath=os.path.join(self.workPath,"download")
-        if not os.path.exists(destPath):
-            os.mkdir(destPath)
-            print(os.path.relpath(destPath)+" inited")  
-        newly=os.path.join(destPath,"new.txt")
-        if not os.path.exists(newly):
-            with open(newly,"w") as f:
-                f.close()
-            print(os.path.relpath(newly)+" inited")
-            
-    def initTidy(self):
-        destPath=os.path.join(self.workPath,"tidy")
-        if not os.path.exists(destPath):
-            os.mkdir(destPath)
-            print(os.path.relpath(destPath)+" inited")  
-        newly=os.path.join(destPath,"new.txt")
-        if not os.path.exists(newly):
-            with open(newly,"w") as f:
-                f.close()
-            print(os.path.relpath(newly)+" inited")
+
+from _Log import *
+cmd1=[
+    '''CREATE TABLE now(
+        time        txt,
+        hashMd5     txt,
+        conflictNum INT DEFAULT 0,
+        path        txt
+        )''',
     
-    def initfinal(self):
-        destPath=os.path.join(self.workPath,"final")
-        if not os.path.exists(destPath):
-            os.mkdir(destPath)
-            print(os.path.relpath(destPath)+" inited")  
-        newly=os.path.join(destPath,"new.txt")
-        if not os.path.exists(newly):
-            with open(newly,"w") as f:
-                f.close()
-            print(os.path.relpath(newly)+" inited")
-    def initpremove(self):
-        destPath=os.path.join(self.workPath,"premove")
-        if not os.path.exists(destPath):
-            os.mkdir(destPath)
-            print(os.path.relpath(destPath)+" inited")  
-        newly=os.path.join(destPath,"new.txt")
-        if not os.path.exists(newly):
-            with open(newly,"w") as f:
-                f.close()
-            print(os.path.relpath(newly)+" inited")
-    def initlog(self):
-        destPath=os.path.join(self.workPath,"log")
-        if not os.path.exists(destPath):
-            os.mkdir(destPath)
-            print(os.path.relpath(destPath)+" inited")  
-    def callInit(self):
-        for i,j in init.__dict__.items():
-            if callable(j) and i!="__init__" and i!="callInit":
-                j(self)    
-            
-    
-if __name__ =="__main__":
-    if len(sys.argv)!=2:
-        x=init(os.path.abspath("."))
-    else:
-        x=init(sys.argv[1])
-    x.callInit()
+    '''CREATE TABLE change(
+        time        txt,
+        hashMd5     txt,
+        conflictNum INT DEFAULT 0,
+        path        txt
+        )''',
+
+    '''CREATE TABLE origin(
+        time        txt,
+        hashMd5     txt,
+        conflictNum INT DEFAULT 0,
+        path        txt
+        )''',    
+
+    '''CREATE TABLE unzip(
+        time                txt,
+        zipFileHashMd5      txt,
+        zipFilePath         txt,
+        zipFileConflictNum  INT DEFAULT 0,
+        unzipFilehash       txt,
+        unzipFileconf       txt,
+        unzipName           txt
+        
+        )''',
+
+    '''CREATE TABLE zip(
+        time                txt,
+        zipFileHashMd5      txt,
+        zipFilePath         txt,
+        zipFileConflictNum  INT DEFAULT 0,
+        unzipFilehash       txt,
+        unzipFileconf       txt,
+        unzipName           txt
+        )''',
+
+    '''CREATE TABLE toCompare(
+        mainPath       txt,
+        new            txt
+        )''',
+
+]
+
+class Init:
+    def __init__(self,path):
+        if not os.path.exists(path):
+            os.mkdir(path)
+        Log.open(path)
+        Log.writeLog(f"init path={path}")
+        db_path=os.path.join(path,"files.db")
+        if os.path.exists(db_path):
+            Log.writeLog(f"already exists dest database in {db_path}")
+            return
+        conn=sqlite3.connect(db_path)
+        cur=conn.cursor()
+        for i in cmd1:
+            cur.execute(i)
+        
+        conn.commit()
+        conn.close()
+        Log.closeLog()
+
+        
