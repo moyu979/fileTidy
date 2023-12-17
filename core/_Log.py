@@ -34,6 +34,7 @@ class Log:
     def debug(cls,string):
         if cls.debugOutput:
             cls.writeLog(string)
+            
 if __name__=="__main__":
     while(True):
         i=input("请输入测试字段，以q结束")

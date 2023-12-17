@@ -9,7 +9,7 @@ class sizeManage:
 
         self.totalSize=self.calSize(path)
         print("total size: "+self.humanSize(self.totalSize))
-        pass
+        
     def update(self,path):
         self.temp=0
         self.calSize(path)

@@ -27,19 +27,7 @@ def removeFile(filePath,hash):
         
 def removeFiles(files):
     for i in files:
-        removeFile(i)
-        
-def removeAll(path):
-    if os.path.isdir(path):
-        list=os.listdir(path)
-        for i in list:
-            absp=os.path.join(path,i)
-            removeAll(absp)
-        os.rmdir(path)
-    else:
-        Log.writeLog("[remove file]\tremove\t"+path.replace("\\","/"))
-        os.remove(path)
-        
+        removeFile(i)        
         
 def removeEmpty(path):
     if not os.path.isdir(path):

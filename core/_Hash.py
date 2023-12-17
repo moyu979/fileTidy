@@ -33,17 +33,11 @@ class Hash:
             self.fileHash(path)
 
     def fileHash(self,path):
-        if(path.endswith("redirect.txt")):
-            return
         md5=getAHash(path)
         self.fileList.append([md5,path])
         if self.showProgress:
             self.sizeManage.update(path)
             self.sizeManage.showProgress()
-    
-    def show(self):
-        for i in self.fileList:
-            print(i[0]+"\t"+i[1].replace("\\","/"))
 
 def getAHash(path,size=512):
     if os.path.isdir(path):
