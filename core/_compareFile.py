@@ -1,9 +1,10 @@
 import sys
 import os
-
+#传入两个文件或文件夹，进行比较
 def compare(path1,path2):
     path1=os.path.abspath(path1)
     path2=os.path.abspath(path2)
+    #如果两个都是文件夹，递归
     if os.path.isdir(path1) and os.path.isdir(path2):    
         f1=os.listdir(path1)
         f2=os.listdir(path2)
@@ -13,6 +14,7 @@ def compare(path1,path2):
             else:
                 absSubPath1=os.path.join(path1,i)
                 absSubPath2=os.path.join(path2,i)
+                #只要有不一样的，就返回错误
                 if not compare(absSubPath1,absSubPath2):
                     return False
         return True
@@ -20,28 +22,34 @@ def compare(path1,path2):
         return False
     else:
         return compareFile(path1,path2)
+
 #当且仅当两个文件不是同一个但内容相同时返回True    
 def compareFile(path1,path2)->bool:
-    ret=False
-    #进入比较流程
-    f1=open(path1,"rb")
-    f2=open(path2,"rb")
-    while True:
-        #以512M为单位比较
-        data1=f1.read(1024**2*512)
-        data2=f2.read(1024**2*512)
-        
-        #如果到尽头都相同，视作文件相同
-        if not data1 and not data2:
-            ret=True
-            break
-        #如果出现不同，视作文件不同
-        if not data1==data2:
-            ret=False
-            break        
-    f1.close()
-    f2.close()
-    return ret
+    path1=os.path.abspath(path1).replace("\\","/")
+    path2=os.path.abspath(path2).replace("\\","/")
+    if path1==path2:
+        return False
+    else:
+        ret=False
+        #进入比较流程
+        f1=open(path1,"rb")
+        f2=open(path2,"rb")
+        while True:
+            #以512M为单位比较
+            data1=f1.read(1024**2*512)
+            data2=f2.read(1024**2*512)
+            
+            #如果到尽头都相同，视作文件相同
+            if not data1 and not data2:
+                ret=True
+                break
+            #如果出现不同，视作文件不同
+            if not data1==data2:
+                ret=False
+                break        
+        f1.close()
+        f2.close()
+        return ret
         
 if __name__=="__main__":
     if len(sys.argv)!=3:
