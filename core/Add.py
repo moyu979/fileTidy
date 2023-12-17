@@ -120,6 +120,7 @@ class Add:
             sizes.update(path)
             sizes.showProgress()
             
+            ————finish here——
             #如果是消失的文件，说明发生了一次移位
 
             #如果是哈希改变的文件，说明发生了一次移位-写入
@@ -133,7 +134,7 @@ class Add:
             ### 如果确实相同，判别，删除
 
             ### 如果哈希碰撞 上报
-            
+
             # if not hash in exists_hashkey:
             #     self.cur.execute("INSERT INTO now (time,hashMd5,conflictNum,path) VALUES (?,?,?,?)",(self.time,hash,0,path))
             #     if self.write_origin and not hash in check_removed:
