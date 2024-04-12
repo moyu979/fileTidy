@@ -2,12 +2,12 @@ import sqlite3
 import os
 import sys
 
-from _hash import *
+from _Hash import *
 from _fileTime import *
 from _Log import *
 from _compareFile import *
 from _removeFile import *
-
+from _sizeManage import *
 
 class Move:
     def __init__(self,db_path,src_path,dst_path) -> None:
@@ -35,7 +35,7 @@ class Move:
         to_match=self.dst_path+"%"
         already_exist_in_dest=self.cur.execute("SELECT * FROM now WHERE path LIKE ?",(to_match,)).fetchall()
         for i in already_exist_in_dest:
-            already_exist_dest_dict[i[3]]=i[0]
+            already_exist_dest_dict[i[2]]=i[0]
 
         already_exist_src_dict={}
         to_match=self.src_path+"%"
@@ -53,15 +53,14 @@ class Move:
                     if file_path not in already_exist_dest_dict:
                         more_in_dest.append(file_path)
 
-        Log.writeLog(f"find {len(more_in_dest)} unreg files in dest")
+        Log.writeLog(f"find {len(more_in_dest)} unlogged files in dest")
 
         sizes=sizeManage(more_in_dest)
 
         for i in more_in_dest:
             hash=getAHash(i)
             if hash in already_exist_src_dict:
-                self.cur.execute("INSERT INTO change (time,hashMd5,conflictNum,path) VALUES (?,?,?,?)",(self.time,hash,already_exist_src_dict[hash][2],i))
-                self.cur.execute("UPDATE now SET time=?,path=? WHERE hashMd5=? AND conflictNum=?",(self.time,i,hash,already_exist_src_dict[hash][2]))
+                self.cur.execute("UPDATE now SET time=?,path=? WHERE hashMd5=?",(self.time,i,hash))
                 #todo 是否自动删除原本文件
             else:
                 Log.writeLog(f"[no source file]\thash {already_exist_src_dict[hash][3]}")

@@ -6,22 +6,15 @@ cmd1=[
     '''CREATE TABLE now(
         time        txt,
         hashMd5     txt,
-        conflictNum INT DEFAULT 0,
-        path        txt
-        )''',
-    
-    '''CREATE TABLE change(
-        time        txt,
-        hashMd5     txt,
-        conflictNum INT DEFAULT 0,
-        path        txt
+        path        txt,
+        conflictNum INT DEFAULT 0
         )''',
 
     '''CREATE TABLE origin(
         time        txt,
         hashMd5     txt,
-        conflictNum INT DEFAULT 0,
-        path        txt
+        path        txt,
+        conflictNum INT DEFAULT 0
         )''',    
 
     '''CREATE TABLE unzip(
@@ -43,12 +36,7 @@ cmd1=[
         unzipFilehash       txt,
         unzipFileconf       txt,
         unzipName           txt
-        )''',
-
-    '''CREATE TABLE toCompare(
-        mainPath       txt,
-        new            txt
-        )''',
+        )'''
 
 ]
 
