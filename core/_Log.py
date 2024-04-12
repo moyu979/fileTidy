@@ -5,10 +5,13 @@ class Log:
     debugOutput=True
     @classmethod
     def writeLog(cls,string,new_line=True):
+        
         cls.logFile.write(string)
         if new_line:
             cls.logFile.write("\n")
         cls.logFile.flush()
+        print(string)
+
     @classmethod
     def open(cls,path,time=fileTime()):
         log_dir=os.path.join(path,"logs")

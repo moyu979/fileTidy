@@ -11,7 +11,6 @@ class sizeManage:
         print("total size: "+self.humanSize(self.totalSize))
         
     def update(self,path):
-        self.temp=0
         self.calSize(path)
         self.finished=self.finished+self.temp
 
