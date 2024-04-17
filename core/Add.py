@@ -125,11 +125,11 @@ class Add:
             sizes.update(path)
             sizes.showProgress()
 
-            existed_file=self.cur.execute("SELECT * FROM now WHERE hash=?",(hash,)).fetchall()
+            existed_file=self.cur.execute("SELECT * FROM now WHERE hashMd5=?",(hash,)).fetchall()
             #保持每次写入origin之后，都会写入now，那么可以得知，如果一个东西不在now中存在，那么一定不在origin中
 
             if self.write_origin:
-                self.cur.execute("INSERT INTO origin (time,hashMd5,path) VALUES (?,?,?,?)",(self.time,hash,path,0))
+                self.cur.execute("INSERT INTO origin (time,hashMd5,path,conflictNum) VALUES (?,?,?,?)",(self.time,hash,path,0))
            
             ## 如果没有冲突，直接写入
             if len(existed_file)==0:
@@ -150,7 +150,13 @@ class Add:
                             removeFile(path)
                             flag=True
                     if flag:
-                        break
+                        continue
+                    for i in existed_file:
+                        if i[2] in data_base_existed_path and not os.path.exists(i[2]):
+                            self.cur.execute("UPDATE now SET time=?,path=? where hashMd5=?",(self.time,path,hash))
+                            flag=True
+                    if flag:
+                        continue      
                     #有暂时不存在的
                     for i in existed_file:
                         if not os.path.exists(i[2]):
