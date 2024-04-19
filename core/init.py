@@ -20,10 +20,9 @@ cmd1=[
     '''CREATE TABLE unzip(
         time                txt,
         zipFileHashMd5      txt,
-        zipFilePath         txt,
         zipFileConflictNum  INT DEFAULT 0,
         unzipFilehash       txt,
-        unzipFileconf       txt,
+        unzipFileConflictNum       txt,
         unzipName           txt
         
         )''',
