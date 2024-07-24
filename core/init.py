@@ -1,61 +1,29 @@
 import sqlite3
 import os
+import argparse
+from _decorator import *
 
 from _Log import *
-cmd1=[
-    '''CREATE TABLE now(
-        time        txt,
-        hashMd5     txt,
-        path        txt,
-        conflictNum INT DEFAULT 0
-        )''',
-
-    '''CREATE TABLE origin(
-        time        txt,
-        hashMd5     txt,
-        path        txt,
-        conflictNum INT DEFAULT 0
-        )''',    
-
-    '''CREATE TABLE unzip(
-        time                txt,
-        zipFileHashMd5      txt,
-        zipFileConflictNum  INT DEFAULT 0,
-        unzipFilehash       txt,
-        unzipFileConflictNum       txt,
-        unzipName           txt
-        
-        )''',
-
-    '''CREATE TABLE zip(
-        time                txt,
-        zipFileHashMd5      txt,
-        zipFilePath         txt,
-        zipFileConflictNum  INT DEFAULT 0,
-        unzipFilehash       txt,
-        unzipFileconf       txt,
-        unzipName           txt
-        )'''
-
-]
-
 class Init:
-    def __init__(self,path):
-        if not os.path.exists(path):
-            os.mkdir(path)
-        Log.open(path)
-        Log.writeLog(f"init path={path}")
-        db_path=os.path.join(path,"files.db")
-        if os.path.exists(db_path):
-            Log.writeLog(f"already exists dest database in {db_path}")
-            return
-        conn=sqlite3.connect(db_path)
-        cur=conn.cursor()
-        for i in cmd1:
-            cur.execute(i)
-        
-        conn.commit()
-        conn.close()
-        Log.closeLog()
+    @init_decorator
+    def __init__(self,args) -> None:
+        self.work_path=args.dbpath
+        self.db_path=os.path.join(self.work_path,"files.db")
 
-        
+    @call_decorator
+    def __call__(self):
+        if not os.path.exists(self.work_path):
+            os.mkdir(self.work_path)
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        with open("./core/Init.sql", 'r') as sql_file:
+            sql_script = sql_file.read()
+        cursor.executescript(sql_script)
+        conn.close()
+
+if __name__=="__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dbpath",default="./db",help="dir path to store database")
+    args = parser.parse_args()
+    init=Init(args)
+    init()

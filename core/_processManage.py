@@ -1,18 +1,21 @@
 import os
 import sys
 from time import sleep
-class sizeManage:
+class ProcessManage:
     def __init__(self,path) -> None:
         self.totalSize:float=0
         self.finished:float=0
         self.temp=0
 
         self.totalSize=self.calSize(path)
+        self.show=True
         print("total size: "+self.humanSize(self.totalSize))
         
     def update(self,path):
         self.calSize(path)
         self.finished=self.finished+self.temp
+        if self.show:
+            self.showProgress()
 
     def showProgress(self):
         print("\r nowfinish %f " % (self.finished/self.totalSize),flush=True,end="")   
