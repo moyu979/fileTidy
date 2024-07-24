@@ -1,7 +1,7 @@
 import hashlib
 import os
 import sys
-from _sizeManage import *
+from _processManage import *
 class Hash:
     def __init__(self):
         self.fileList=[]
