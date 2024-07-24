@@ -45,6 +45,21 @@ class ProcessManage:
             sizelable=sizelable+1
         return "%.2f%s" % (count, size[sizelable])
     
+def get_size(path):
+    file_size = float(os.path.getsize(path))
+    formatted_size = format_size(file_size)
+    return formatted_size
+def format_size(bytes_size):
+    if bytes_size < 1024:
+        return f"{bytes_size} B"
+    elif bytes_size < 1024**2:
+        return f"{bytes_size / 1024:.2f} KB"
+    elif bytes_size < 1024**3:
+        return f"{bytes_size / 1024**2:.2f} MB"
+    elif bytes_size < 1024**4:
+        return f"{bytes_size / 1024**3:.2f} GB"
+    else:
+        return f"{bytes_size / 1024**4:.2f} TB"
 if __name__=="__main__":
     if len(sys.argv)!=2:
         path=input("请输入测试位置")
@@ -52,7 +67,7 @@ if __name__=="__main__":
         path=sys.argv[1]
     path=os.path.abspath(path)
     path=path.replace("\\","/")
-    p=sizeManage(path)
+    p=ProcessManage(path)
     pl=os.listdir(path)
     for i in pl:
         p.update(i)
