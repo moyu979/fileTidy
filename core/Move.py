@@ -8,38 +8,56 @@ from _Hash import *
 from _Log import *
 from _processManage import *
 
-class Add:
-    """
-        将刚刚下载的文件放到数据库里
-    """
+class Move:
     @init_decorator
     def __init__(self,args) -> None:
         self.work_path=os.path.abspath(args.dbpath)
-        self.data_storage_path=os.path.abspath(args.datapath)
+        self.from_path=os.path.abspath(args.frompath)
+        self.to_path=os.path.abspath(args.topath)
+
         self.storageVirtual=args.dataStorage
         self.storagePhysical=args.datadisk
-        self.addTime=None
+
         self.conn=None
         self.cur=None
         self.processManage=None
-
     @call_decorator
-    def __call__(self):
+    def __call__(self, *args: os.Any, **kwds: os.Any) -> os.Any:
         self.para_convert()
+        to_check=self.from_path+"%"
+        datas=self.cur.execute("SELECT (Md5,nowPath) FROM files WHERE nowPath like ?",(to_check,)).fetchall()
+        data_dic={}
+        for data in datas:
+            data_dic[data[0]]=data[1]
+
         for root,dir,files in os.walk(self.data_storage_path):
             for file in files:
                 path=os.path.join(root,file)
                 hash=getAHash(path)
-                self.write_db(hash,path,file)
+
+                before_path=data_dic.get(hash)
+                if before_path==None:
+                    Log.writeLog(f"[file not fount]\thash:{hash}\tpath:{path}")
+                else:
+                    self.cur.execute("UPDATE files SET nowPath=? WHERE Md5=? AND nowPath=?",(path,hash,before_path))
+                data_dic.pop(path)
                 self.processManage.update(path)
-        self.conn.commit()
-        self.conn.close()
+
+        chosen=input("there are still some not moved files, do you want to show them in log?(Y/N)")
+        while chosen!="Y" and chosen!="N":
+            chosen=input("there are still some not moved files, do you want to show them in log?(Y/N)")
+                    
+        if chosen!="N":
+            return
+        else:
+            for key in data_dic.keys():
+                Log.writeLog(f"[file not move]\thash:{data_dic[key]}\tpath:{key}")
 
     def para_convert(self):
         self.addTime=fileTime()
         self.conn=sqlite3.connect(os.path.join(self.work_path,"files.db"))
         self.cur=self.conn.cursor()
-        self.processManage=ProcessManage(self.data_storage_path)
+
         #如果提供了磁盘信息，可以根据磁盘信息推断出校验组信息
         if self.storagePhysical!=None:
             res=self.cur.execute("SELECT * FROM physicalStorage where volumeName=?",(self.storagePhysical,)).fetchall()[0]
@@ -62,18 +80,3 @@ class Add:
             res=self.cur.execute("SELECT * FROM virtualStorage where volumeName=?",(self.storageVirtual,)).fetchall()[0]
             self.storageVirtual=res[0]
             self.storagePhysical=0
-
-    def write_db(self,hash,path,name):
-        size=get_size(path)
-        self.cur.execute("INSERT INTO files (Md5,addTime,fromPath,nowPath,nowName,storageVirtual,storagePhysical,size) VALUES (?,?,?,?,?,?,?,?)",(hash,self.addTime,path,path,name,self.storageVirtual,self.storagePhysical,size))
-
-
-if __name__=="__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dbpath",default="./db",help="dir path to store database")
-    parser.add_argument("--datapath",default=None,help="file path to add")
-    parser.add_argument("--dataStorage",default=None,help="volume to store files")
-    parser.add_argument("--datadisk",default=None,help="disk to store files")
-    args = parser.parse_args()
-    add=Add(args)
-    add()
