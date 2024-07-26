@@ -8,35 +8,51 @@ from _Hash import *
 from _Log import *
 from _processManage import *
 
-class Add:
+class CheckExistence:
     """
-        将刚刚下载的文件放到数据库里
+        检查某一个目录下的文件是否都被记录了
     """
     @init_decorator
-    def __init__(self,args) -> None:
+    def __init__(self,args):
         self.work_path=os.path.abspath(args.dbpath)
         self.data_storage_path=os.path.abspath(args.datapath)
-        self.storageVirtual=args.dataStorage
         self.storagePhysical=args.datadisk
-        self.addTime=None
+        self.storageVirtual=args.dataStorage
+        self.checkTime=None
         self.conn=None
         self.cur=None
         self.processManage=None
 
+
+
     @call_decorator
     def __call__(self):
         self.para_convert()
+        to_check=self.data_storage_path+"%"
+        datas=self.cur.execute("SELECT (Md5,nowPath) FROM files WHERE nowPath like ?",(to_check,)).fetchall()
+        data_dic={}
+        for data in datas:
+            data_dic[data[1]]=data[0]
+
         for root,dir,files in os.walk(self.data_storage_path):
             for file in files:
                 path=os.path.join(root,file)
                 hash=getAHash(path)
-                self.write_db(hash,path,file)
+                hash2=data_dic.get(path)
+
+                if hash2==None:
+                    Log.writeLog(f"[file not loged]\thash:{hash}\tpath{path}")
+                elif hash2!=hash:
+                    Log.writeLog(f"[file not match]\tbeforehash:{hash2}\tnowhash:{hash}\tpath:{path}")
+                data_dic.pop(path)
                 self.processManage.update(path)
+        for k in data_dic.keys():
+            Log.writeLog(f"[file not exist]\thash:{data_dic[k]}\tpath:{k}")
         self.conn.commit()
         self.conn.close()
 
     def para_convert(self):
-        self.addTime=fileTime()
+        self.checkTime=fileTime()
         self.conn=sqlite3.connect(os.path.join(self.work_path,"files.db"))
         self.cur=self.conn.cursor()
         self.processManage=ProcessManage(self.data_storage_path)
@@ -62,18 +78,4 @@ class Add:
             res=self.cur.execute("SELECT * FROM virtualStorage where volumeName=?",(self.storageVirtual,)).fetchall()[0]
             self.storageVirtual=res[0]
             self.storagePhysical=0
-
-    def write_db(self,hash,path,name):
-        size=get_size(path)
-        self.cur.execute("INSERT INTO files (Md5,addTime,fromPath,nowPath,nowName,storageVirtual,storagePhysical,size) VALUES (?,?,?,?,?,?,?,?)",(hash,self.addTime,path,path,name,self.storageVirtual,self.storagePhysical,size))
-
-
-if __name__=="__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dbpath",default="./db",help="dir path to store database")
-    parser.add_argument("--datapath",default=None,help="file path to add")
-    parser.add_argument("--dataStorage",default=None,help="volume to store files")
-    parser.add_argument("--datadisk",default=None,help="disk to store files")
-    args = parser.parse_args()
-    add=Add(args)
-    add()
+    
