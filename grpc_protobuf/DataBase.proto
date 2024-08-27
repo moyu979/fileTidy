@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+service DataBase{
+    rpc InitDataBase(InitRequest) returns (InitAnswer);
+
+}
+
+message InitRequest{
+    string DataBasePath=1;
+}
+message InitAnswer{
+    enum Result{
+        success=0;
+        DataBaseAlreadyExist=1;
+        Fail=2;
+    }
+    Result result=1;
+    string info=2;
+}
+

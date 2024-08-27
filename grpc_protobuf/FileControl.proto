@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+service FileControl{
+    rpc TestAccess(TestAccessRequest) returns (TestAccessAnswer);
+    rpc AddFile(AddFileRequest) returns (AddFileAnswer);
+}
+
+message TestAccessRequest{
+    string requestInfo=1;
+}
+message TestAccessAnswer{
+    string answerInfo=1;
+}
+message AddFileRequest{
+    string path=1;
+    string DataStroageMinimal=2;
+}
+message AddFileAnswer{
+    enum Result{
+        success=0;
+        FileNotExist=1;
+        DataBaseNotExist=2;
+        NotMinimumStorage=3;
+        otherFailure=4;
+    }
+    Result result=1;
+    string info=5;
+}
