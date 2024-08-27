@@ -6,7 +6,6 @@ CREATE TABLE files(
     nowPath TEXT,
     nowName TEXT,
     storageVirtual INTEGER DEFAULT 0,
-    storagePhysical INTEGER DEFAULT 0,
     state TEXT DEFAULT 'healthy',
     info TEXT DEFAULT NULL
 );
@@ -25,10 +24,12 @@ CREATE TABLE physicalStorage(
     id INTEGER PRIMARY KEY,
     addTime TEXT,
     lastCheck TEXT,
-    diskName TEXT UNIQUE NOT NULL,
-    healthy TEXT DEFAULT 'healthy',
+    mode TEXT DEFAULT 'others',
+    diskName TEXT UNIQUE,
+    healthy TEXT DEFAULT 'health',
+    capacity TEXT,
     info TEXT DEFAULT NULL,
-    diskID TEXT
+    diskID TEXT UNIQUE
     
 );
 
@@ -40,6 +41,6 @@ CREATE TABLE storageStructure(
     PRIMARY KEY (superid,subid)
 );
 
-INSERT INTO physicalStorage (id,addTime,lastCheck,diskName,diskID) VALUES (0,'0000-00-00 00:00','0000-00-00 00:00','referToAllDisk','0000000000000000');
+INSERT INTO physicalStorage (id,addTime,lastCheck,diskName,diskID,capacity) VALUES (0,'0000-00-00 00:00','0000-00-00 00:00','referToAllDisk','0000000000000000',0);
 INSERT INTO virtualStorage (id,addTime,lastCheck,volumeName)  VALUES (0,'0000-00-00 00:00','0000-00-00 00:00','referToDownloadVolumn');
 INSERT INTO storageStructure VALUES (0,0,'0000-00-00 00:00','addByInitProcess');

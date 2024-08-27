@@ -1,12 +1,12 @@
 /*
 !.gitignore
 !*.md
-!/core/
-!/test/
 
-/test/__pycache__
-/test/examples/toCheck
+!/grpc_protobuf/
+/grpc_protobuf/**/__pycache__
 
+!/grpcCmd/
+/grpcCmd/**/__pycache__
 
-/core/__pycache__
-
+!/grpcServer/
+/grpcServer/**/__pycache__
