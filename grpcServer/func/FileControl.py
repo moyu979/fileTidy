@@ -9,9 +9,7 @@ from tools._fileTime import *
 from tools._processManage import *
 from tools._Hash import *
 class FileControlServicer(FileControl_pb2_grpc.FileControl):
-    def TestAccess(self,request,context):
-        print(f"received request with info {request.retuestInfo}")
-        return FileControl_pb2.TestAccessAnswer(answerInfo="result")
+    
     
     def AddFile(self,request,context):
         print(f"received request")
