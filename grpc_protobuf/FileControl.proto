@@ -1,16 +1,14 @@
 syntax = "proto3";
 
 service FileControl{
-    rpc TestAccess(TestAccessRequest) returns (TestAccessAnswer);
     rpc AddFile(AddFileRequest) returns (AddFileAnswer);
+    rpc LoadFileIntoCache(CachePath) returns(loadCacheResult);
+    rpc MoveFile(MoveInfo) returns(MoveResult);
+    rpc UnzipFile(UnzipInfo) returns(UnzipResult);
+    rpc ZipFile(ZipInfo) returns(ZipResult)
 }
 
-message TestAccessRequest{
-    string requestInfo=1;
-}
-message TestAccessAnswer{
-    string answerInfo=1;
-}
+
 message AddFileRequest{
     string path=1;
     string DataStroageMinimal=2;

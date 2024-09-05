@@ -2,12 +2,17 @@ syntax = "proto3";
 
 service DataBase{
     rpc InitDataBase(InitRequest) returns (InitAnswer);
-
+    rpc AddPhysicalStorage(DiskInfo) returns (addDiskResult);
+    rpc AddVirtualStorage(StorageInfo) returns (addStorageResult);
+    rpc CheckStorage(ID) returns(CheckId);
+    rpc CheckDisk(ID) returns(CheckId);
+    rpc getCheckResult(CheckId) returns(CheckInfo);
 }
 
 message InitRequest{
     string DataBasePath=1;
 }
+
 message InitAnswer{
     enum Result{
         success=0;
@@ -18,3 +23,45 @@ message InitAnswer{
     string info=2;
 }
 
+message DiskInfo{
+    string diskName;
+    string healthy;
+    string capacity;
+    string diskPath;
+    string diskKind;
+    bool forceDo;
+}
+
+message addDiskResult{
+    enum Result{
+        success=0;
+        infoConflect=1;
+        missingInfo=2;
+        diskNotExist=3;
+    }
+    Result result=1;
+    string diskId=2;
+    string info=3;
+}
+
+message StorageInfo{
+    string name;
+    string capacity;
+    string used;
+    string info;
+    int32 needAll;
+    repeat string subid;
+}
+
+message ID{
+    string doCheckId;
+}
+
+message CheckId{
+    string checkId;
+}
+
+message CheckInfo{
+    repeat int32 rate;
+    repeat string info;
+}

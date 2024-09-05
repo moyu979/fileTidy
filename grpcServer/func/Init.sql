@@ -10,6 +10,12 @@ CREATE TABLE files(
     info TEXT DEFAULT NULL
 );
 
+CREATE TABLE cache(
+    Md5 TEXT,
+    nowPath TEXT,
+    nowName TEXT,
+)
+
 CREATE TABLE virtualStorage(
     id INTEGER PRIMARY KEY,
     addTime TEXT,
@@ -17,20 +23,22 @@ CREATE TABLE virtualStorage(
     volumeName TEXT UNIQUE NOT NULL,
     healthy TEXT DEFAULT 'healthy',
     info TEXT DEFAULT NULL,
-    needAll INTEGER DEFAULT 1
+    needAll INTEGER DEFAULT 1,
+    used Text DEFAULT 0,
+    capacity Text DEFAULT 0,
 );
 
 CREATE TABLE physicalStorage(
     id INTEGER PRIMARY KEY,
     addTime TEXT,
     lastCheck TEXT,
-    mode TEXT DEFAULT 'others',
-    diskName TEXT UNIQUE,
+    diskName TEXT,
     healthy TEXT DEFAULT 'health',
     capacity TEXT,
+    kind TEXT,
     info TEXT DEFAULT NULL,
-    diskID TEXT UNIQUE
-    
+    diskID TEXT UNIQUE,
+    PRIMARY KEY (id)
 );
 
 CREATE TABLE storageStructure(

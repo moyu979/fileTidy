@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+service Server{
+    rpc TestAccess(TestAccessRequest) returns (TestAccessAnswer);
+    rpc GetChecking(idMessage) returns (CheckResult);
+}
+
+message TestAccessRequest{
+    string requestInfo=1;
+}
+message TestAccessAnswer{
+    string answerInfo=1;
+}
+message NullMessage{
+    checkId=1;
+}
+message CheckResult{
+    repeat string checkId;
+    repeat string checkInfo;
+}
