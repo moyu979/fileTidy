@@ -11,10 +11,16 @@ message TestAccessRequest{
 message TestAccessAnswer{
     string answerInfo=1;
 }
-message NullMessage{
-    checkId=1;
+message idMessage{
+    string checkId=1;
 }
+
 message CheckResult{
-    repeat string checkId;
-    repeat string checkInfo;
+    enum Result{
+        success=0;
+        checkId_not_Found=1;
+    }
+    Result result=1;
+    repeated string checkId=2;
+    repeated string checkInfo=3;
 }
