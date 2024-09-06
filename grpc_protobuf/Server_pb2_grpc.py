@@ -3,9 +3,9 @@
 import grpc
 import warnings
 
-import msg_pb2 as msg__pb2
+import Server_pb2 as Server__pb2
 
-GRPC_GENERATED_VERSION = '1.66.0'
+GRPC_GENERATED_VERSION = '1.66.1'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,14 +18,14 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in msg_pb2_grpc.py depends on'
+        + f' but the generated code in Server_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
     )
 
 
-class FileControlStub(object):
+class ServerStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -35,18 +35,18 @@ class FileControlStub(object):
             channel: A grpc.Channel.
         """
         self.TestAccess = channel.unary_unary(
-                '/FileControl/TestAccess',
-                request_serializer=msg__pb2.TestAccessRequest.SerializeToString,
-                response_deserializer=msg__pb2.TestAccessAnswer.FromString,
+                '/Server/TestAccess',
+                request_serializer=Server__pb2.TestAccessRequest.SerializeToString,
+                response_deserializer=Server__pb2.TestAccessAnswer.FromString,
                 _registered_method=True)
-        self.AddFile = channel.unary_unary(
-                '/FileControl/AddFile',
-                request_serializer=msg__pb2.AddFileRequest.SerializeToString,
-                response_deserializer=msg__pb2.AddFileAnswer.FromString,
+        self.GetChecking = channel.unary_unary(
+                '/Server/GetChecking',
+                request_serializer=Server__pb2.idMessage.SerializeToString,
+                response_deserializer=Server__pb2.CheckResult.FromString,
                 _registered_method=True)
 
 
-class FileControlServicer(object):
+class ServerServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def TestAccess(self, request, context):
@@ -55,34 +55,34 @@ class FileControlServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def AddFile(self, request, context):
+    def GetChecking(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
 
-def add_FileControlServicer_to_server(servicer, server):
+def add_ServerServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'TestAccess': grpc.unary_unary_rpc_method_handler(
                     servicer.TestAccess,
-                    request_deserializer=msg__pb2.TestAccessRequest.FromString,
-                    response_serializer=msg__pb2.TestAccessAnswer.SerializeToString,
+                    request_deserializer=Server__pb2.TestAccessRequest.FromString,
+                    response_serializer=Server__pb2.TestAccessAnswer.SerializeToString,
             ),
-            'AddFile': grpc.unary_unary_rpc_method_handler(
-                    servicer.AddFile,
-                    request_deserializer=msg__pb2.AddFileRequest.FromString,
-                    response_serializer=msg__pb2.AddFileAnswer.SerializeToString,
+            'GetChecking': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetChecking,
+                    request_deserializer=Server__pb2.idMessage.FromString,
+                    response_serializer=Server__pb2.CheckResult.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'FileControl', rpc_method_handlers)
+            'Server', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('FileControl', rpc_method_handlers)
+    server.add_registered_method_handlers('Server', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
-class FileControl(object):
+class Server(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
@@ -99,9 +99,9 @@ class FileControl(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/FileControl/TestAccess',
-            msg__pb2.TestAccessRequest.SerializeToString,
-            msg__pb2.TestAccessAnswer.FromString,
+            '/Server/TestAccess',
+            Server__pb2.TestAccessRequest.SerializeToString,
+            Server__pb2.TestAccessAnswer.FromString,
             options,
             channel_credentials,
             insecure,
@@ -113,7 +113,7 @@ class FileControl(object):
             _registered_method=True)
 
     @staticmethod
-    def AddFile(request,
+    def GetChecking(request,
             target,
             options=(),
             channel_credentials=None,
@@ -126,9 +126,9 @@ class FileControl(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/FileControl/AddFile',
-            msg__pb2.AddFileRequest.SerializeToString,
-            msg__pb2.AddFileAnswer.FromString,
+            '/Server/GetChecking',
+            Server__pb2.idMessage.SerializeToString,
+            Server__pb2.CheckResult.FromString,
             options,
             channel_credentials,
             insecure,
