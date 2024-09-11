@@ -5,8 +5,8 @@
 !/grpc_protobuf/
 /grpc_protobuf/**/__pycache__
 
-!/grpcCmd/
-/grpcCmd/**/__pycache__
+!/Cmd/
+/Cmd/**/__pycache__
 
-!/grpcServer/
-/grpcServer/**/__pycache__
+!/Server/
+/Server/**/__pycache__

@@ -1,12 +1,19 @@
 syntax = "proto3";
 
 service DataBase{
-    rpc InitDataBase(InitRequest) returns (InitAnswer);
+    rpc InitDataBase(InitRequest) returns (InitResult);
+
+    rpc GetDisk(GetDiskRequest) returns (GetDiskResult);
+    rpc GetVolumn(GetVolumnRequest) returns (GetVolumnResult);
+
+
     rpc AddPhysicalStorage(DiskInfo) returns (addDiskResult);
     rpc AddVirtualStorage(StorageInfo) returns (addStorageResult);
-    rpc CheckStorage(ID) returns(CheckId);
-    rpc CheckDisk(ID) returns(CheckId);
-    rpc getCheckResult(CheckId) returns(CheckInfo);
+
+    rpc replaceDisk(replaceDiskRequest)  returns (replaceDiskResult);
+
+    rpc renameDisk(renameDiskRequest) returns (renameResult);
+    rpc renameVolumn(renameVolumnRequest) returns (renameResult);
 }
 
 message InitRequest{
@@ -23,45 +30,80 @@ message InitAnswer{
     string info=2;
 }
 
+message GetDiskInfo{
+    string id=0;
+    string info=1;
+}
+
+message GetDiskInfoAnswer{
+    enum Result{
+        success=0;
+        notSuchid=1;
+        notSuchdisk=2;
+    }
+    Result result=0
+    repeated disk diskinfo=1;
+}
+
 message DiskInfo{
-    string diskName;
-    string healthy;
-    string capacity;
-    string diskPath;
-    string diskKind;
-    bool forceDo;
+    disk diskInfo=0;
+    bool forceDo=1;
+    string diskPath=2;
 }
 
 message addDiskResult{
     enum Result{
         success=0;
-        infoConflect=1;
-        missingInfo=2;
-        diskNotExist=3;
+        DiskInfoMissing=1;
+        PathSericalNotMatch=2;
+        PathNotExist=3;
+        MissingCapacity=4;
+        UsingGivenCapacity=5;
+        UnknownFailure=6;
     }
     Result result=1;
-    string diskId=2;
+    string knownDiskInfo=2;
     string info=3;
 }
 
 message StorageInfo{
-    string name;
-    string capacity;
-    string used;
+    volumn volumnInfo=0;
+    repeated string subid;
+}
+
+message addVirtualStorageResult{
+    enum Result{
+        success=0;
+        nameNotGiven=1；
+        nameAlreadyUsed=2;
+        nameAlreadyExist=2;
+        diskAlreadyUsed=3;
+    }
+    Result result=0;
+    string info=1;
+}
+
+
+
+
+message volumn{
+    string id;
+    string addTime;
+    string lastCheck;
+    string volumeName;
+    string healthy;
     string info;
-    int32 needAll;
-    repeat string subid;
+    int needAll;
+    string used;
+    string capacity;
 }
-
-message ID{
-    string doCheckId;
-}
-
-message CheckId{
-    string checkId;
-}
-
-message CheckInfo{
-    repeat int32 rate;
-    repeat string info;
+message disk{
+    string id;
+    string addTime;
+    string lastCheck;
+    string diskName;
+    string healthy;
+    string capacity;
+    string kind;
+    string info;
 }
