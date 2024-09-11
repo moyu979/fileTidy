@@ -2,6 +2,14 @@ syntax = "proto3";
 
 service FileControl{
     rpc AddFile(AddFileRequest) returns (AddFileAnswer);
+
+    rpc DeleteNotExistFile(DeleteFileRequest) returns (DeleteResult);
+    rpc DeleteThoseFile(DeleteThoseFileRequest) returns(DeleteThoseFileResult);
+
+    rpc CheckFile(CheckFileRequest) returns(CheckFileResult);
+    rpc CheckVolumn(CheckVolumnRequest) returns(CheckVolumnResult);
+    rpc CheckDisk(CheckDiskRequest) returns (CheckDiskResult);
+    
     rpc LoadFileIntoCache(CachePath) returns(loadCacheResult);
     rpc MoveFile(MoveInfo) returns(MoveResult);
     rpc UnzipFile(UnzipInfo) returns(UnzipResult);
@@ -13,6 +21,7 @@ message AddFileRequest{
     string path=1;
     string DataStroageMinimal=2;
 }
+
 message AddFileAnswer{
     enum Result{
         success=0;
