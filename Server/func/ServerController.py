@@ -14,6 +14,7 @@ class ServerServicer(Server_pb2_grpc.Server):
         return Server_pb2.TestAccessAnswer(answerInfo="success")
 
     def GetChecking(self,request,context):
+        print(f"received GetChecking request")
         print(request.checkId)
         if request.checkId!="":
             if request.checkId in vars.nowChecking:

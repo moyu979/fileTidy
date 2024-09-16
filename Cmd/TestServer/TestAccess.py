@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath("../.."))
+sys.path.append(os.path.abspath("../../grpc_protobuf"))
 import publicImport
 import grpc_protobuf.Server_pb2 as Server_pb2
 import grpc_protobuf.Server_pb2_grpc as Server_pb2_grpc

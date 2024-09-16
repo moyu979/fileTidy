@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 service FileControl{
-    rpc AddFile(AddFileRequest) returns (AddFileAnswer);
+    rpc AddFile(AddFileRequest) returns (AddFileResult);
 
     rpc DeleteNotExistFile(DeleteFileRequest) returns (DeleteResult);
     rpc DeleteThoseFile(DeleteThoseFileRequest) returns(DeleteThoseFileResult);
@@ -17,9 +17,8 @@ service FileControl{
 }
 
 
-message AddFileRequest{
+message AddFileResult{
     string path=1;
-    string DataStroageMinimal=2;
 }
 
 message AddFileAnswer{
