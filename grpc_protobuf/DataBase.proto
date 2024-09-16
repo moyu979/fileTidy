@@ -1,57 +1,68 @@
 syntax = "proto3";
 
 service DataBase{
-    rpc InitDataBase(InitRequest) returns (InitResult);
+    rpc InitDataBase(NullMessage) returns (InitResult);
 
     rpc GetDisk(GetDiskRequest) returns (GetDiskResult);
-    rpc GetVolumn(GetVolumnRequest) returns (GetVolumnResult);
+    rpc GetVolume(GetVolumeRequest) returns (GetVolumeResult);
 
+    rpc AddDisk(AddDiskRequest) returns (AddDiskResult);
+    rpc AddVolume(AddVolumeRequest) returns (AddVolumeResult);
 
-    rpc AddPhysicalStorage(DiskInfo) returns (addDiskResult);
-    rpc AddVirtualStorage(StorageInfo) returns (addStorageResult);
+    rpc UpdateDisk(UpdateDiskRequest) returns (UpdateDiskResult);
+    rpc UpdateVolume(UpdateVolumeRequest) returns (UpdateVolumeResult);
+}
+message NullMessage{
 
-    rpc replaceDisk(replaceDiskRequest)  returns (replaceDiskResult);
-
-    rpc renameDisk(renameDiskRequest) returns (renameResult);
-    rpc renameVolumn(renameVolumnRequest) returns (renameResult);
 }
 
-message InitRequest{
-    string DataBasePath=1;
-}
-
-message InitAnswer{
+message InitResult{
     enum Result{
         success=0;
-        DataBaseAlreadyExist=1;
-        Fail=2;
+        dataBaseAlreadyExist=1;
+        fail=2;
     }
     Result result=1;
     string info=2;
 }
 
-message GetDiskInfo{
-    string id=0;
-    string info=1;
+message GetDiskRequest{
+    string id=1;
+    string info=2;
 }
 
-message GetDiskInfoAnswer{
+message GetDiskResult{
+    enum Result{
+        success=0;
+        notSuchId=1;
+        notSuchDisk=2;
+    }
+    Result result=1;
+    repeated Disk diskinfo=2;
+}
+
+message GetVolumeRequest{
+    string id=1;
+    string info=2;
+}
+
+message GetVolumeResult{
     enum Result{
         success=0;
         notSuchid=1;
         notSuchdisk=2;
     }
-    Result result=0
-    repeated disk diskinfo=1;
+    Result result=1;
+    repeated Volume volumeInfo=2;
 }
 
-message DiskInfo{
-    disk diskInfo=0;
-    bool forceDo=1;
-    string diskPath=2;
+message AddDiskRequest{
+    Disk diskInfo=1;
+    bool forceDo=2;
+    string diskPath=3;
 }
 
-message addDiskResult{
+message AddDiskResult{
     enum Result{
         success=0;
         DiskInfoMissing=1;
@@ -66,44 +77,75 @@ message addDiskResult{
     string info=3;
 }
 
-message StorageInfo{
-    volumn volumnInfo=0;
-    repeated string subid;
+message AddVolumeRequest{
+    Volume volumeInfo=1;
+    repeated string subid=2;
+    bool forceDo=3;
+    string diskPath=4;
 }
 
-message addVirtualStorageResult{
+message AddVolumeResult{
     enum Result{
         success=0;
-        nameNotGiven=1；
+        nameNotGiven=1;
         nameAlreadyUsed=2;
-        nameAlreadyExist=2;
-        diskAlreadyUsed=3;
+        nameAlreadyExist=3;
+        diskAlreadyUsed=4;
     }
-    Result result=0;
-    string info=1;
+    Result result=1;
+    string knownVolumeInfo=2;
+    string info=3;
+}
+
+message UpdateDiskRequest{
+    string oldDiskId=1;
+    string newDiskId=2;
+}
+
+message UpdateDiskResult{
+    enum Result{
+        success=0;
+        unknownFailure=1;
+    }
+    Result result=1;
+    string info=2;
 }
 
 
-
-
-message volumn{
-    string id;
-    string addTime;
-    string lastCheck;
-    string volumeName;
-    string healthy;
-    string info;
-    int needAll;
-    string used;
-    string capacity;
+message UpdateVolumeRequest{
+    Volume oldVolume=1;
+    Volume newVolume=2;
+    repeated string items=3;
 }
-message disk{
-    string id;
-    string addTime;
-    string lastCheck;
-    string diskName;
-    string healthy;
-    string capacity;
-    string kind;
-    string info;
+
+message UpdateVolumeResult{
+    enum Result{
+        success=0;
+        oldVolumeNotExist=1;
+        
+    }
+    Result result=1;
+    string info=2;
+}
+
+message Volume{
+    string id=1;
+    string addTime=2;
+    string lastCheck=3;
+    string volumeName=4;
+    string healthy=5;
+    string info=6;
+    int64 needAll=7;
+    string used=8;
+    string capacity=9;
+}
+message Disk{
+    string id=1;
+    string addTime=2;
+    string lastCheck=3;
+    string diskName=4;
+    string healthy=5;
+    string capacity=6;
+    string kind=7;
+    string info=8;
 }

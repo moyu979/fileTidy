@@ -10,3 +10,4 @@
 
 !/Server/
 /Server/**/__pycache__
+/Server/datas

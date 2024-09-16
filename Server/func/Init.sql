@@ -16,7 +16,7 @@ CREATE TABLE cache(
     nowName TEXT,
 )
 
-CREATE TABLE virtualStorage(
+CREATE TABLE Volume(
     id INTEGER PRIMARY KEY,
     addTime TEXT,
     lastCheck TEXT,
@@ -28,7 +28,7 @@ CREATE TABLE virtualStorage(
     capacity Text DEFAULT 0,
 );
 
-CREATE TABLE physicalStorage(
+CREATE TABLE Disk(
     id INTEGER PRIMARY KEY,
     addTime TEXT,
     lastCheck TEXT,

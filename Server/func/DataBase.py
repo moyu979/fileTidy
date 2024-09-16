@@ -5,160 +5,245 @@ import sqlite3
 from func import vars
 from func.tools import _fileTime
 from Server.func.tools.DisKOperation import *
-from tools.DisKOperation import *
+from func.tools.DisKOperation import *
 
 class DataBaseServicer(DataBase_pb2_grpc.DataBase):
     def InitDataBase(self,request,context):
         print(f"received InitDataBase request with {request.DataBasePath}")
-        result=initDataBase(request.path)
-        return DataBase_pb2.InitAnswer(result=result,info=" ")
-    def AddPhysicalStorage(self,request,context):
-        if request.kind in vars.kind["disk"]:
-            return addDisk(request)
+        result=initDataBase()
+        return result
+    
+    def GetDisk(self,request,context):
+        return GetDisk(request)
+    
+    def GetVolume(self,request,context):
+        return GetVolume(request)
+
+    def AddDisk(self,request,context):
+        if request.diskInfo.kind in vars.kind["disk"]:
+            return AddDisk(request)
         
-    def AddVirtualStorage(self,request,context):
-        return addVirtualStorage(request)
+    def AddVolume(self,request,context):
+        return AddVolume(request)
+    
+    def UpdateDisk(self,request,context):
+        return UpdateDisk(request)
+    
+    def UpdateVolume(self,request,context):
+        return UpdateVolume(request)
+    
 
-def initDataBase(path=None):
+def initDataBase():
+    result=DataBase_pb2.InitAnswer()
+    path="./DataBase"
     vars.data["work_path"]=path
-    if path==None:
-        return initDataBase("./DataBase")
+    print("Path:",path)
+    if not os.path.exists(path):
+        os.mkdir(path)
+    db_path=os.path.join(path,"files.db")
+    if os.path.exists(db_path):
+        result.result=1
+        return result
+    conn=sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    with open("./func/init.sql","r") as script:
+        sql_script=script.read()
+    cursor.executescript(sql_script)
+    conn.commit()
+    conn.close()
+    result.result=0
+    result.info=f"init database in {path}"
+    return result
+
+def GetDisk(request):
+    db_path=os.path.join(vars.data["work_path"],"files.db")
+    conn=sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    # todo:检查disk的查询是否存在对应关键字
+    queryResult=cursor.execute("SELECT * FROM Disk WHERE ?=? AND healthy!='removed'",(request.id,request.info)).fetchall()
+    GetDiskResult=DataBase_pb2.GetDiskResult()
+    if len(queryResult)==0:
+        GetDiskResult.result="notSuchDisk"
+        return GetDiskResult
     else:
-        print("Path:",path)
-        if not os.path.exists(path):
-            os.mkdir(path)
-        db_path=os.path.join(path,"files.db")
-        if os.path.exists(db_path):
-            return 1
+        for i in queryResult:
+            a_disk=DataBase_pb2.Disk()
+            a_disk.id=i[0]
+            a_disk.addTime=i[1]
+            a_disk.lastCheck=i[2]
+            a_disk.diskName=i[3]
+            a_disk.healthy=i[4]
+            a_disk.capacity=i[5]
+            a_disk.diskKind=i[6]
+            a_disk.info=i[7]
+            GetDiskResult.diskinfo.append(a_disk)
+        return GetDiskResult
 
-        conn=sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        with open("./func/init.sql","r") as script:
-            sql_script=script.read()
-        cursor.executescript(sql_script)
-        conn.close()
-        return 0
+def GetVolume(request):
+    db_path=os.path.join(vars.data["work_path"],"files.db")
+    conn=sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    # todo:检查disk的查询是否存在对应关键字
+    queryResult=cursor.execute("SELECT * FROM Volume WHERE ?=? AND healthy!='removed'",(request.id,request.info)).fetchall()
+    GetVolumeResult=DataBase_pb2.GetVolumeResult()
+    if len(queryResult)==0:
+        GetVolumeResult.result="notSuchVolume"
+        return GetVolumeResult
+    else:
+        for i in queryResult:
+            a_disk=DataBase_pb2.Volume()
+            a_disk.id=i[0]
+            a_disk.addTime=i[1]
+            a_disk.lastCheck=i[2]
+            a_disk.volumeName=i[3]
+            a_disk.healthy=i[4]
+            a_disk.info=i[5]
+            a_disk.needAll=i[6]
+            a_disk.used=i[7]
+            a_disk.capacity=i[7]
+            GetVolumeResult.voluneInfo.append(a_disk)
+        return GetVolumeResult
 
-def addDisk(request):
-    if request.healthy=="":
-        request.healthy='health'
+def AddDisk(request):
+    if request.diskInfo.healthy=="":
+        request.diskInfo.healthy='health'
 
     db_path=os.path.join(vars.data["work_path"],"files.db")
     conn=sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    request["time"]=_fileTime.fileTimeSecond()
-    request["last_check"]="0000-00-00 00:00"
+    request.diskInfo.addTime=_fileTime.fileTimeSecond()
+    request.diskInfo.lastCheck="0000-00-00 00:00"
 
-    addDiskResult=DataBase_pb2.addDiskResult()
+    AddDiskResult=DataBase_pb2.__annotations__ddDiskResult()
     
-    if request.diskName=="" and request.SerialNumber=="":
-        addDiskResult.result="DiskInfoMissing"
-        addDiskResult.info=f"can not locate disk with empty name and empty Serial Number"
-        return addDiskResult
+    if request.diskPath=="" and request.diskInfo.id=="":
+        AddDiskResult.result="DiskInfoMissing"
+        AddDiskResult.info=f"can not locate disk with empty name and empty Serial Number"
+        return AddDiskResult
    
-    elif request.diskName!="" and request.SerialNumber!="":
-        request.capacity=getMatchedDisk(request.diskPath,request.SerialNumber)
-        if request.capacity==None:
-            addDiskResult.result="PathSericalNotMatch"
-            addDiskResult.knownDiskInfo=request.SerialNumber
-            addDiskResult.info=f"disk in {request.diskPath} with SerialNumber {request.SerialNumber} not found"
-            return addDiskResult
+    elif request.diskPath!="" and request.diskInfo.id!="":
+        request.diskInfo.capacity=getMatchedDisk(request.diskPath,request.SerialNumber)
+        if request.capacity==None and request.forceDo==False:
+            AddDiskResult.result="PathSericalNotMatch"
+            AddDiskResult.knownDiskInfo=request.SerialNumber
+            AddDiskResult.info=f"disk in {request.diskPath} with SerialNumber {request.SerialNumber} not found"
+            return AddDiskResult
+        elif request.forceDo:
+            AddDiskResult.result="PathSericalNotMatch"
+            AddDiskResult.knownDiskInfo=request.SerialNumber
+            AddDiskResult.info=f"disk in {request.diskPath} with SerialNumber {request.SerialNumber} not found"
+            return AddDiskResult
         else:
-            addDiskResult.result="success"
+            AddDiskResult.result="success"
 
             
-    elif request.SerialNumber=="":
-        request.SerialNumber,request.capacity=getDiskByPath(request.diskPath)
-        if request.SerialNumber==None:
-            addDiskResult.result="PathNotExist"
-            addDiskResult.knownDiskInfo=request.diskPath
-            addDiskResult.info=f"disk in {request.diskPath} not found"
-            return addDiskResult
+    elif request.diskInfo.id=="":
+        request.diskInfo.id,request.diskINfo.capacity=getDiskByPath(request.diskPath)
+        if request.diskInfo.id==None:
+            AddDiskResult.result="PathNotExist"
+            AddDiskResult.knownDiskInfo=request.diskPath
+            AddDiskResult.info=f"disk in {request.diskPath} not found"
+            return AddDiskResult
         else:
-            addDiskResult.result="success"
+            AddDiskResult.result="success"
         
     elif request.diskPath=="":
-        temp_capacity=getDiskBySerialNumber(request.SerialNumber)
+        temp_capacity=getDiskBySerialNumber(request.diskInfo.id)
         if not temp_capacity and request.capacity=="":
-            addDiskResult.result="MissingCapacity"
+            AddDiskResult.result="MissingCapacity"
         elif not temp_capacity:
-            addDiskResult.result="UsingGivenCapacity"
+            AddDiskResult.result="UsingGivenCapacity"
         else:
-            addDiskResult.result="success"
-            request.capacity=temp_capacity
+            AddDiskResult.result="success"
+            request.diskInfo.capacity=temp_capacity
     else:
-        addDiskResult.result="UnknownFailure"
-        return addDiskResult
+        AddDiskResult.result="UnknownFailure"
+        return AddDiskResult
     
     cursor.execute("INSERT INTO physicalStorage (id,addTime,lastCheck,diskName,healthy,capacity,kind,info) VALUES (?,?,?,?,?,?,?,?)",\
-                   (request.id,request.addTime,request.lastCheck,request.diskName,request.healthy,request.capacity,request.kind,request.info))
-            
+                   (request.diskInfo.id,request.diskInfo.addTime,request.diskInfo.lastCheck,request.diskInfo.diskName,request.diskInfo.healthy,request.diskInfo.capacity,request.diskInfo.kind,request.diskInfo.info))
     conn.commit()
     conn.close()  
     
-def addVirtualStorage(request):
+    return AddDiskResult
+
+def AddVolume(request):
     db_path=os.path.join(vars.data["work_path"],"files.db")
     conn=sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    request["time"]=_fileTime.fileTimeSecond()
-    request["last_check"]="0000-00-00 00:00"
+    request.volumeInfo.addTime=_fileTime.fileTimeSecond()
+    request.volumeInfo.last_check="0000-00-00 00:00"
 
     subs=request.subid
 
-    addVirtualStorageResult=DataBase_pb2.addVirtualStorageResult()
+    AddVolumeResult=DataBase_pb2.AddVolumeResult()
 
-    if request.name=="":
-        addVirtualStorageResult.result="nameNotGiven"
-        return addVirtualStorageResult
-    elif len(cursor.execute("SELECT * FROM virtualStorage WHERE volumeName=?",(request.name,)).fetchall())>0:
-        addVirtualStorageResult.result="nameAlreadyUsed"
-        return addVirtualStorageResult
+    if request.volumeInfo.volumeName=="":
+        AddVolumeResult.result="nameNotGiven"
+        return AddVolumeResult
     else:
-        found=cursor.execute("SELECT * FROM virtualStorage WHERE volumeName=?",(request.volumeName,)).fetchall()
+        found=cursor.execute("SELECT * FROM virtualStorage WHERE volumeName=?",(request.volumeInfo.volumeName,)).fetchall()
         if len(found)>0:
-            addVirtualStorageResult.result="nameAlreadyExist"
-            return addVirtualStorageResult
+            AddVolumeResult.result="nameAlreadyExist"
+            return AddVolumeResult
         else:
             for i in subs:
                 found=cursor.execute("SELECT * FROM storageStructure WHERE subid=?",(i,)).fetchall()
                 if len(found)>0:
-                    addVirtualStorageResult.result="diskAlreadyUsed"
-                    addVirtualStorageResult=f"disk called {i} already used in other pool"
-                    return addVirtualStorageResult
+                    AddVolumeResult.result="diskAlreadyUsed"
+                    AddVolumeResult=f"disk called {i} already used in other pool"
+                    return AddVolumeResult
             cursor.execute("INSERT INTO virtualStorage (addTime,lastCheck,volumeName,healthy,info,needAll,used,capacity) VALUES (?,?,?,?,?,?,?,?)",\
-                           (request["time"],request["last_check"],request.volumeName,request.healthy,request.info,request.capacity,request.needAll,request.used))
+                           (request.volumeInfo.addTime,request.volumeInfo.lastCheck,request.volumeInfo.volumeName,request.volumeInfo.healthy,request.volumeInfo.info,request.volumeInfo.needAll,request.volumeInfo.used,request.volumeInfo.capacity))
             result=cursor.execute("SELECT id FROM virtualStorage WHERE volumeName=?",(request.volumeName,)).fetchall()[0]
             for i in subs:
-                cursor.execute("INSERT INTO storageStructure (superid,subid,addTime) VALUES (?,?,?)",(result,i,request["time"]))
+                cursor.execute("INSERT INTO storageStructure (superid,subid,addTime) VALUES (?,?,?)",(result,i,request.volumeInfo.addTime))
             conn.commit()
             conn.close()
-            addVirtualStorageResult.result="success"
-            return addVirtualStorageResult
-    addVirtualStorageResult.result="unknownError"
-    return addVirtualStorageResult
-def getDiskInfo(request):
+            AddVolumeResult.result="success"
+            return AddVolumeResult
+        
+#这个函数是为了更新硬盘使用的，并不是为了替换硬盘！替换硬盘请使用其他命令
+def UpdateDisk(request):
+    oldDisk=request.oldDisk
+    newDisk=request.newDisk
+    
     db_path=os.path.join(vars.data["work_path"],"files.db")
     conn=sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    result=cursor.execute("SELECT * FROM physicalStorage WHERE ?=? AND healthy!='removed'",(request.id,request.info)).fetchall()
-    GetDiskInfoAnswerResult=DataBase_pb2.GetDiskInfoAnswer()
-    if len(result)==0:
-        GetDiskInfoAnswerResult.result="notSuchdisk"
-        return GetDiskInfoAnswerResult
-    elif len(result)>1:
-        GetDiskInfoAnswerResult.result="tooMuchChoice"
-        return GetDiskInfoAnswerResult
+    result=DataBase_pb2.UpdateDiskResult
+    old_disk=cursor.execute("SELECT * FORM Disk WHERE id=?",(old_disk.id)).fetchall()
+
+    if len(old_disk)==0:
+        result.result=1
+        return result
     else:
-        GetDiskInfoAnswerResult.result="success"
-        GetDiskInfoAnswerResult.diskinfo.SerialNumber=result[0][0]
-        GetDiskInfoAnswerResult.diskinfo.addTime=result[0][1]
-        GetDiskInfoAnswerResult.diskinfo.lastCheck=result[0][2]
-        GetDiskInfoAnswerResult.diskinfo.diskName=result[0][3]
-        GetDiskInfoAnswerResult.diskinfo.healthy=result[0][4]
-        GetDiskInfoAnswerResult.diskinfo.capacity=result[0][5]
-        GetDiskInfoAnswerResult.diskinfo.diskKind=result[0][6]
-        GetDiskInfoAnswerResult.diskinfo.info=result[0][7]
-        return GetDiskInfoAnswerResult
+        cursor.execute("UPDATE Disk SET id=?,diskName=?,healthy=?,capacity=?,kind=?,info=? where id=?",\
+                       (newDisk.id,newDisk.diskName,newDisk.healthy,newDisk.capacity,newDisk.kind,newDisk.info,oldDisk.id))
+        result.result=0
+        return result
+    
+#这个函数是为了更新硬盘使用的，并不是为了替换硬盘！替换硬盘请使用其他命令
+def UpdateVolume(request):
+    oldVolume=request.oldVolume
+    newVolume=request.newVolume
+    
+    db_path=os.path.join(vars.data["work_path"],"files.db")
+    conn=sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    result=DataBase_pb2.UpdateVolumeResult
+    old_volume=cursor.execute("SELECT * FORM Volume WHERE id=?",(old_volume.id)).fetchall()
+
+    if len(old_volume)==0:
+        result.result=1
+        return result
+    else:
+        cursor.execute("UPDATE Volume SET id=?,volumeName=?,healthy=?,info=?,needAll=?,used=?,capacity=? where id=?",\
+                       (newVolume.id,newVolume.volumeName,newVolume.healthy,newVolume.info,newVolume.needAll,newVolume.used,newVolume.capacity,oldVolume.id))
+        result.result=0
+        return result
+    
