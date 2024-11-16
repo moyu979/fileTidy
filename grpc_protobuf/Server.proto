@@ -2,7 +2,7 @@ syntax = "proto3";
 
 service Server{
     rpc TestAccess(TestAccessRequest) returns (TestAccessAnswer);
-    rpc GetChecking(idMessage) returns (CheckResult);
+    //rpc GetChecking(idMessage) returns (CheckResult);
 }
 
 message TestAccessRequest{
@@ -11,10 +11,11 @@ message TestAccessRequest{
 message TestAccessAnswer{
     string answerInfo=1;
 }
+
+/*
 message idMessage{
     string checkId=1;
 }
-
 message CheckResult{
     enum Result{
         success=0;
@@ -24,3 +25,4 @@ message CheckResult{
     repeated string checkId=2;
     repeated string checkInfo=3;
 }
+*/

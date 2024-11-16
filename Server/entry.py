@@ -1,7 +1,8 @@
 import sys
+import os
 sys.path.append(os.path.abspath(".."))
 sys.path.append(os.path.abspath("../grpc_protobuf"))
-import os
+import threading
 import grpc
 import time
 
@@ -18,6 +19,14 @@ from func import vars
 #
 def serve():
     vars.load_datas()
+    print(vars.data["serverid"],222)
+
+    current_thread = threading.current_thread()
+    print(f"当前线程名: {current_thread.name}")
+    print(f"当前线程ID: {current_thread.ident}")
+    print(f"当前进程ID: {os.getpid()}")
+    print(f"当前模块名: {__name__}")
+    
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     #FileControl_pb2_grpc.add_FileControlServicer_to_server(FileControlServicer(), server)
     #DataBase_pb2_grpc.add_DataBaseServicer_to_server(DataBase.DataBaseServicer(), server)
@@ -31,9 +40,9 @@ def serve():
     except KeyboardInterrupt:
         server.stop(0)
         vars.save_datas()
+        print(vars.data["serverid"])
  
 if __name__ == '__main__':
-  
   print("service start")
   
   serve()
