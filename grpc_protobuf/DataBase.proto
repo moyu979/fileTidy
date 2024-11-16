@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 service DataBase{
-    rpc InitDataBase(NullMessage) returns (InitResult);
+    rpc InitDataBase(InitRequest) returns (InitResult);
 
     rpc GetDisk(GetDiskRequest) returns (GetDiskResult);
     rpc GetVolume(GetVolumeRequest) returns (GetVolumeResult);
@@ -16,6 +16,9 @@ message NullMessage{
 
 }
 
+message InitRequest{
+    string DataBasePath=1;
+}
 message InitResult{
     enum Result{
         success=0;
@@ -30,30 +33,32 @@ message GetDiskRequest{
     string id=1;
     string info=2;
 }
-
 message GetDiskResult{
     enum Result{
         success=0;
         notSuchId=1;
         notSuchDisk=2;
+        DBFailure=3;
     }
     Result result=1;
     repeated Disk diskinfo=2;
+    string info=3;
 }
 
 message GetVolumeRequest{
     string id=1;
     string info=2;
 }
-
 message GetVolumeResult{
     enum Result{
         success=0;
         notSuchid=1;
         notSuchdisk=2;
+        DBFailure=3;
     }
     Result result=1;
     repeated Volume volumeInfo=2;
+    string info=3;
 }
 
 message AddDiskRequest{
@@ -61,7 +66,6 @@ message AddDiskRequest{
     bool forceDo=2;
     string diskPath=3;
 }
-
 message AddDiskResult{
     enum Result{
         success=0;
@@ -71,6 +75,9 @@ message AddDiskResult{
         MissingCapacity=4;
         UsingGivenCapacity=5;
         UnknownFailure=6;
+        PathSericalNotMatchButForce=7;
+        DBFailure=8;
+        notSuchKind=9;
     }
     Result result=1;
     string knownDiskInfo=2;
@@ -91,6 +98,8 @@ message AddVolumeResult{
         nameAlreadyUsed=2;
         nameAlreadyExist=3;
         diskAlreadyUsed=4;
+        diskNotExist=6
+        DBFailure=5;
     }
     Result result=1;
     string knownVolumeInfo=2;

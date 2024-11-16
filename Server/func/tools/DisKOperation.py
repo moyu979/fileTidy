@@ -18,17 +18,19 @@ def getDiskByPath(disk_path):
         for physical_disk in c.Win32_DiskDrive():
             id:str=physical_disk.DeviceID
             get_name=id.replace("\\","").replace(".","")
-            if get_name==disk_path:
-                return physical_disk.SerialNumber,physical_disk.Size
-        return None,0
+            if get_name==str(disk_path):
+                return physical_disk.SerialNumber.replace(".",""),physical_disk.Size
+        return None,"0"
     
 def getDiskBySerialNumber(disk_id):
     if vars.data["platform"]=="Windows":
         import wmi
         c=wmi.WMI()
+        print("there")
         for physical_disk in c.Win32_DiskDrive():
             if physical_disk.SerialNumber==disk_id:
                 return physical_disk.Size
+        print("there")   
         return None
 
 

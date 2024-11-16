@@ -13,7 +13,7 @@ service FileControl{
     rpc LoadFileIntoCache(CachePath) returns(loadCacheResult);
     rpc MoveFile(MoveInfo) returns(MoveResult);
     rpc UnzipFile(UnzipInfo) returns(UnzipResult);
-    rpc ZipFile(ZipInfo) returns(ZipResult)
+    rpc ZipFile(ZipInfo) returns(ZipResult);
 }
 
 
