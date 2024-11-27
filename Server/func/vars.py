@@ -21,9 +21,16 @@ nowChecking={
     "2":"3"
 }
 
+import logging
+
+# 设置日志的基本配置
+logging.basicConfig(level=logging.DEBUG,  # 日志级别
+                    format='%(asctime)s - %(levelname)s - %(message)s',  # 日志输出格式
+                    datefmt='%Y-%m-%d %H:%M:%S')  # 日期时间格式
+
 @say_begin_and_end
 def load_datas(path="./"):
-    global data
+    logging.info("start loading static datas")
     data_dir=os.path.join(path,"datas")
     if not os.path.exists(data_dir):
         save_datas(path)
@@ -44,7 +51,6 @@ def load_datas(path="./"):
     data["platform"]=platform.system()
     if data["serverid"]==None:
         data["serverid"]=generate_server_id()
-    print(data["serverid"])
 def generate_server_id():
     now_time=fileTimeSecond()
     random_int = random.randint(1, 100)
