@@ -13,3 +13,7 @@
 /Server/datas
 
 !/tests
+
+!/filetidy_offline
+/filetidy_offline/**/__pycache__
+/filetidy_offline/datas
