@@ -3,19 +3,19 @@ import logging
 
 
 from core.tools.confs import conf
+
 from core.tools.db_tools import *
 from core.tools.hash import get_hash
 from core.tools.fileTime import fileTimeSecond
 from core.tools.file import get_size
-from core.tools.init_cmd import init_cmd_env
+from core.tools.process import ProcessManage
 from core.component.add_file_info import add_file_info
 
-class regist_hash:
+class add_file:
     def __init__(self):
         pass
 
     def __call__(self, file_path:add_file_info):
-        print("qqq")
         _,err=check_db_existance()
         if err is not None:
             return _,err
@@ -31,6 +31,7 @@ class regist_hash:
         self.conn=sqlite3.connect(get_db_path())
         self.cursor=self.conn.cursor()
 
+        process_manage=ProcessManage(file_path._file_path)
         for root,dir,files in os.walk(file_path._file_path):
             for file in files:
 
@@ -66,11 +67,9 @@ class regist_hash:
                         logging.warning(f"find a file has same path {path} \n but different md5 {hash} and {data[0][0]}")
                         self.conn.close()
                         return None,f"find a file has same path {path} \n but different md5 {hash} and {data[0][0]}"
-        
+                process_manage.update(path)
         self.conn.commit()
         self.conn.close()
         logging.debug("successful finished")
         return "success",None
         
-if __name__=="__main__":
-    init_cmd_env()

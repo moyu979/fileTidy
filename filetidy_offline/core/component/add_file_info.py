@@ -10,10 +10,8 @@ class add_file_info:
         self._file_path=file_path
         self._storage_volume=storage_volume
 
-    def check(self) ->bool:
-
+    def check(self):
         self._file_path=os.path.abspath(self._file_path)
-        
         # 要记录的目录是否存在
         if not os.path.exists(self._file_path):
             logging.warning(f"path {self._file_path} not exists")
@@ -28,7 +26,7 @@ class add_file_info:
             return False,f"volumn {self._storage_volume} not exist in data base"
             
         return True,None
-        
+    
         
         
         

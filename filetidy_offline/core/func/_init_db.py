@@ -10,10 +10,12 @@ def init_db(path=None):
     if not os.path.exists(data_storage_path):
         logging.info(f"creating {data_storage_path}")
         os.mkdir(data_storage_path)
+
     db_path=os.path.join(data_storage_path,conf["db_name"])
     if os.path.exists(db_path):
         logging.warning("data base already exists, nothing will be done")
     else:
+        logging.info(f"init database in {db_path}")
         parent_dir = Path(__file__).resolve().parent.parent
         sql_dir=os.path.join(parent_dir,"resource")
         sql_file=os.path.join(sql_dir,"Init.sql")
