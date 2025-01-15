@@ -20,22 +20,27 @@ conf={
         "server_id":None
     }
 
-tape_kind={
-    "5":"lto5",
-    "6":"lto6"
+disk_kind={
+    "01":"HDD",
+    "02":"SSD",
+    "03":"flash",
+    "15":"lto5",
+    "16":"lto6"
 }
 
+tape=[]
+disk=[]
 health={
     "1":"health",
     "2":"in_danger",
     "3":"break_down"
 }
 
-disk_kind={
-    "1":"HDD",
-    "2":"SSD",
-    "3":"flash"
+capacity={
+    "lto5":"1.5T",
+    "lto6":"2.5T"
 }
+
 hash_storage={}
 
 
@@ -61,7 +66,12 @@ def load_conf(path="./datas"):
     conf["platform"]=platform.system()
     if conf["server_id"]==None:
         conf["server_id"]=generate_server_id()
-    print(conf["server_id"])
+    
+    for k,v in disk_kind.items():
+        if k.startswith("0"):
+            disk.append(v)
+        elif k.startswith("1"):
+            tape.append(v)
 
 def generate_server_id():
     now_time,_=fileTimeSecond()

@@ -26,6 +26,3 @@ def init_db(path=None):
         cursor.executescript(sql_script)
         conn.commit()
         conn.close()
-
-if __name__=="__main__":
-    init_db()
