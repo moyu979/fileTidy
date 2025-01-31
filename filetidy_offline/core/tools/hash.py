@@ -12,7 +12,7 @@ def get_hash(path,size=conf["load_unit"]):
     if os.path.isdir(path):
         return None,"is dir"
     elif conf["remember_hash"] and path in hash_storage.keys():
-        return hash_storage[path],None
+        return hash_storage[path]
     else:
         md5=hashlib.md5()
         with open(path,"rb") as fp:
@@ -24,7 +24,7 @@ def get_hash(path,size=conf["load_unit"]):
         file_md5=md5.hexdigest()
         if conf["remember_hash"]:
             hash_storage[path]=file_md5
-        return file_md5,None
+        return file_md5
     
 if __name__=="__main__":
     path=""

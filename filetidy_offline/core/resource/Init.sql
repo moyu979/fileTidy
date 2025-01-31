@@ -20,16 +20,18 @@ CREATE TABLE Volume(
     id TEXT UNIQUE,
     addTime TEXT,
     lastCheck TEXT,
-    volumeName TEXT UNIQUE NOT NULL,
+    volumeName TEXT,
     healthy TEXT DEFAULT 'healthy',
     info TEXT DEFAULT '',
     needAll TEXT DEFAULT 1,
     used Text DEFAULT 0,
     capacity Text DEFAULT 0,
-    kind TEXT
+    kind TEXT,
+    isBase TEXT DEFAULT 'false',
+    globalPoint TEXT DEFAULT 'unknown'
 );
 
-CREATE TABLE PhysicalStorage(
+CREATE TABLE device(
     id TEXT PRIMARY KEY,
     addTime TEXT,
     lastCheck TEXT,
@@ -43,12 +45,13 @@ CREATE TABLE PhysicalStorage(
 CREATE TABLE storageStructure(
     superid TEXT,
     subid TEXT,
+    subdir TEXT,
     addTime TEXT,
-    info TEXT DEFAULT '',
     state TEXT DEFAULT 'inuse',
+    info TEXT DEFAULT '',
     PRIMARY KEY (superid,subid)
 );
 
-INSERT INTO PhysicalStorage (id,addTime,lastCheck,diskName,capacity,kind) VALUES ('0','0000:00:00 00:00:00','0000:00:00 00:00:00','referToAllDisk','0','0');
+INSERT INTO device (id,addTime,lastCheck,diskName,capacity,kind) VALUES ('0','0000:00:00 00:00:00','0000:00:00 00:00:00','referToAllDisk','0','0');
 INSERT INTO Volume (id,addTime,lastCheck,volumeName)  VALUES ('0','0000-00-00 00:00','0000-00-00 00:00','referToDownloadVolumn');
-INSERT INTO storageStructure VALUES ('0','0','0000:00:00 00:00:00','addByInitProcess','inuse');
+INSERT INTO storageStructure VALUES ('0','0','./','0000:00:00 00:00:00','inuse','addByInitProcess');

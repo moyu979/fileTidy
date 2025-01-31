@@ -1,6 +1,6 @@
-import core.component.physical_storage as physical_storage
+import core.component.add_device_data as add_device_data
 
-def add_disk(disk:physical_storage.physical_storage):
+def add_disk(disk:add_device_data.device_data):
     _,err=disk.check()
     if err:
         return None,err

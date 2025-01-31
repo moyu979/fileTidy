@@ -5,7 +5,7 @@ import os
 import platform
 import random
 
-from core.tools.fileTime import fileTimeSecond
+from core.tools.generater import fileTimeSecond
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s')
@@ -20,6 +20,8 @@ conf={
         "server_id":None
     }
 
+bool_mode=["true","false"]
+
 disk_kind={
     "01":"HDD",
     "02":"SSD",
@@ -28,6 +30,19 @@ disk_kind={
     "16":"lto6"
 }
 
+# part值得是在原有的目录下划出一个子目录，当作新的part
+raid_kind={
+    "3":"single_disk",
+    "2":"stripe",
+    "0":"raid0",
+    "1":"raid1",
+    "10":"raid10",
+    "5":"raid5",
+    "6":"raid6",
+    "7":"part",
+    "8":"copy",
+    "9":"continue"
+}
 tape=[]
 disk=[]
 health={
