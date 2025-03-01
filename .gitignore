@@ -1,21 +1,12 @@
 /*
 !.gitignore
 !*.md
+!*.py
 
-!/grpc_protobuf/
-/grpc_protobuf/**/__pycache__
+!command
+!core
+!filesystem
 
-!/Cmd/
-/Cmd/**/__pycache__
+**/datas
+**/__pycache__
 
-!/Server/
-/Server/**/__pycache__
-/Server/datas
-
-!/tests
-
-!/filetidy_offline
-/filetidy_offline/**/__pycache__
-/filetidy_offline/datas
-
-*/datas
