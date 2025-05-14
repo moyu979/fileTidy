@@ -35,8 +35,20 @@ class Storage:
     def to_database(self):
         conn=sqlite3.connect(conf.get("db_path"))
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO Dist (id, name, kind, addTime, lastCheck, healthy, capacity, info) VALUES (?,?,?,?,?,?,?,?)",\
-                        (self.id, self.name, self.kind, self.add_time, self.last_check, self.healthy, self.capacity, self.info))
+        # 使用 INSERT OR REPLACE 实现存在更新，不存在插入
+        cursor.execute("""
+            INSERT INTO Storage (id, name, kind, addTime, lastCheck, healthy, capacity, info)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                name=excluded.name,
+                kind=excluded.kind,
+                addTime=excluded.addTime,
+                lastCheck=excluded.lastCheck,
+                healthy=excluded.healthy,
+                capacity=excluded.capacity,
+                info=excluded.info
+        """, (self.id, self.name, self.kind, self.add_time, self.last_check, self.healthy, self.capacity, self.info))
+        
         conn.commit()
         conn.close()
 
