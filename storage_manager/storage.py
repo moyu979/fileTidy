@@ -16,21 +16,23 @@ class Storage:
 
         self.info = None
         
-    def set_storage(self, info_set):
-        """
-        根据 info_set 的值按顺序设置存储对象的属性。
-        """
-        if len(info_set) != 8:
-            raise ValueError("info_set must contain exactly 8 elements.")
-        
-        self.id = info_set[0]
-        self.name = info_set[1]
-        self.kind = info_set[2]
-        self.add_time = info_set[3]
-        self.last_check = info_set[4]
-        self.healthy = info_set[5]
-        self.capacity = info_set[6]
-        self.info = info_set[7]
+def set_storage(self, info_dict):
+    """
+    根据 info_dict 的键值对设置存储对象的属性。
+    :param info_dict: 包含存储对象属性的字典。
+    """
+    # 定义允许设置的属性
+    allowed_keys = {"id", "name", "kind", "add_time", "last_check", "healthy", "capacity", "info"}
+    
+    for key, value in info_dict.items():
+        if key in allowed_keys:
+            setattr(self, key, value)  # 动态设置属性
+        else:
+            raise KeyError(f"Invalid key '{key}' in info_dict. Allowed keys are: {allowed_keys}")
+
+    def set_storage_by_path(self, path):
+        self.to_database()
+        logging.error("set_storage_by_path not finished")
 
     def to_database(self):
         conn=sqlite3.connect(conf.get("db_path"))

@@ -34,7 +34,3 @@ def init_database(path=None):
     conn.commit()
     conn.close()
     logging.info(f"init database in \"{path}\"")
-
-if __name__=="__main__":
-    initDatabase()
-    logging.info("Database initialized successfully")

@@ -10,6 +10,7 @@ class StorageFactory:
     @staticmethod
     def load_storage(id):
         conn=sqlite3.connect(conf.get("db_path"))
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM Storage WHERE id=?", (id,))
         result = cursor.fetchone()
@@ -26,10 +27,10 @@ class StorageFactory:
     #通过路径自动读取存储设备信息，并存入数据库
     @staticmethod
     def init_by_path(path=None):
-        pass
+        logging.error("init disk by path not finished")
     
     #通过用户输入的数据给出一个存储设备，并且放到数据库
     @staticmethod
-    def init_by_info(info=None):
-        pass
+    def init_by_input(info=None):
+        logging.error("init disk by input not finished")
     

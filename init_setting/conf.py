@@ -5,7 +5,9 @@ conf={
     "log_path": "./log",
     "log_file": "initSetting.log",
     "log_level": "DEBUG",
-    "log_format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    "log_format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+
+    "hash_once":512
 }
 
 def get(key):

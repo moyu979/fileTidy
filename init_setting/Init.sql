@@ -5,12 +5,12 @@ CREATE TABLE Storage(
     id TEXT PRIMARY KEY,
     name TEXT,
     kind TEXT,
+    capacity TEXT,
 
     addTime TEXT,
     lastCheck TEXT,
     
     healthy TEXT DEFAULT 'health',
-    capacity TEXT,
     
     info TEXT DEFAULT ''
 );
@@ -18,16 +18,22 @@ CREATE TABLE Storage(
 卷信息：一个虚拟存储的基本单位，可以说分区，raid，或者是手动维护的一个若干分区组成的集群
  */
 CREATE TABLE Volume(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    addTime TEXT,
-    lastCheck TEXT,
+    id TEXT PRIMARY KEY,
     volumeName TEXT UNIQUE NOT NULL,
+    capacity Text DEFAULT 0,
+
+    addTime TEXT,
+
+    lastCheck TEXT,
     healthy TEXT DEFAULT 'healthy',
+
     info TEXT DEFAULT '',
+
     needAll INTEGER DEFAULT 1,
     used Text DEFAULT 0,
-    capacity Text DEFAULT 0
+    
 );
+
 CREATE TABLE storageStructure(
     superid TEXT,
     subid TEXT UNIQUE,

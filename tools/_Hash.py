@@ -1,9 +1,10 @@
 import hashlib
 import os
 import sys
-from _processManage import *
 
-def getAHash(path,size=512):
+import init_setting.conf as conf
+
+def getAHash(path,size=conf.get("hash_once")):
     if os.path.isdir(path):
         return None
     else:
@@ -16,12 +17,4 @@ def getAHash(path,size=512):
                 md5.update(data)
         file_md5=md5.hexdigest()
         return file_md5
-    
-if __name__=="__main__":
-    path=""
-    if len(sys.argv)!=2:
-        path=input("请输入测试路径")
-    else:
-        path=sys.argv[1]
-    path=os.path.abspath(path)
-    path=path.replace("\\","/")
+
