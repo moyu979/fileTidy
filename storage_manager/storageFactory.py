@@ -23,3 +23,13 @@ class StorageFactory:
         storage.set_storage(result)
         return storage
     
+    #通过路径自动读取存储设备信息，并存入数据库
+    @staticmethod
+    def init_by_path(path=None):
+        pass
+    
+    #通过用户输入的数据给出一个存储设备，并且放到数据库
+    @staticmethod
+    def init_by_info(info=None):
+        pass
+    
