@@ -1,15 +1,2 @@
-/*
-!.gitignore
-!*.md
-
-!/grpc_protobuf/
-/grpc_protobuf/**/__pycache__
-
-!/Cmd/
-/Cmd/**/__pycache__
-
-!/Server/
-/Server/**/__pycache__
-/Server/datas
-
-!/tests
+.vscode/
+__pycache__/
