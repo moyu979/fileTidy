@@ -1,4 +1,6 @@
 conf={
+    "platform":"Linux",  # or "Windows"
+
     "path": "./DataBase",
     "db_path": "./DataBase/files.db",
     "script_path": "./func/init.sql",

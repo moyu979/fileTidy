@@ -54,4 +54,25 @@ def set_storage(self, info_dict):
         conn.commit()
         conn.close()
 
+    def check_disk(self):
+        # 检查磁盘的健康状态（全量扫描）
+        logging.error("check_disk not finished")
 
+    def monitor_health(self):
+        # 实时监控磁盘健康状态（实时监控）
+        logging.error("monitor_health not finished")
+
+    def formate_disk(self):
+        # 格式化磁盘
+        logging.error("formate_disk not finished")
+
+    
+
+    def get_disk_usage(self):
+        # 获取磁盘使用情况
+        #import shutil
+        #total, used, free = shutil.disk_usage("/")
+        #return {"total": total, "used": used, "free": free}
+        logging.error("get_disk_usage not finished")
+
+        

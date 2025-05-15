@@ -7,8 +7,12 @@ class StorageFactory:
     A factory class for creating storage instances.
     """
 
-    @staticmethod
-    def load_storage(id):
+    storages={
+
+    }
+
+    @classmethod
+    def load_storage(cls,id):
         conn=sqlite3.connect(conf.get("db_path"))
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -22,6 +26,7 @@ class StorageFactory:
         
         storage = Storage()
         storage.set_storage(result)
+        cls.storages[id]=storage
         return storage
     
     #通过路径自动读取存储设备信息，并存入数据库
@@ -33,4 +38,15 @@ class StorageFactory:
     @staticmethod
     def init_by_input(info=None):
         logging.error("init disk by input not finished")
+
+    @classmethod
+    def update_all_storage(cls):
+        #将所有设备的信息更新到数据库
+        for v in cls.storages.values():
+            v.to_database()
+
+    @classmethod
+    def load_exist_disks(cls):
+        #载入系统中挂载的全部disk
+        logging.error("load_exist_disks not finished")
     
