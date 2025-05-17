@@ -1,5 +1,6 @@
 import logging
 from volume_manager.volume import Volume
+from volume_manager.tools import load_upper_volume
 
 import importlib
 import os
@@ -15,38 +16,42 @@ class VolumeFactory:
 
     @classmethod
     def load_volume(cls, name=None, id=None,mount_point=None):
+        volume = Volume()
+        # 如果id是已知的，那么直接根据id读取即可
         if id is not None:
-            conn=sqlite3.connect(conf.get("db_path"))
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM Volume WHERE id=?", (id,))
-            result = cursor.fetchone()
-            cursor.close()
-            conn.close()
-            if result is None:
-                logging.error(f"Volume with id {id} not found.")
-                raise ValueError(f"Volume with id {id} not found.")
-            
-            volume = Volume()
-            volume.set_volume(result,mount_point=mount_point)
-            #载入子卷
-            conn=sqlite3.connect(conf.get("db_path"))
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM storageStructure WHERE superid=?", (id,))
-            result = cursor.fetchall()
-            cursor.close()
-            conn.close()
-            volume.set_sub_volume(result)
-
-            cls.volumes[id] = volume
-
-            return volume
-        
+            logging.debug("load volume by id")
+            if id in cls.volumes:
+                logging.debug("load volume from cache")
+                volume=cls.volumes[id]
+            else:
+                logging.debug("load volume from database")
+                volume.load_info(id=id)
+                cls.volumes[id] = volume
+        # 如果name是已知的，那么直接根据id读取即可
         elif name is not None:
-            logging.error("load volume by name not finished")
+            logging.debug("load volume by name")
+            volume.load_info(name=name)
+            if volume.id in cls.volumes:
+                volume=cls.volumes[volume.id]
+            else:
+                cls.volumes[volume.id] = volume
+        # 如果挂载点是已知的，那么直接根据id读取即可
+        elif mount_point is not None:
+            logging.debug("load volume by point")
+            volume=cls.load_upper_volume(path=mount_point)
+            if volume.id==0:
+                logging.error(f"Volume with mount point {mount_point} not found.")
+                volume=None
+            elif volume.id in cls.volumes:
+                volume=cls.volumes[volume.id]
+            else:
+                cls.volumes[volume.id] = volume
         else:
-            logging.error("load volume by mount_point not finished")
+            logging.error("load volume must has infos")
+            volume=None
+            raise ValueError("Either id or name must be provided.")
+        return volume
+        
 
     def new_volume(cls, info_dict=None, mount_point=None):
         """
@@ -58,6 +63,9 @@ class VolumeFactory:
         if info_dict is not None:
             volume = Volume()
             volume.set_volume(info_dict, mount_point=mount_point)
+        elif mount_point is not None:
+            volume = Volume()
+            volume.set_volume_interactive()
         else:
             volume = Volume()
             volume.set_volume_interactive()
@@ -76,9 +84,40 @@ class VolumeFactory:
             if os.path.exists(test_path):
                 files=os.listdir(test_path)
                 id=files[0]
-                cls.load_volume(id=id,mount_point=mount_point)
+                volume=cls.load_volume(id=id,mount_point=mount_point)
+                volume.mount_point=mount_point
             else:
                 continue
+
+        cls.load_volume(id=0)
+
+    @classmethod
+    def load_upper_volume(cls,path=None):
+        if path is None:
+            logging.info("using default volume")
+            return cls.load_volume(id=0)
+        else:
+            volume,root=load_upper_volume.load_root_volume_id(path=path)
+            volume.mount_point=root
+            return volume
+        
+    @classmethod
+    def get_volume_path(cls, volume_id):
+        """
+        Get the path of the volume.
+        :param volume: The Volume instance.
+        :return: The path of the volume.
+        """
+        # 这里需要实现获取卷路径的逻辑,这个逻辑不对，
+        if volume_id in cls.volumes:
+            volume = cls.volumes[volume_id]
+            if volume.mount_point is not None:
+                return volume.mount_point
+            else:
+                logging.error(f"Volume with id {volume_id} does not have a mount point.")
+        logging.error("get_volume_path not finished")
+
+
 
             
         

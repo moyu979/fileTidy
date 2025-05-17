@@ -25,7 +25,7 @@ def init_database(path=None):
     
     script_dir = Path(__file__).resolve().parent
     script_path=os.path.join(script_dir,"Init.sql")
-    with open(script_path,"r") as script:
+    with open(script_path, "r", encoding="utf-8") as script:
         sql_script=script.read()
 
     

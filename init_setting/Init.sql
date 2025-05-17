@@ -30,9 +30,9 @@ CREATE TABLE Volume(
     info TEXT DEFAULT '',
 
     needAll INTEGER DEFAULT 1,
-    used Text DEFAULT 0,
-    
+    used Text DEFAULT 0
 );
+
 
 CREATE TABLE storageStructure(
     superid TEXT,
@@ -45,17 +45,17 @@ CREATE TABLE storageStructure(
 CREATE TABLE fileSource(
     Md5 TEXT,
     size TEXT,
-    addTime TEXT,
+    add_time TEXT,
     fromPath TEXT
 );
-CREATE TABLE files(
-    Md5 TEXT,
+CREATE TABLE File(
+    md5 TEXT,
     size TEXT,
-    addTime TEXT,
-    fromPath TEXT,
-    nowPath TEXT UNIQUE,
-    nowName TEXT,
-    storageVirtual INTEGER DEFAULT 0,
+    add_time TEXT,
+    from_path TEXT,
+    now_path TEXT UNIQUE,
+    now_name TEXT,
+    volume INTEGER DEFAULT 0,
     state TEXT DEFAULT 'healthy',
     info TEXT DEFAULT ''
 );
@@ -68,6 +68,6 @@ CREATE TABLE cache(
     nowName TEXT
 );
 
-INSERT INTO Disk (id,addTime,lastCheck,diskName,capacity,kind) VALUES ('0','0000-00-00 00:00','0000-00-00 00:00','referToAllDisk','0','0');
-INSERT INTO Volume (id,addTime,lastCheck,volumeName)  VALUES ('0','0000-00-00 00:00','0000-00-00 00:00','referToDownloadVolumn');
+INSERT INTO Storage (id,addTime,lastCheck,name,capacity,kind) VALUES ('0','0000-00-00 00:00','0000-00-00 00:00','referToAllDisk','0','0');
+INSERT INTO Volume (id,addTime,lastCheck,name)  VALUES ('0','0000-00-00 00:00','0000-00-00 00:00','referToDownloadVolumn');
 INSERT INTO storageStructure VALUES ('0','0','0000-00-00 00:00','addByInitProcess');

@@ -1,4 +1,8 @@
+import json
 import logging
+import sqlite3
+
+from init_setting import conf
 
 
 class Volume:
@@ -18,20 +22,46 @@ class Volume:
 
         self.mount_point = None
 
+    def load_info(self, id=None, name=None):
+        if id is not None or name is not None:
+            logging.debug("load volume from database")
+            conn=sqlite3.connect(conf.get("db_path"))
+            cursor = conn.cursor()
+            if id is not None:
+                logging.debug("load volume from database by id")
+                cursor.execute("SELECT * FROM Volume WHERE id=?", (id,))
+            elif name is not None:
+                logging.debug("load volume from database by name")
+                cursor.execute("SELECT * FROM Volume WHERE name=?", (name,))
+            result = cursor.fetchone()
+            cursor.close()
+            conn.close()
+
+            if result is None:
+                logging.error(f"Volume with id {id} not found.")
+                raise ValueError(f"Volume with id {id} not found.")
+
+            self.id = result[0]
+            self.name=result[1]
+            self.capacity=result[2]
+            self.add_time=result[3]
+            self.last_check=result[4]
+            self.healthy=result[5]
+            self.info=result[6]
+            self.need_all=result[7]
+            self.used=result[8]
+
+            conn=sqlite3.connect(conf.get("db_path"))
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM storageStructure WHERE superid=?", (self.id,))
+            self.sub_volumes = cursor.fetchall()
+            cursor.close()
+            conn.close()
+
+        
+
     def set_volume_interactive(self):
         logging.error("set_volume_interactive not finished")
-        
-    def set_volume(self, info_dict,mount_point=None):
-        """
-        根据 info_dict 的键值对设置存储对象的属性。
-        :param info_dict: 包含存储对象属性的字典。
-        """
-        # 定义允许设置的属性
-        allowed_keys = {"id", "name", "capacity", "add_time", "last_check", "healthy", "info", "need_all"}
-        
-        for key, value in info_dict.items():
-            if key in allowed_keys:
-                setattr(self, key, value)
 
     def set_sub_volume(self, sub_volume):
         """
@@ -72,3 +102,25 @@ class Volume:
         """
         # 这里需要实现获取卷使用情况的逻辑
         logging.error("get_volume_usage not finished")
+
+    # 将对象转换为字典
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "capacity": self.capacity,
+            "add_time": self.add_time,
+            "last_check": self.last_check,
+            "healthy": self.healthy,
+            "info": self.info,
+            "need_all": self.need_all,
+            "sub_volumes": self.sub_volumes,  # 假设子卷是可序列化的
+            "mount_point": self.mount_point
+        }
+
+    # 将对象转换为 JSON 字符串
+    def to_json(self):
+        return json.dumps(self.to_dict(), ensure_ascii=False, indent=4)
+    
+    def __str__(self):
+        return f"Volume(id={self.id}, name={self.name}, capacity={self.capacity}, add_time={self.add_time}, last_check={self.last_check}, healthy={self.healthy}, info={self.info}, need_all={self.need_all}, sub_volumes={self.sub_volumes}, mount_point={self.mount_point})"
