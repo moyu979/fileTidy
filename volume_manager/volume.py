@@ -1,9 +1,10 @@
+from datetime import datetime
 import json
 import logging
 import sqlite3
 
 from init_setting import conf
-
+from volume_manager.tools.id_generate import generate_id
 
 class Volume:
     def __init__(self):
@@ -18,11 +19,12 @@ class Volume:
 
         self.need_all=None
 
-        self.sub_volumes = []
+        self.storages = []
 
         self.mount_point = None
 
-    def load_info(self, id=None, name=None):
+    def load_info(self, id:str=None, name:str=None):
+        """通过给定的id或name加载卷的信息"""
         if id is not None or name is not None:
             logging.debug("load volume from database")
             conn=sqlite3.connect(conf.get("db_path"))
@@ -53,22 +55,38 @@ class Volume:
 
             conn=sqlite3.connect(conf.get("db_path"))
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM storageStructure WHERE superid=?", (self.id,))
-            self.sub_volumes = cursor.fetchall()
+            temp=cursor.execute("SELECT * FROM storageStructure WHERE superid=?", (self.id,)).fetchall()
+            if len(temp)==0:
+                logging.error(f"your volume {self.id} has no sub volume")
+                raise ValueError(f"Volume with id {id} not found.")
+            for i in temp:
+                self.storages.append(i[1])
             cursor.close()
             conn.close()
 
+    def new_volume(self, info_dict:dict=None,mount_point=None):
+        """
+        根据 info_dict 的键值对设置卷对象的属性。
+        :param info_dict: 包含卷对象属性的字典。
+        """
+        # 定义允许设置的属性
+        now_time=datetime.now().strftime("%Y:%m:%d %H:%M:%S")
+
+        self.id = info_dict.get("id", generate_id())
+        self.name = info_dict.get("name", self.id)
+        self.capacity = info_dict.get("capacity", 0)
+
+        self.add_time = info_dict.get("add_time", now_time)
+        self.last_check = info_dict.get("last_check", now_time)
+        self.healthy = info_dict.get("healthy", "health")
+        self.info = info_dict.get("info", "")
+        self.need_all = info_dict.get("need_all", True)
+        self.storages = info_dict.get("storages", [])
+        self.mount_point = info_dict.get("mount_point", mount_point)
         
+        if mount_point is not None:
+            self.mount_point = mount_point
 
-    def set_volume_interactive(self):
-        logging.error("set_volume_interactive not finished")
-
-    def set_sub_volume(self, sub_volume):
-        """
-        设置子卷。
-        :param sub_volume: 子卷对象。
-        """
-        self.sub_volumes=sub_volume
 
     def to_database(self):
         """
@@ -114,7 +132,7 @@ class Volume:
             "healthy": self.healthy,
             "info": self.info,
             "need_all": self.need_all,
-            "sub_volumes": self.sub_volumes,  # 假设子卷是可序列化的
+            "storages": self.storages,  # 假设子卷是可序列化的
             "mount_point": self.mount_point
         }
 

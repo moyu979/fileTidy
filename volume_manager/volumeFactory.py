@@ -13,6 +13,7 @@ class VolumeFactory:
     A factory class for creating volume instances.
     """
     volumes = {}
+    no_init_volume=[]
 
     @classmethod
     def load_volume(cls, name=None, id=None,mount_point=None):
@@ -62,7 +63,7 @@ class VolumeFactory:
         """
         if info_dict is not None:
             volume = Volume()
-            volume.set_volume(info_dict, mount_point=mount_point)
+            volume.set_volume(info_dict)
         elif mount_point is not None:
             volume = Volume()
             volume.set_volume_interactive()
@@ -73,7 +74,6 @@ class VolumeFactory:
     
     @classmethod
     def load_exist_volumes(cls):
-
         module_path = f"volume_manager.tools.{conf.get("platform")}.get_all_volume"
         get_all_volume = importlib.import_module(module_path)
         all_volumes=get_all_volume.get_all_mount_points()
@@ -87,8 +87,7 @@ class VolumeFactory:
                 volume=cls.load_volume(id=id,mount_point=mount_point)
                 volume.mount_point=mount_point
             else:
-                continue
-
+                cls.no_init_volume.append(v)
         cls.load_volume(id=0)
 
     @classmethod
@@ -119,7 +118,7 @@ class VolumeFactory:
 
 
 
-            
+
         
     
     

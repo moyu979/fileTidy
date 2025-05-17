@@ -30,8 +30,11 @@ CREATE TABLE Volume(
     info TEXT DEFAULT '',
 
     needAll INTEGER DEFAULT 1,
-    used Text DEFAULT 0
 );
+/*
+存储结构信息：一个卷下面的一个文件夹/分区/raid等的基本信息
+*/
+
 
 
 CREATE TABLE storageStructure(

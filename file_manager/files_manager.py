@@ -15,17 +15,14 @@ class Files:
 
         for root,dirs,files in os.walk(file_path):
             for file in files:
-                
                 path=os.path.join(root,file)
-
                 file=File.file()
                 file.set_volume(volume.id)
                 file.set_abspath(path=path)
-                print(path)
                 file.append_file()
         # logging.error(f"Inserting files from {file_path} not finished")
     @classmethod
-    def move_files(self):
+    def move_files(self,from_dir,to_dir):
         # Logic to move files
         logging.error(f"Moving files not finished")
     @classmethod
