@@ -1,5 +1,5 @@
 conf={
-    "platform":"Linux",  # or "Windows"
+    "platform":"Darwin",  # or "Windows"
 
     "path": "./DataBase",
     "db_path": "./DataBase/files.db",
@@ -20,3 +20,4 @@ def set(key, value):
         conf[key] = value
     else:
         raise KeyError(f"Key '{key}' not found in configuration.")
+    

@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import sqlite3
 import logging
+import platform
 
 import init_setting.conf as conf
 def init_database(path=None):
@@ -34,3 +35,5 @@ def init_database(path=None):
     conn.commit()
     conn.close()
     logging.info(f"init database in \"{path}\"")
+
+    conf.set("platform",platform.system())

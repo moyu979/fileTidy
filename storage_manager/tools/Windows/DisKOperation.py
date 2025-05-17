@@ -1,5 +1,6 @@
+#待重写
 import os
-from .. import vars
+from ....ztemp.Server.func import vars
 def getMatchedDisk(diskName,SerialNumber):
     if vars.data["platform"]=="Windows":
         import wmi

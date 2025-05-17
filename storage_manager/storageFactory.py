@@ -6,7 +6,7 @@ class StorageFactory:
     """
     A factory class for creating storage instances.
     """
-
+    # A dictionary to hold all used storage instances
     storages={
 
     }

@@ -19,7 +19,7 @@ CREATE TABLE Storage(
  */
 CREATE TABLE Volume(
     id TEXT PRIMARY KEY,
-    volumeName TEXT UNIQUE NOT NULL,
+    name TEXT UNIQUE NOT NULL,
     capacity Text DEFAULT 0,
 
     addTime TEXT,
