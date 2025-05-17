@@ -64,7 +64,7 @@ class Volume:
             cursor.close()
             conn.close()
 
-    def new_volume(self, info_dict:dict=None,mount_point=None):
+    def new_volume(self, info_dict:dict=None):
         """
         根据 info_dict 的键值对设置卷对象的属性。
         :param info_dict: 包含卷对象属性的字典。
@@ -82,12 +82,10 @@ class Volume:
         self.info = info_dict.get("info", "")
         self.need_all = info_dict.get("need_all", True)
         self.storages = info_dict.get("storages", [])
-        self.mount_point = info_dict.get("mount_point", mount_point)
+        self.mount_point = info_dict.get("mount_point", "")
+
+        self.to_dict()
         
-        if mount_point is not None:
-            self.mount_point = mount_point
-
-
     def to_database(self):
         """
         将卷信息存储到数据库中。

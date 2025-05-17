@@ -13,7 +13,7 @@ class VolumeFactory:
     A factory class for creating volume instances.
     """
     volumes = {}
-    no_init_volume=[]
+    no_init_volume={}
 
     @classmethod
     def load_volume(cls, name=None, id=None,mount_point=None):
@@ -53,25 +53,6 @@ class VolumeFactory:
             raise ValueError("Either id or name must be provided.")
         return volume
         
-
-    def new_volume(cls, info_dict=None, mount_point=None):
-        """
-        Create a new volume instance and store it in the database.
-        :param info_dict: A dictionary containing volume attributes.
-        :param mount_point: The mount point of the volume.
-        :return: The created Volume instance.
-        """
-        if info_dict is not None:
-            volume = Volume()
-            volume.set_volume(info_dict)
-        elif mount_point is not None:
-            volume = Volume()
-            volume.set_volume_interactive()
-        else:
-            volume = Volume()
-            volume.set_volume_interactive()
-        return volume
-    
     @classmethod
     def load_exist_volumes(cls):
         module_path = f"volume_manager.tools.{conf.get("platform")}.get_all_volume"
@@ -87,8 +68,29 @@ class VolumeFactory:
                 volume=cls.load_volume(id=id,mount_point=mount_point)
                 volume.mount_point=mount_point
             else:
-                cls.no_init_volume.append(v)
+                cls.no_init_volume[mount_point]=v
         cls.load_volume(id=0)
+
+    def new_volume(cls, info_dict=None, mount_point=None):
+        """
+        Create a new volume instance and store it in the database.
+        :param info_dict: A dictionary containing volume attributes.
+        :param mount_point: The mount point of the volume.
+        :return: The created Volume instance.
+        """
+        module_path = f"volume_manager.tools.{conf.get("platform")}.get_capacity"
+        get_all_volume = importlib.import_module(module_path)
+
+        if mount_point is not None:
+            info_dict["mount_point"] = mount_point
+            info_dict["capacity"]=get_all_volume.get_mount_point_capacity(mount_point=mount_point)[0]
+            logging.info("自动获取了部分信息")
+        volume=Volume()
+        volume.new_volume(info_dict=info_dict)
+        cls.volumes[volume.id] = volume
+        
+    
+
 
     @classmethod
     def load_upper_volume(cls,path=None):

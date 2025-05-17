@@ -1,20 +1,15 @@
 import subprocess
 
-def get_partition_capacity_bytes(partition):
+def get_mount_point_capacity(mount_point):
     """
-    获取指定分区的容量信息（以字节为单位）。
-    :param partition: 分区名称（如 /dev/disk1s1）
-    :return: 分区容量（整数，字节数），如 500068036608
+    获取指定挂载点的容量信息（以字节为单位）。
+    :param mount_point: 挂载点路径（如 /Volumes/MyDisk）
+    :return: 总容量、已用容量、可用容量（单位：字节）
     """
     try:
-        if partition.startswith("/dev/"):
-            pass
-        else:
-            partition = "/dev/" + partition
-
-        # 调用 diskutil 命令
+        # 调用 df 命令
         result = subprocess.run(
-            ["diskutil", "info", partition],
+            ["df", "-k", mount_point],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
@@ -22,13 +17,31 @@ def get_partition_capacity_bytes(partition):
         if result.returncode != 0:
             raise RuntimeError(f"Error: {result.stderr.strip()}")
 
-        # 解析输出，查找容量信息
-        for line in result.stdout.splitlines():
-            if "Disk Size" in line and "Bytes" in line:
-                # 提取容量的字节数部分
-                size_str = line.split("(")[1].split(" ")[0]  # 提取括号内的字节数
-                return int(size_str)  # 转换为整数返回
+        # 解析 df 输出
+        lines = result.stdout.splitlines()
+        if len(lines) < 2:
+            raise RuntimeError("无法解析 df 输出")
+
+        # 第二行包含容量信息
+        data = lines[1].split()
+        total = int(data[1]) * 1024  # 总容量（块大小为 1K，转换为字节）
+        used = int(data[2]) * 1024   # 已用容量
+        available = int(data[3]) * 1024  # 可用容量
+
+        return total, used, available
 
     except Exception as e:
-        print(f"获取分区容量时出错: {e}")
-        return None
+        print(f"获取挂载点容量时出错: {e}")
+        return None, None, None
+
+# 示例：获取 /Volumes/MyDisk 的容量
+if __name__ == "__main__":
+    mount_point = "/Volumes/MyDisk"  # 替换为你的挂载点路径
+    total, used, available = get_mount_point_capacity(mount_point)
+    if total is not None:
+        print(f"挂载点 {mount_point} 的容量信息：")
+        print(f"总容量: {total} 字节")
+        print(f"已用容量: {used} 字节")
+        print(f"可用容量: {available} 字节")
+    else:
+        print(f"无法获取挂载点 {mount_point} 的容量信息")
