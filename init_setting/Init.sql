@@ -14,6 +14,16 @@ CREATE TABLE Storage(
     
     info TEXT DEFAULT ''
 );
+/*
+存储结构信息：一个存储设备下面的一个文件夹/分区/raid等的基本信息
+*/
+CREATE TABLE storageStructure(
+    superid TEXT,
+    subid TEXT UNIQUE,
+    addTime TEXT,
+    info TEXT DEFAULT '',
+    PRIMARY KEY (superid,subid)
+);
 /* 
 卷信息：一个虚拟存储的基本单位，可以说分区，raid，或者是手动维护的一个若干分区组成的集群
  */
@@ -32,25 +42,22 @@ CREATE TABLE Volume(
     kind TEXT DEFAULT '0'
 
 );
+
+CREATE TABLE VolumeGroupStructure(
+    group_id TEXT PRIMARY KEY,
+    volume_id TEXT,
+    need_all TEXT,
+    name TEXT
+);
 /*
 存储结构信息：一个卷下面的一个文件夹/分区/raid等的基本信息
 */
-
-
-
-CREATE TABLE storageStructure(
-    superid TEXT,
-    subid TEXT UNIQUE,
+CREATE TABLE VolumeGroup(
+    group_id TEXT PRIMARY KEY,
+    kind TEXT,
+    name TEXT,
     addTime TEXT,
-    info TEXT DEFAULT '',
-    PRIMARY KEY (superid,subid)
-);
-
-CREATE TABLE fileSource(
-    Md5 TEXT,
-    size TEXT,
-    add_time TEXT,
-    fromPath TEXT
+    lastCheck TEXT
 );
 CREATE TABLE File(
     md5 TEXT,
