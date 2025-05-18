@@ -21,15 +21,16 @@ CREATE TABLE Volume(
     id TEXT PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
     capacity Text DEFAULT 0,
+    used Text DEFAULT 0,
 
     addTime TEXT,
 
     lastCheck TEXT,
-    healthy TEXT DEFAULT 'healthy',
+    healthy TEXT DEFAULT 'health',
 
     info TEXT DEFAULT '',
+    kind TEXT DEFAULT '0'
 
-    needAll INTEGER DEFAULT 1,
 );
 /*
 存储结构信息：一个卷下面的一个文件夹/分区/raid等的基本信息
