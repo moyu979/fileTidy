@@ -55,8 +55,11 @@
                 "raid0",
                 "raid1",
                 "raid5",
+                "raidz1",
                 "raid6",
-                "raid10"
+                "raid10",
+                "single_disk",
+                "sub_volume"
             ]
         },
         "mount_point": {
