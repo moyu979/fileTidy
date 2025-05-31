@@ -1,5 +1,5 @@
 import logging
-from volume_manager.volume import Volume
+from volume_manager.temp.volume import Volume
 from volume_manager.tools import load_upper_volume
 
 import importlib
@@ -124,7 +124,7 @@ class VolumeFactory:
             info_dict["capacity"]=get_all_volume.get_mount_point_capacity(mount_point=mount_point)[0]
             logging.info("自动获取了部分信息")
         volume=Volume()
-        volume.init_from_dict(info_dict=info_dict)
+        volume.new_volume(info_dict=info_dict)
         cls.volumes[volume.id] = volume
         
     

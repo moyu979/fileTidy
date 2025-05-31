@@ -4,8 +4,8 @@ from datetime import datetime
 import sqlite3
 import os
 from init_setting import conf
-from volume_manager.volume import Volume
-import volume_manager.volumeFactory as VolumeFactory
+from volume_manager.temp.volume import Volume
+import volume_manager.temp.volumeFactory as VolumeFactory
 import file_manager.tools.Hash as Hash
 class file:
     def __init__(self):

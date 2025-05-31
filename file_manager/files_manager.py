@@ -1,7 +1,7 @@
 import logging
 import os
-import volume_manager.volumeFactory as VolumeFactory
-import volume_manager.volume as Volume
+import volume_manager.temp.volumeFactory as VolumeFactory
+import volume_manager.temp.volume as Volume
 import file_manager.tools.Hash as Hash
 import file_manager.file as File
 from datetime import datetime
