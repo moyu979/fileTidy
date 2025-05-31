@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+import os
 import logging
 import sqlite3
 from pathlib import Path
@@ -10,6 +11,7 @@ from volume_manager.tools.id_generate import generate_id
 class Volume:
     base_path = Path(__file__).resolve().parent
     json_path = base_path / "volume_item_prompt.json"
+
     if not json_path.exists():
         raise FileNotFoundError(f"找不到 JSON 文件：{json_path}")
     with open(json_path, 'r', encoding='utf-8') as f:
@@ -17,7 +19,6 @@ class Volume:
     fields = schema.get('fields', {})
 
     def __init__(self):
-        
         self.values = {
             key: meta.get("default", None)
             for key, meta in self.fields.items()
@@ -26,23 +27,83 @@ class Volume:
         self.storages = []
 
     @classmethod
-    def get_fileds(cls):
+    def get_all_fileds(cls):
         return cls.fields
+    
     @classmethod
     def get_prompt(cls,key):
         return cls.fields.get(key,{"prompt","not such item"}).get("prompt","not has prompt")
+    
+    @classmethod
+    def validate_value(cls, key:str, value):
+        """
+        检查给定的键值对是否符合预期的类型和范围。
+        :param key: 要检查的键。
+        :param value: 要检查的值。
+        :return: 如果符合预期，返回 True；否则返回 False。
+        """
+
+        to_return=True
+
+        if key=="storages":
+            to_return=True
+            logging.error(f"检查storages是否合法还没做")
+            return to_return
+        
+        if key=="mount_point":
+            if not os.path.exists(value):
+                logging.error(f"Mount point '{value}' does not exist.")
+                raise ValueError(f"Mount point '{value}' does not exist.")
+            else:
+                info_path=os.path.join(value,"volume_info")
+                if not os.path.exists(info_path):
+                    logging.error(f"Mount point '{value}' does not have a valid data directory, which means it might not be a valid volume.")
+                    raise ValueError(f"Mount point '{value}' does not have a valid data directory, which means it might not be a valid volume.")
+            return True
+        
+        if value is None:
+            to_return=False
+            logging.error(f"Key '{key}' cannot be None.")
+        else:
+            if key not in Volume.fields:
+                to_return=False
+                logging.error(f"Key '{key}' not found in fields.")
+            else:
+                allows=Volume.fields.get(key,{}).get("allows",None)
+                not_allows=Volume.fields.get(key,{}).get("not_allows",None)
+                #如果存在not_allows，那么如果value在not_allows中，那么返回False
+                if not_allows is not None:
+                    if value in not_allows:
+                        to_return=False
+                        logging.error(f"Key '{key}' with value {value} cannot be one of {not_allows}.")
+            
+                if allows is not None:
+                    if value not in allows:
+                        to_return=False
+                        logging.error(f"Key '{key}' with value {value} must be one of {allows}.")
+
+            must=Volume.fields.get(key,{}).get("must",None)
+
+            if must and not to_return:
+                logging.error(f"Key '{key}' must be set as a league value.")
+                raise ValueError(f"Key '{key}' must be set as a league value.")
+            
+        return to_return
     
     def get_value(self,key):
         return self.values.get(key,{})
     
     def set_value(self,key,value):
         if key in self.fields:
-            self.values[key] = value
+            if not self.validate_value(key, value):
+                self.values[key] = value
         else:
-            raise KeyError(f"Key '{key}' not found in fields.")
+            logging.error(f"Key '{key}' not found in fields.")
         
-    def load_info(self, id:str=None, name:str=None):
-        """通过给定的id或name加载卷的信息"""
+    def init_from_database(self, id:str=None, name:str=None,now_path=None):
+        """
+        通过给定的id或name在数据库中加载卷的信息
+        """
         if id is not None or name is not None:
             logging.debug("load volume from database")
             conn=sqlite3.connect(conf.get("db_path"))
@@ -74,6 +135,7 @@ class Volume:
 
             conn=sqlite3.connect(conf.get("db_path"))
             cursor = conn.cursor()
+            #载入存储结构
             temp=cursor.execute("SELECT * FROM storageStructure WHERE superid=?", (self.id,)).fetchall()
             if len(temp)==0:
                 logging.error(f"your volume {self.id} has no sub volume")
@@ -83,45 +145,15 @@ class Volume:
             cursor.close()
             conn.close()
 
-    @classmethod
-    def validate_value(cls, key:str, value):
-        """
-        检查给定的键值对是否符合预期的类型和范围。
-        :param key: 要检查的键。
-        :param value: 要检查的值。
-        :return: 如果符合预期，返回 True；否则返回 False。
-        """
+            if now_path is not None:
+                self.validate_value("mount_point", now_path)
 
-        logging.error(f"检查storages是否合法还没做")
-        to_return=True
-
-        if value is None:
-            to_return=False
+            return self
         else:
-            if key not in Volume.fields:
-                logging.error(f"Key '{key}' not found in fields.")
-                to_return=False
-            else:
-                allows=Volume.fields.get(key,{}).get("allows",None)
-                not_allows=Volume.fields.get(key,{}).get("not_allows",None)
+            logging.error("load volume must has ether id or name to load from database") 
+            return None
 
-                if not_allows is not None:
-                    if value in not_allows:
-                        to_return=False
-            
-                if allows is not None:
-                    if value not in allows:
-                        to_return=(to_return and False)
-                else:
-                    to_return=(to_return and True)
-            must=Volume.fields.get(key,{}).get("must",None)
-            if must and not to_return:
-                logging.error(f"Key '{key}' must be set as a league value.")
-                raise ValueError(f"Key '{key}' must be set as a league value.")
-            
-        return to_return
-    
-    def new_volume(self, info_dict:dict=None):
+    def init_from_dict(self, info_dict:dict=None):
         """
         根据 info_dict 的键值对设置卷对象的属性。
         :param info_dict: 包含卷对象属性的字典。
@@ -139,9 +171,9 @@ class Volume:
         self.values["info"] = info_dict.get("info") if Volume.validate_value("info",info_dict.get("info")) else ""
         self.values["kind"] = info_dict.get("kind") if Volume.validate_value("kind",info_dict.get("kind")) else "single_disk"
         
-        self.storages = info_dict.get("storages", [])
-
-        self.mount_point = info_dict.get("mount_point", None)
+        self.storages = info_dict.get("storages") if Volume.validate_value("storages",info_dict.get("storages")) else []
+        
+        self.mount_point = info_dict.get("mount_point") if Volume.validate_value("mount_point", info_dict.get("mount_point")) else None
 
         self.to_database()
         
@@ -150,57 +182,64 @@ class Volume:
         将卷信息存储到数据库中。
         """
         conn=sqlite3.connect(conf.get("db_path"))
-        cursor = conn.cursor()
-        # 使用 INSERT OR REPLACE 实现存在更新，不存在插入
-        cursor.execute("""
-            INSERT INTO Storage (id, name, capacity, used, addTime, lastCheck, healthy, info, kind)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                name=excluded.name,
-                capacity=excluded.capacity,
-                used=excluded.used,
-                addTime=excluded.addTime,
-                lastCheck=excluded.lastCheck,
-                healthy=excluded.healthy,
-                info=excluded.info
-                kind=excluded.kind,
-                
-        """, (
-        self.values["id"],
-        self.values["name"],
-        self.values["capacity"],
-        self.values["used"],
-        self.values["add_time"],
-        self.values["last_check"],
-        self.values["healthy"],
-        self.values["info"],
-        self.values["kind"]
-        ))
-        conn.commit()
-        conn.close()
-
-        for storage in self.storages:
-            conn=sqlite3.connect(conf.get("db_path"))
+        try:
             cursor = conn.cursor()
             # 使用 INSERT OR REPLACE 实现存在更新，不存在插入
             cursor.execute("""
-                INSERT INTO Storage (superid, subid, addTime, info)
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT(subid) DO UPDATE SET
-                    superid=excluded.superid,
-                    info=excluded.info,
+                INSERT INTO Storage (id, name, capacity, used, addTime, lastCheck, healthy, info, kind)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    name=excluded.name,
+                    capacity=excluded.capacity,
+                    used=excluded.used,
+                    addTime=excluded.addTime,
+                    lastCheck=excluded.lastCheck,
+                    healthy=excluded.healthy,
+                    info=excluded.info
+                    kind=excluded.kind,
+                    
             """, (
             self.values["id"],
-            storage,
-            datetime.now().strftime("%Y:%m:%d %H:%M:%S"),
-            self.values["info"]
+            self.values["name"],
+            self.values["capacity"],
+            self.values["used"],
+            self.values["add_time"],
+            self.values["last_check"],
+            self.values["healthy"],
+            self.values["info"],
+            self.values["kind"]
             ))
+
+            for storage in self.storages:
+                conn=sqlite3.connect(conf.get("db_path"))
+                cursor = conn.cursor()
+                # 使用 INSERT OR REPLACE 实现存在更新，不存在插入
+                cursor.execute("""
+                    INSERT INTO Storage (superid, subid, addTime, info)
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT(subid) DO UPDATE SET
+                        superid=excluded.superid,
+                        info=excluded.info,
+                """, (
+                self.values["id"],
+                storage,
+                datetime.now().strftime("%Y:%m:%d %H:%M:%S"),
+                self.values["info"]
+                ))
             conn.commit()
+        except sqlite3.Error as e:
+            conn.rollback()
+            logging.error(f"Database error: {e}, nothing will be saved to database")
+            raise
+        finally:
             conn.close()
 
-        # 这里需要实现将卷信息存储到数据库的逻辑
-        logging.warning("to_database not checked")
-
+    def is_mounted(self):
+        if self.mount_point is None:
+            return False
+        else:
+            return True
+        
     def check_volume(self):
         """
         检查卷的健康状态（全量扫描）。
@@ -218,14 +257,6 @@ class Volume:
     def formate_volume(self):
         # 格式化磁盘
         logging.error("formate_volume not finished")
-
-    def get_volume_usage(self):
-        """
-        获取卷的使用情况。
-        :return: 卷的使用情况。
-        """
-        # 这里需要实现获取卷使用情况的逻辑
-        logging.error("get_volume_usage not finished")
 
     # 将对象转换为字典
     def to_dict(self):

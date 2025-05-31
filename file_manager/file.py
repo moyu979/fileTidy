@@ -44,7 +44,7 @@ class file:
             else:
                 volume:Volume.Volume=VolumeFactory.VolumeFactory.load_upper_volume(path=self.abspath)
                 self.volume=volume.id
-        print(VolumeFactory.VolumeFactory.load_volume(id=self.volume))
+        print(VolumeFactory.VolumeFactory.load_volume_from_database(id=self.volume))
 
         self.now_path=self.abspath.replace(VolumeFactory.VolumeFactory.get_volume_path(self.volume),"")
         self.add_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S")

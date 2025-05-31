@@ -8,7 +8,7 @@ def load_root_volume_id(path=None):
     :return: The root Volume instance.
     """
     if path is None:
-        volume = volumeFactory.VolumeFactory.load_volume(id=0)
+        volume = volumeFactory.VolumeFactory.load_volume_from_database(id=0)
         return volume
     else:
         upper=Path(path).parent
@@ -18,5 +18,5 @@ def load_root_volume_id(path=None):
             if os.path.exists(maybe):
                 files=os.listdir(maybe)
                 id=files[0]
-                return volumeFactory.VolumeFactory.load_volume(id=id),upper
-        return volumeFactory.VolumeFactory.load_volume(id=0),"/"
+                return volumeFactory.VolumeFactory.load_volume_from_database(id=id),upper
+        return volumeFactory.VolumeFactory.load_volume_from_database(id=0),"/"

@@ -11,7 +11,7 @@ class Files:
     def insert_files(self,file_path):
         logging.info(f"Inserting files from {file_path} to the system")
         # Logic to insert files into the system
-        volume:Volume.Volume=VolumeFactory.VolumeFactory.load_volume(mount_point=file_path)
+        volume:Volume.Volume=VolumeFactory.VolumeFactory.load_volume_from_database(mount_point=file_path)
 
         for root,dirs,files in os.walk(file_path):
             for file in files:
