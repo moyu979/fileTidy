@@ -7,5 +7,6 @@ logging.basicConfig(
     #filemode="a"  # 文件模式：'a' 表示追加，'w' 表示覆盖
 )
 path=input("请输入挂载点")
-vol=v.volume(mount_point=path)
+vol=v.Volume(mount_point=path)
 print(vol.to_json())
+vol.file_detector()

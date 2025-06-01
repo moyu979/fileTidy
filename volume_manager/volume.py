@@ -1,14 +1,13 @@
-from datetime import datetime
 import json
 import os
 import logging
 import sqlite3
 from pathlib import Path
 
+from file_manager.file import File
 from init_setting import conf
-from volume_manager.tools.id_generate import generate_id
 from file_manager.tools.Hash import getAHash
-class volume:
+class Volume:
 
     def __init__(self, name=None, id=None, mount_point=None):
         """
@@ -19,6 +18,10 @@ class volume:
         :param mount_point: 卷的挂载点
         """
 
+        self.matched=None
+        self.differed=None
+        self.disappeared=None
+        self.unexpected=None
         
         logging.debug("load volume from database")
         
@@ -95,7 +98,7 @@ class volume:
         finally:
             cursor.close()
             conn.close()
-        print(result)
+
         self.values = {}
         self.values["id"] = result[0]
         self.values["name"] = result[1]
@@ -131,7 +134,10 @@ class volume:
         for item in temp:
             self.storages.append(item[1])
 
-    def update_file(self):
+    def file_detector(self):
+        """
+            查找volume中发生变化的文件
+        """
         if self.mount_point==None:
             logging.error("Mount point is not set, cannot update file.")
             raise ValueError("Mount point is not set, cannot update file.")
@@ -139,39 +145,62 @@ class volume:
             logging.error(f"Mount point {self.mount_point} does not exist.")
             raise FileNotFoundError(f"Mount point {self.mount_point} does not exist.")
         else:
+            
+            in_db_path=[]
+
             conn=sqlite3.connect(conf.get("db_path"))
             cursor = conn.cursor()
             in_db_file=cursor.execute("SELECT * FROM File WHERE volume=?", (self.values["id"],)).fetchall()
             cursor.close()
             conn.close()
 
-            matched=[]
-            differed=[]
-            disappeared=[]
-            unexpected=[]
+            self.matched=[]
+            self.differed=[]
+            self.disappeared=[]
+            self.unexpected=[]
 
-            mp=os.path.join(self.mount_point, "datas")
+            file_storage_point=os.path.join(self.mount_point, "datas")
             for a_file in in_db_file:
-                file_path = os.path.join(mp, a_file[4])
+                in_db_path.append
+                file_path=os.path.join("datas",a_file[4])
+                file_path = os.path.join(file_storage_point, a_file[4])
+                in_db_path.append(file_path)
+
                 if not os.path.exists(file_path):
-                    disappeared.append(file_path)
+                    self.disappeared.append(file_path)
                 else:
                     if conf.get("volume_check")=="relaxed":
-                        matched.append(file_path)
+                        self.matched.append(file_path)
                     else:
                         hash=getAHash(file_path)
                         if hash == a_file[3]:
-                            matched.append(file_path)
+                            self.matched.append(file_path)
                         else:
-                            differed.append(file_path)
+                            self.differed.append(file_path)
 
-            for root,dirs,files in os.walk(mp):
+            
+            for root,dirs,files in os.walk(file_storage_point):
                 for file in files:
                     path=os.path.join(root, file)
-                    if path not in in_db_file:
-                        unexpected.append(path)
+                    if path not in in_db_path:
+                        self.unexpected.append(path)
             
-            logging.info(f"文件扫描完毕，发现{len(matched)}个匹配的文件，{len(differed)}个发生变化的文件，{len(disappeared)}个消失的文件，{len(unexpected)}个不存在于数据库的文件。")
+            logging.info(f"文件扫描完毕，发现{len(self.matched)}个匹配的文件，{len(self.differed)}个发生变化的文件，{len(self.disappeared)}个消失的文件，{len(self.unexpected)}个不存在于数据库的文件。")
+
+    #更新变化
+    def update_file(self):
+        """
+            更新变化
+        """
+        if self.matched is None:
+            self.file_detector()
+        
+        for file in self.unexpected:
+            f=File(file)
+            f.auto_complete()
+            f.append_to_database()
+
+    #将volume转换成字典
     def to_dict(self):
         return {
             "id": self.values["id"],
@@ -189,6 +218,10 @@ class volume:
 
             "mount_point": self.mount_point,
         }
-    # 将对象转换为 JSON 字符串
+    
+    # 将volume转换为 JSON 字符串
     def to_json(self):
         return json.dumps(self.to_dict(), ensure_ascii=False, indent=4)
+    
+    def __str__(self):
+        return self.to_json()

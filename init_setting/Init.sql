@@ -68,7 +68,8 @@ CREATE TABLE File(
     now_name TEXT,
     volume INTEGER DEFAULT 0,
     state TEXT DEFAULT 'healthy',
-    info TEXT DEFAULT ''
+    info TEXT DEFAULT '',
+    UNIQUE (volume,now_path)
 );
 
 

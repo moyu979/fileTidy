@@ -43,8 +43,7 @@
             ]
         },
         "info": {
-            "prompt": "请输入其他附加信息，可以为空",
-            "not_allow": []
+            "prompt": "请输入其他附加信息，可以为空"
         },
         "kind": {
             "prompt": "请输入其他raid信息",
@@ -60,10 +59,16 @@
                 "raid10",
                 "single_disk",
                 "sub_volume"
-            ]
+            ],
+            "must_legal":true
+
         },
         "mount_point": {
             "prompt": "请输入卷挂载点，可以置空"
+        },
+        "storages":{
+            "prompt":"请输入构成这个卷的信息",
+            "must_legal":true
         }
     }
 }

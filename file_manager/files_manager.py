@@ -16,7 +16,7 @@ class Files:
         for root,dirs,files in os.walk(file_path):
             for file in files:
                 path=os.path.join(root,file)
-                file=File.file()
+                file=File.File()
                 file.set_volume(volume.id)
                 file.set_abspath(path=path)
                 file.append_file()
