@@ -8,7 +8,7 @@ class VolumeCmd(cmd.Cmd):
         args=arg.split()
     
     def do_newVolume(self, arg):
-        infos=
+        pass
 
     def do_delete(self, arg):
         """delete [volume_name] - 删除指定的卷"""

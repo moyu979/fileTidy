@@ -1,3 +1,4 @@
 .vscode/
+.VSCodeCounter
 __pycache__/
 DataBase/

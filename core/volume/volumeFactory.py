@@ -1,6 +1,6 @@
-from volume_manager.volume import Volume
-import volume_manager.volume_creater as creater
-import volume_manager.volume_checker as checker
+from volume.volume import Volume
+import volume.volume_creater as creater
+import volume.volume_checker as checker
 import logging
 class VolumeFactory:
 

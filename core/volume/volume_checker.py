@@ -4,26 +4,30 @@ import logging
 import os
 import sqlite3
 from pathlib import Path
-from init_setting import conf
-from volume_manager.tools.id_generate import generate_id
+from conf import conf
+from volume.tools.id_generate import generate_id
 class checker:
     base_path = Path(__file__).resolve().parent
     json_path = base_path / "volume_item_prompt.json"
     #载入数据文件
     if not json_path.exists():
+        logging.error(f"找不到 JSON 文件：{json_path}")
         raise FileNotFoundError(f"找不到 JSON 文件：{json_path}")
+    
     with open(json_path, 'r', encoding='utf-8') as f:
         schema = json.load(f)
     fields:dict = schema.get('fields', {})
-
+    logging.debug("载入域文件成功")
+    
     def __init__(self):
         self.time=datetime.now().strftime("%Y:%m:%d %H:%M:%S")
 
     def __call__(self,key:str,value)->bool:
         """
-            检查一个key的值value是否合法
-            True:合法
-            False:不合法
+            将输入的值合法化：
+            合法：原样返回
+            不合法但可使用默认值：使用默认值
+            不合法且不可修复：抛出错误信息
         """
         if key=="storages":
             return self.check_storages(value)

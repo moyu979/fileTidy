@@ -1,6 +1,6 @@
 import sqlite3
 import logging
-import init_setting.conf as conf
+import conf.conf as conf
 
 class Storage:
     def __init__(self):

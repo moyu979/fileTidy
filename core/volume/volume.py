@@ -5,7 +5,7 @@ import sqlite3
 from pathlib import Path
 
 from file_manager.file import File
-from init_setting import conf
+from conf import conf
 from file_manager.tools.Hash import getAHash
 class Volume:
 
@@ -134,6 +134,7 @@ class Volume:
         for item in temp:
             self.storages.append(item[1])
 
+    #检查文件变化
     def file_detector(self):
         """
             查找volume中发生变化的文件
