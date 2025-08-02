@@ -2,3 +2,5 @@
 .VSCodeCounter
 __pycache__/
 DataBase/
+func_test
+database/

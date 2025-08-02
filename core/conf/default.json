@@ -1,0 +1,16 @@
+{
+  "system": "Linux",
+  "path": "./DataBase",
+  "db_path": "./database/datas.db",
+  "script_path": "./func/init.sql",
+  "log_path": "./log",
+  "log_file": "initSetting.log",
+  "log_level": "DEBUG",
+  "log_format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+  "hash_once": 512,
+  "insert_node": "relaxed",
+  "volume_check": "relaxed",
+  "HDD": ["hdd"],
+  "SSD": ["ssd"],
+  "TAPE": ["lto1", "lto2", "lto3", "lto4", "lto5", "lto6", "lto7", "lto8", "lto9"]
+}
