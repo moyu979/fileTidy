@@ -1,10 +1,10 @@
 {
   "system": "Linux",
-  "path": "./DataBase",
-  "db_path": "./database/datas.db",
-  "script_path": "./func/init.sql",
-  "log_path": "./log",
-  "log_file": "initSetting.log",
+  "path": "./data",
+  "db_path": "./data/datas.db",
+  "json_path": "./data/conf.json",
+  "log_path": "./data/log",
+  "log_file": "log.log",
   "log_level": "DEBUG",
   "log_format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
   "hash_once": 512,
@@ -12,5 +12,6 @@
   "volume_check": "relaxed",
   "HDD": ["hdd"],
   "SSD": ["ssd"],
-  "TAPE": ["lto1", "lto2", "lto3", "lto4", "lto5", "lto6", "lto7", "lto8", "lto9"]
+  "TAPE": ["lto1", "lto2", "lto3", "lto4", "lto5", "lto6", "lto7", "lto8", "lto9"],
+  "develop_mode": true
 }
