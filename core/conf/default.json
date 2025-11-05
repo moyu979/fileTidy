@@ -13,5 +13,6 @@
   "HDD": ["hdd"],
   "SSD": ["ssd"],
   "TAPE": ["lto1", "lto2", "lto3", "lto4", "lto5", "lto6", "lto7", "lto8", "lto9"],
-  "develop_mode": true
+  "develop_mode": true,
+  "all_env_fail": true
 }

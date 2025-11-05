@@ -1,5 +1,8 @@
+# 本文件未经测试
 import time
+import logging
 from core.storage.tools import storage_check
+from core.storage.tools.get_storage import get_storage
 from core.conf import conf
 import sqlite3
 
@@ -18,6 +21,7 @@ class Storage:
         self.info = info
 
         self.device_path = None
+        
 
     @classmethod
     def from_default(cls):
@@ -32,30 +36,6 @@ class Storage:
             capacity=0,
             info="用于默认和缺省的类",
         )
-
-    @classmethod
-    def from_db(cls, id):
-        """
-        从数据库加载指定 id 的 storage 实例。
-        :param id: storage 的唯一标识
-        :return: Storage 实例或 None
-        """
-
-        db_path = conf.get("db_path")
-        if not db_path:
-            raise ValueError('conf["db_path"] 未设置')
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id, name, kind, add_time, last_check_time, state, capacity, info FROM storages WHERE id=?",
-            (id,),
-        )
-        row = cursor.fetchone()
-        conn.close()
-        if row:
-            return cls(*row)
-        else:
-            return None
 
     def write_back_to_db(self):
         """
@@ -97,6 +77,8 @@ class Storage:
             conn.commit()
         conn.close()
 
+    # from_db 方法已迁移至 StorageFactory
+
     def check(self):
         mapped_kind = conf.map_kind_to_type(self.kind)
         if mapped_kind == "hdd":
@@ -109,3 +91,54 @@ class Storage:
             raise ValueError(f"未知的存储类型: {self.kind} (映射后: {mapped_kind})")
         self.last_check_time = int(time.time())
         self.write_back_to_db()
+
+    def set_path(self, path):
+        """
+        设置设备路径
+        """
+        self.device_path = path
+
+    def to_json(self):
+        """
+        返回当前Storage实例的字典表示，便于序列化为JSON
+        """
+        return {
+            "id": self.id,
+            "name": self.name,
+            "kind": self.kind,
+            "add_time": self.add_time,
+            "last_check_time": self.last_check_time,
+            "state": self.state,
+            "capacity": self.capacity,
+            "info": self.info,
+            "device_path": self.device_path
+        }
+
+    def insert_to_db(self):
+        """
+        将当前Storage实例插入数据库，若序列号已存在则抛出异常
+        """
+        db_path = conf.get("db_path")
+        if not db_path:
+            raise ValueError('conf["db_path"] 未设置')
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM storages WHERE id=?", (self.id,))
+        if cursor.fetchone():
+            conn.close()
+            raise ValueError(f"磁盘序列号 {self.id} 已存在，不能重复注册")
+        cursor.execute(
+            "INSERT INTO storages (id, name, kind, add_time, last_check_time, state, capacity, info) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                self.id,
+                self.name,
+                self.kind,
+                self.add_time,
+                self.last_check_time,
+                self.state,
+                self.capacity,
+                self.info
+            )
+        )
+        conn.commit()
+        conn.close()

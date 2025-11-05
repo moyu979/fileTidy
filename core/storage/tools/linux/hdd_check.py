@@ -9,7 +9,7 @@ def run_command(cmd):
     return result.returncode, result.stdout.decode(), result.stderr.decode()
 
 
-def hdd_check(device="/dev/sda", scan_blocks=False):
+def hdd_check(device, scan_blocks=False):
     """
     检查HDD健康状态，返回 'health'（健康）、'danger'（警告）、None（检查失败）
     

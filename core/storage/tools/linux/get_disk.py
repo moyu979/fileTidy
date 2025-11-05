@@ -3,8 +3,6 @@ import subprocess
 import re
 import logging
 
-# 配置日志
-logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # 注意：本方法未考虑移动硬盘（如 USB 设备），如有需要请自行扩展。
@@ -62,6 +60,18 @@ def get_device_info(dev_path):
     }
 
 
+_DISK_NAME_PATTERN = re.compile(r'^(sd[a-z]+|nvme\d+n\d+)$')
+
+
+def _is_disk_device_path(dev_path: str) -> bool:
+    """校验是否为磁盘设备（排除分区）。"""
+    try:
+        name = os.path.basename(str(dev_path))
+        return bool(_DISK_NAME_PATTERN.match(name))
+    except Exception:
+        return False
+
+
 def get_disk(path=None):
     """
     获取磁盘信息。
@@ -79,12 +89,13 @@ def get_disk(path=None):
     ]
     """
 
-    if path is not None and path.strip():
-        # 如果指定了路径，只返回该设备的信息
-        if os.path.exists(path):
-            return [get_device_info(path)]
-        else:
+    if path is not None and str(path).strip():
+        # 指定路径：需校验存在且为磁盘设备
+        if not os.path.exists(path):
             return None
+        if not _is_disk_device_path(path):
+            return None
+        return [get_device_info(path)]
     else:
         # 遍历所有磁盘设备
         disk_list = []

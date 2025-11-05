@@ -42,7 +42,7 @@ def init_conf(path=None):
     if path is not None:
         json_path = path
     else:
-        json_path = "./database/conf.json"
+        json_path = "./data/conf.json"
     # 初次运行时进行载入
     logger.info("首次装载conf模块，进行初始化")
     try:
