@@ -1,9 +1,10 @@
 # 本文件未经测试
-import sqlite3
 import json
 import time
 import logging
-from core.conf import conf
+
+from core.database.init import session_scope
+from core.database.models import StorageModel
 from core.storage.storage import Storage
 from core.storage.tools.get_storage import get_storage
 from core.storage.tools.detect_device_type import get_device_type
@@ -20,21 +21,11 @@ class StorageFactory:
         :param id: storage 的唯一标识
         :return: Storage 实例或 None
         """
-        db_path = conf.get("db_path")
-        if not db_path:
-            raise ValueError('conf["db_path"] 未设置')
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id, name, kind, add_time, last_check_time, state, capacity, info FROM storages WHERE id=?",
-            (id,),
-        )
-        row = cursor.fetchone()
-        conn.close()
-        if row:
-            return Storage(*row)
-        else:
-            return None
+        with session_scope() as session:
+            model = session.get(StorageModel, id)
+            if model is None:
+                return None
+            return Storage.from_model(model)
 
     @staticmethod
     def init_storage():
@@ -43,23 +34,17 @@ class StorageFactory:
         """
         global all_storages
         all_storages.clear()
-        db_path = conf.get("db_path")
-        if not db_path:
-            raise ValueError('conf["db_path"] 未设置')
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id, name, kind, add_time, last_check_time, state, capacity, info FROM storages"
-        )
-        rows = cursor.fetchall()
-        conn.close()
+        with session_scope() as session:
+            storage_entities = [
+                Storage.from_model(model) for model in session.query(StorageModel).all()
+            ]
+
         # 获取所有磁盘信息
         disk_list = get_storage() or []
         # 构建id到磁盘路径的映射
         disk_id_path_map = {str(disk.get("id")): disk.get("path") for disk in disk_list}
         # 创建Storage实例并设置device_path
-        for row in rows:
-            storage = Storage(*row)
+        for storage in storage_entities:
             disk_path = disk_id_path_map.get(str(storage.id))
             if disk_path:
                 storage.set_path(disk_path)
@@ -120,7 +105,7 @@ class StorageFactory:
             if not disk_info:
                 raise ValueError(f"未找到路径为 {path} 的磁盘")
             disk_id = str(disk_info.get("id"))
-            now = int(time.time())
+            now = str(int(time.time()))
             storage = Storage(
                 id=disk_id,
                 name=f"disk_{disk_id}",
