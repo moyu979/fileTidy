@@ -2,7 +2,12 @@
 设备管理器，用于管理设备实例
 """
 
+import logging
 from component.device.deviceFactory import DeviceFactory
+from component.device.tools import getSerial
+from component.device.tools.getCapacity import get_capacity
+from component.device.tools.getNormalizedPath import get_normalized_path
+from component.device.tools.Serial2Path import serial_to_path
 from database.session import session_scope
 
 
@@ -20,51 +25,65 @@ class DeviceManager:
         with session_scope() as session:
             session.add(device)
             
-        return DeviceFactory.createDevice(device_path)
-
-    def getDevice(self, device_path):
-        """
-        获取设备实例,不太建议使用
-        """
-        return DeviceFactory.createDevice(device_path)   
-
-    def setDevice(self, device_path):
-        """
-        设置设备实例,不太建议使用
-        """
-        pass
-
     def checkDevice(self, device_path):
         """
         检查设备的介质情况
         """
-        pass
+        device=DeviceFactory.createDevice(device_path)
+        device.check()
+        
+    def replaceDevice(self, device_path1, device_path2):
+        """
+        用device_path1的设备替换掉device_path2的设备
+        """
+        logging.info(f"用{device_path1}的设备替换掉{device_path2}的设备的功能还没完成")
 
-    def replaceDevice(self, device_path):
+    def exists_in_database(self, device_path=None, serial=None):
         """
-        用一个设备替换掉另一个设备，主要用于设备出现问题时的替换
+        检查给定的设备是否存在，如果存在，返回True，否则返回False
+        
+        Args:
+            device_path: 设备路径
+            serial: 设备序列号
+            两者必须至少提供一个，不能同时提供
         """
-        pass
+        if not device_path and not serial:
+            raise ValueError("必须提供 device_path 或 serial 至少一个")
+        
+        if device_path and serial:
+            raise ValueError("不能同时提供 device_path 和 serial")
+        
+        # 统一用序列号查数据库
+        from database.models import DeviceModel
+        
+        # 如果传入的是路径，先获取序列号
+        if device_path:
+            serial = getSerial.get_serial(device_path)
+            if not serial:
+                return False
+        
+        # 用序列号查数据库
+        device = DeviceModel.query.filter(DeviceModel.serial == serial).first()
+        return device is not None
 
-    def exists(self, id):
+    def get_path(self, serial):
         """
-        检查给定的设备id是否存在，如果存在，返回True，否则返回False
-        如果传入的是path，首先会通过path获取id
+        根据序列号获取设备路径，如果设备存在但没挂载，返回None
         """
-        pass
+        return serial_to_path(serial)
 
-    def get_path(self, device_path):
+    def get_Serial(self, device_path):
         """
-        获取设备路径，如果设备存在但没挂载，返回None
+        根据设备路径获取序列号
         """
-        pass
+        return getSerial.get_serial(device_path)
 
-    def get_id(self, device_path):
+    def get_capacity(self, device_path):
         """
-        获取设备路径，如果设备存在但没挂载，返回None
+        根据设备路径获取容量
         """
-        pass
-
+        return get_capacity(device_path)
+    
 # 模块级单例实例
 device_manager = DeviceManager()
 

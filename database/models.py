@@ -28,7 +28,7 @@ class DeviceModel(Base):
     """
     __tablename__ = "device"
 
-    id = Column(String, primary_key=True)  # device_ 开头的唯一 ID
+    serial = Column(String, primary_key=True)  # device_ 开头的唯一 ID
     name = Column(String, unique=True, nullable=False)
     kind = Column(String)
     add_time = Column(String)
