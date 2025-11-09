@@ -1,5 +1,6 @@
-from utils.runCommand import run_command
+# 通过了初步校验
 
+from utils.runCommand import run_command
 
 def is_hdd(device: str) -> bool:
     """判断设备是否为HDD"""

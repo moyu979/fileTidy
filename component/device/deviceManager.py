@@ -3,6 +3,7 @@
 """
 
 from component.device.deviceFactory import DeviceFactory
+from database.session import session_scope
 
 
 class DeviceManager:
@@ -11,10 +12,14 @@ class DeviceManager:
     def __init__(self):
         self.devices = []
     
-    def newDevice(self, device_path):
+    def regDevice(self, device_path):
         """
-        创建一个新设备
+        注册设备到数据库
         """
+        device=DeviceFactory.createDevice(device_path)
+        with session_scope() as session:
+            session.add(device)
+            
         return DeviceFactory.createDevice(device_path)
 
     def getDevice(self, device_path):

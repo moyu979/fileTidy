@@ -9,12 +9,16 @@ from component.device.tools.isHdd import is_hdd
 from component.device.tools.isSSD import is_ssd
 from component.device.tools.isTape import is_tape
 
+from component.device.tools.getId import get_id
+from component.device.tools.infoGetterDisk import get_disk
+from database.models import DeviceModel
+
 
 class DeviceFactory:
     """设备工厂，提供静态方法创建设备实例"""
     
     @staticmethod
-    def createDevice(device_path, orm_model=None):
+    def createDevice(device_path):
         """
         根据设备路径创建对应的设备实例
         
@@ -23,17 +27,35 @@ class DeviceFactory:
             orm_model: 可选的ORM模型实例
             
         Returns:
-            设备实例（HDD、SSD 或 Tape），如果无法识别设备类型则返回 None
+            设备实例（HDD、SSD 或 Tape），如果无法识别设备类型则返回 None)
         """
         if not device_path:
             return None
         
-        # 判断设备类型并创建对应的设备实例
-        if is_hdd(device_path):
-            return HDD(orm_model=orm_model, path=device_path)
-        elif is_ssd(device_path):
-            return SSD(orm_model=orm_model, path=device_path)
-        elif is_tape(device_path):
-            return Tape(orm_model=orm_model, path=device_path)
+        infos=get_disk(device_path)
+        
+        Device=DeviceModel(
+            id = infos["id"],  # device_ 开头的唯一 ID
+            name = "",
+            kind = "",
+            add_time = "",
+            last_check_time = "",
+            capacity = infos["size"],
+            info = ""
+        )
+        path=infos["path"]
+
+        if is_hdd(path):
+            Device.kind = "HDD"
+            return HDD(orm_model=Device, path=path)
+        elif is_ssd(path):
+            Device.kind = "SSD"
+            return SSD(orm_model=Device, path=path)
+        elif is_tape(path):
+            Device.kind = "Tape"
+            return Tape(orm_model=Device, path=path)
         else:
+            Device.kind = "Unknown"
             return None
+        
+        
