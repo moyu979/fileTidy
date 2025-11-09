@@ -1,7 +1,7 @@
 from component.device.device import Device
 from component.device.tools.checkSSD import checkSSD
 
-class SSD(Device):
+class Ssd(Device):
     def __init__(self, orm_model=None, path=None):
         super().__init__(orm_model, path)
 

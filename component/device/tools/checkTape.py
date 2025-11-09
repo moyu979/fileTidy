@@ -4,7 +4,7 @@ from utils.confs import get_conf_manager
 logger = logging.getLogger(__name__)
 
 
-def checkTape(device, scan_blocks=False):
+def check_tape(device, scan_blocks=False):
     """
     检查HDD健康状态，返回 'health'（健康）、'danger'（警告）、None（检查失败）
     

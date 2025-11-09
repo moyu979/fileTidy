@@ -2,7 +2,7 @@ from tabnanny import check
 from tkinter import NO
 from component.device.device import Device
 from component.device.tools.checkHdd import checkHdd
-class HDD(Device):
+class Hdd(Device):
     def __init__(self, orm_model=None,path=None):
         super().__init__(orm_model,path)
 

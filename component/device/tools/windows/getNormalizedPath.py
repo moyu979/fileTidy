@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 
-def get_device_path(dev_path):
+def get_normalized_path(dev_path):
     """获取单个设备的完整信息"""    
     # 规范化设备路径
     if dev_path.isdigit():

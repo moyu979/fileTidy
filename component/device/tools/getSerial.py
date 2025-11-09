@@ -5,7 +5,7 @@
 from utils.confs import get_conf_manager
 
 
-def get_id(dev_path):
+def get_serial(dev_path):
     """
     输入磁盘路径，返回磁盘序列号
     
@@ -21,11 +21,11 @@ def get_id(dev_path):
     system = get_conf_manager().get("system")
     
     if system == "windows":
-        from .windows.getId import get_id as impl
+        from .windows.getSerial import get_serial as impl
     elif system == "linux":
-        from .linux.getId import get_id as impl
+        from .linux.getSerial import get_serial as impl
     elif system == "macos":
-        from .macos.getId import get_id as impl
+        from .macos.getSerial import get_serial as impl
     else:
         raise ValueError(f"不支持的系统: {system}")
     

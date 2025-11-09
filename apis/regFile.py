@@ -6,7 +6,7 @@ from database.models import FileModel
 from database.session import session_scope
 from utils import get_hash
 
-def regFiles(path):
+def reg_file(path):
     """
     注册一个文件到数据库中
     会自动检查文件的MD5值，如果文件不存在，则创建一个新文件
