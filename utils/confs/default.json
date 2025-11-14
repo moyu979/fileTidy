@@ -1,5 +1,6 @@
 {
   "system": "Linux",
+  
   "path": "./data",
   "db_path": "./data/datas.db",
   "json_path": "./data/conf.json",
@@ -7,6 +8,7 @@
   "log_file": "log.log",
   "log_level": "DEBUG",
   "log_format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+  
   "hash_once": 512,
   "insert_node": "relaxed",
   "volume_check": "relaxed",

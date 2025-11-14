@@ -3,7 +3,15 @@
 """
 
 from component.device.deviceFactory import DeviceFactory
-
+from component.volume.volumeFactory import VolumeFactory
+import os
+import re
+import shutil
+from component.volume.tools.isMountPoint import is_mount_point
+from component.volume.volumeFactory import VolumeFactory
+from database.session import session_scope
+from utils.idGenerater import generate_id
+from apis.regFile import reg_file
 
 class VolumeManager:
     """设备管理器，管理设备实例"""
@@ -23,14 +31,7 @@ class VolumeManager:
         Returns:
             Volume: 创建的卷实例，如果失败返回 None
         """
-        import os
-        import re
-        import shutil
-        from component.volume.tools.isMountPoint import is_mount_point
-        from component.volume.volumeFactory import VolumeFactory
-        from database.session import session_scope
-        from utils.idGenerater import generate_id
-        from apis.regFile import reg_file
+        
         
         if not volume_path:
             return None
@@ -181,7 +182,7 @@ class VolumeManager:
 
     def get_path(self, device_path):
         """
-        获取设备路径，如果设备存在但没挂载，返回None
+        获取设备路径，如果卷存在但没挂载，返回None
         """
         pass
 
@@ -244,7 +245,14 @@ class VolumeManager:
         except (OSError, IOError):
             return None, None
 
+    def checkVolume(self, volume_path):
+        """
+        检查卷的介质情况
+        """
+        volume=VolumeFactory.getVolume(volume_path)
+        volume.check()
 
+    
 
 # 模块级单例实例
 volume_manager = VolumeManager()

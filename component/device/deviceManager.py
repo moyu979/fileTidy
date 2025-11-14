@@ -29,7 +29,7 @@ class DeviceManager:
         """
         检查设备的介质情况
         """
-        device=DeviceFactory.createDevice(device_path)
+        device=DeviceFactory.getDevice(device_path)
         device.check()
         
     def replaceDevice(self, device_path1, device_path2):

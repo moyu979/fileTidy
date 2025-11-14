@@ -33,7 +33,7 @@ def _ensure_defaults(session: Session) -> None:
     """根据新抽象写入默认 Device/Volume/SuperVolume。"""
     now = str(int(time.time()))
 
-    default_device_id = "00000000000000000000000000000000"
+    default_device_id = "0"
     if session.get(DeviceModel, default_device_id) is None:
         session.add(
             DeviceModel(

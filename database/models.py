@@ -27,14 +27,21 @@ class DeviceModel(Base):
     主要用于提供操作硬件设备的抽象
     """
     __tablename__ = "device"
-
-    serial = Column(String, primary_key=True)  # device_ 开头的唯一 ID
+    # 设备序列号，对于磁盘来说，是磁盘的序列号，对于磁带来说，是一个和单磁带卷id一致的id
+    serial = Column(String, primary_key=True)
+    # 设备名称，一个方便记忆的名称
     name = Column(String, unique=True, nullable=False)
+    # 设备类型，如硬盘、磁带、TF卡等
     kind = Column(String)
+    # 设备添加时间
     add_time = Column(String)
+    # 设备最后一次检查时间
     last_check_time = Column(String)
+    # 设备状态，如健康、故障等
     state = Column(String, default="healthy")
+    # 设备容量（字节）
     capacity = Column(Integer)
+    # 设备其他信息
     info = Column(Text, default="")
 
 
@@ -46,10 +53,13 @@ class VolumeStructureModel(Base):
     __table_args__ = (
         PrimaryKeyConstraint("volume_id", "device_id"),
     )
-
+    # 卷id
     volume_id = Column(String, nullable=False)
+    # 使用哪个设备
     device_id = Column(String, nullable=False)
+    # 添加时间
     add_time = Column(String)
+    # 其他信息
     info = Column(Text, default="")
 
 
@@ -59,16 +69,28 @@ class VolumeModel(Base):
     """
     __tablename__ = "volumes"
 
+    # 卷id  
     id = Column(Integer, primary_key=True)
+    # 卷名称，一个方便记忆的名称
     name = Column(String, unique=True, nullable=False)
+    # 卷类型，如单磁带卷、多磁带卷、RAID5卷等
     kind = Column(String)
+    # 用何技术组成的卷，例如，win存储池，zfs，硬件阵列
+    method = Column(String)
+    # 添加时间
     add_time = Column(String)
+    # 最后一次检查时间
     last_check_time = Column(String)
+    # 卷状态，如健康、故障等
     state = Column(String, default="healthy")
+    # 卷容量（字节）
     capacity = Column(Integer)
-    info = Column(Text, default="")
+    # 卷挂载点，一个唯一的挂载点，用于全局文件索引
     unique_mount_point = Column(String, default="")
+    # 卷文件系统类型，如ext4、xfs、btrfs等
     file_system = Column(String, default="")
+    # 卷其他信息
+    info = Column(Text, default="")
 
 
 class SuperVolumeStructureModel(Base):
@@ -76,10 +98,13 @@ class SuperVolumeStructureModel(Base):
     __table_args__ = (
         PrimaryKeyConstraint("superVolume_id", "volume_id"),
     )
-
+    # 超级卷id  
     superVolume_id = Column(String, nullable=False)
+    # 卷id
     volume_id = Column(String, unique=True, nullable=False)
+    # 添加时间
     add_time = Column(String)
+    # 其他信息
     info = Column(Text, default="")
 
 
@@ -89,13 +114,21 @@ class SuperVolumeModel(Base):
     """
     __tablename__ = "super_volumes"
 
+    # 超级卷id
     id = Column(Integer, primary_key=True)
+    # 超级卷名称，一个方便记忆的名称
     name = Column(String, unique=True, nullable=False)
+    # 超级卷类型，如单磁带卷、多磁带卷、RAID5卷等
     kind = Column(String)
+    # 用何种方式组合的 eg：snapraid，tape自己完成的……等等
+    method = Column(String)
+    # 添加时间
     add_time = Column(String)
+    # 最后一次检查时间
     last_check_time = Column(String)
+    # 超级卷状态，如健康、故障等
     state = Column(String, default="healthy")
-    capacity = Column(Integer)
+    # 超级卷其他信息
     info = Column(Text, default="")
 
 
@@ -119,15 +152,23 @@ class FileModel(Base):
         PrimaryKeyConstraint("md5", "now_path"),
         UniqueConstraint("now_path"),
     )
-
+    # 文件md5值
     md5 = Column(String, nullable=False)
+    # 文件大小（字节）
     size = Column(Integer)
+    # 文件添加时间
     add_time = Column(String)
+    # 文件原始路径
     from_path = Column(Text)
+    # 文件当前路径，除去卷路径和**/datas/**过渡路径
     now_path = Column(Text, nullable=False)
+    # 文件当前所在的卷
     now_volume = Column(String)
+    # 文件当前的名称
     now_name = Column(String)
+    # 文件状态，如健康、故障等
     state = Column(String, default="online")
+    # 文件其他信息
     info = Column(Text, default="")
 
 
@@ -140,12 +181,19 @@ class CacheModel(Base):
         PrimaryKeyConstraint("md5", "now_path"),
     )
 
+    # 文件md5值
     md5 = Column(String, nullable=False)
+    # 文件大小（字节）
     size = Column(Integer)
+    # 文件当前路径，除去卷路径和**/datas/**过渡路径
     now_path = Column(Text, nullable=False)
+    # 文件当前的名称
     now_name = Column(String)
+    # 文件最后一次访问时间
     last_visit_time = Column(String)
+    # 文件最后一次修改时间
     last_modify_time = Column(String)
+    # 文件添加时间
     add_time = Column(String)
 
 
