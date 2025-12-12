@@ -92,6 +92,10 @@ def volume_exists(volume_path=None, name=None):
     # 直接调用
     return volume_manager.exists_in_database(volume_path=volume_path, name=name)
 
+def volume_loaded(volume_id=None):
+    """
+    if givern volume id now loaded in system
+    """
 
 @app.route('/api/volume/path', methods=['POST'])
 def get_path(device_path=None):
@@ -124,9 +128,8 @@ def get_path(device_path=None):
     # 直接调用
     return volume_manager.get_path(device_path)
 
-
-@app.route('/api/volume/get', methods=['POST'])
-def get_volume(volume_path=None, strict=False):
+@app.route('/api/volume/which', methods=['POST'])
+def which_volume(volume_path=None, strict=False):
     """
     获取卷id和路径
     
@@ -169,7 +172,6 @@ def get_volume(volume_path=None, strict=False):
     # 直接调用
     return volume_manager.get_volume(volume_path, strict=strict)
 
-
 @app.route('/api/volume/check', methods=['POST'])
 def check_volume(volume_path=None):
     """
@@ -201,3 +203,8 @@ def check_volume(volume_path=None):
     # 直接调用
     volume_manager.checkVolume(volume_path)
 
+def get_healthy(volume_id=None, refresh=False):
+    """
+    get health of a volume, call check if refresh is true
+    """
+    pass
