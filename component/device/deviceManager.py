@@ -34,7 +34,7 @@ class DeviceManager:
         
     def replaceDevice(self, device_path1, device_path2):
         """
-        用device_path1的设备替换掉device_path2的设备
+        用device_path1的设备替换掉device_path2的设备，先用get_device_role判断设备在卷中的角色，然后根据角色进行替换
         """
         logging.info(f"用{device_path1}的设备替换掉{device_path2}的设备的功能还没完成")
 
@@ -83,6 +83,12 @@ class DeviceManager:
         根据设备路径获取容量
         """
         return get_capacity(device_path)
+
+    def get_device_role(self, device_path):
+        """
+        根据设备路径获取设备角色，指的是根据设备的类型，返回设备在卷中的角色，例如，是在zfs中作为一个raid参与者，还是作为一个单独的卷存在，
+        """
+        return None
     
 # 模块级单例实例
 device_manager = DeviceManager()

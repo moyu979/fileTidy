@@ -75,8 +75,6 @@ def ssd_check(device, scan_blocks=False):
     # SSD 无需坏道扫描
     if scan_blocks:
         logging.info(f"[SSD SCAN] SSD 无需逐块扫描，跳过坏道检测")
-    else:
-        logging.info(f"[SSD SCAN] 跳过坏道扫描，仅进行SMART检测")
     
     return "health"
 
