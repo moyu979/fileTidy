@@ -71,24 +71,17 @@ class VolumeManager:
             if volume_id is not None:
                 final_volume_id = str(volume_id)
             else:
-                # 随机生成一个数字ID
-                import random
-                final_volume_id = str(random.randint(1, 999999999))  # 生成一个随机数字ID
+                # 使用时间戳生成ID
+                from utils.idGenerater import generate_id
+                final_volume_id = generate_id()
         
         # 调用 volumeFactory.createVolume 创建卷
         volume = VolumeFactory.createVolume(normalized_path, final_volume_id)
         if volume is None:
             return None
         
-        # 设置 volume_id 到 VolumeModel（id 是 Integer 类型）
-        try:
-            volume.orm_model.id = int(final_volume_id)
-        except ValueError:
-            # 如果无法转换为整数，使用默认值或生成新的数字ID
-            from utils.idGenerater import generate_numeric_id
-            volume.orm_model.id = generate_numeric_id() % 2147483647  # SQLite Integer 的最大值
-            final_volume_id = str(volume.orm_model.id)
-        
+        # 设置 volume_id 到 VolumeModel（id 是 String 类型）
+        volume.orm_model.id = final_volume_id
         volume.orm_model.name = final_volume_id
         
         # 写入数据库

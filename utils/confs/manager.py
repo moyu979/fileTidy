@@ -13,6 +13,7 @@ from typing import Dict, Optional
 _DEFAULT_VALUES = {
     "path": "./data/datas.db",
     "hash_check_memery":512,
+    "machine_id": "0",  # 机器ID，范围0-9999，用于多机器环境区分
 }
 
 _ENV_KEYS: Dict[str, str] = {
@@ -47,6 +48,7 @@ class ConfManager:
         if key not in self._state.keys():
             raise KeyError(f"未知配置项: {key}")
         with self._lock:
+            print(111)
             return str(self._state.values[key])
 
     # 写入 -----------------------------------------------------------------

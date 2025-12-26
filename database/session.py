@@ -48,10 +48,10 @@ def _ensure_defaults(session: Session) -> None:
             )
         )
 
-    if session.get(VolumeModel, 0) is None:
+    if session.get(VolumeModel, "0") is None:
         session.add(
             VolumeModel(
-                id=0,
+                id="0",
                 name="default",
                 kind="single",
                 add_time=now,
@@ -62,10 +62,10 @@ def _ensure_defaults(session: Session) -> None:
             )
         )
 
-    if session.get(SuperVolumeModel, 0) is None:
+    if session.get(SuperVolumeModel, "0") is None:
         session.add(
             SuperVolumeModel(
-                id=0,
+                id="0",
                 name="default",
                 kind="single",
                 add_time=now,

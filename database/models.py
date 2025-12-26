@@ -1,7 +1,9 @@
-"""SQLAlchemy ORM 模型定义。"""
+"""
+SQLAlchemy ORM 模型定义。
+"""
 
 from __future__ import annotations
-
+import enum
 from sqlalchemy import (
     Column,
     Integer,
@@ -9,11 +11,24 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    Enum,
 )
 from sqlalchemy.orm import declarative_base
 
 
 Base = declarative_base()
+
+# 定义枚举类
+class DeviceState(enum.Enum):
+    HEALTHY = "healthy" # 正常使用的
+    DANGER = "danger" # 危险，冗余出现故障，但是暂时可以使用
+    FAULT = "fault" # 故障，无法使用
+    UNUSED = "unused" # 未使用，指统一淘汰的
+
+# 定义枚举类
+class RelationState(enum.Enum):
+    USING = "using" # 正在使用
+    UNUSED = "unused" # 未使用，一般指代发生替换后之前的设备/卷
 
 
 class DeviceModel(Base):
@@ -27,7 +42,7 @@ class DeviceModel(Base):
     主要用于提供操作硬件设备的抽象
     """
     __tablename__ = "device"
-    # 设备序列号，对于磁盘来说，是磁盘的序列号，对于磁带来说，是一个和单磁带卷id一致的id
+    # 设备序列号，对于磁盘来说，是磁盘的序列号，对于磁带来说，是一个自动生成的id，需要手记一下
     serial = Column(String, primary_key=True)
     # 设备名称，一个方便记忆的名称
     name = Column(String, unique=True, nullable=False)
@@ -38,7 +53,7 @@ class DeviceModel(Base):
     # 设备最后一次检查时间
     last_check_time = Column(String)
     # 设备状态，如健康、故障等
-    state = Column(String, default="healthy")
+    state = Column(Enum(DeviceState), default=DeviceState.HEALTHY)
     # 设备容量（字节）
     capacity = Column(Integer)
     # 设备其他信息
@@ -59,6 +74,8 @@ class VolumeStructureModel(Base):
     device_id = Column(String, nullable=False)
     # 添加时间
     add_time = Column(String)
+    # 状态，指是否还在使用这个映射关系
+    state = Column(Enum(RelationState), default=RelationState.USING)
     # 其他信息
     info = Column(Text, default="")
 
@@ -70,25 +87,35 @@ class VolumeModel(Base):
     __tablename__ = "volumes"
 
     # 卷id  
-    id = Column(Integer, primary_key=True)
+    id = Column(String, primary_key=True)
     # 卷名称，一个方便记忆的名称
     name = Column(String, unique=True, nullable=False)
-    # 卷类型，如单磁带卷、多磁带卷、RAID5卷等
+
+    # 卷类型，如单磁带卷、多磁带卷、RAID5卷等，与VolumeStructure一起，构成挂载文件系统时的指南
+    # 同一个卷，应当由相同的设备构成，否则可能会造成不可知的问题
     kind = Column(String)
+
     # 用何技术组成的卷，例如，win存储池，zfs，硬件阵列
     method = Column(String)
+
     # 添加时间
     add_time = Column(String)
+
     # 最后一次检查时间
     last_check_time = Column(String)
+
     # 卷状态，如健康、故障等
-    state = Column(String, default="healthy")
+    state = Column(Enum(DeviceState), default=DeviceState.HEALTHY)
+
     # 卷容量（字节）
     capacity = Column(Integer)
+
     # 卷挂载点，一个唯一的挂载点，用于全局文件索引
-    unique_mount_point = Column(String, default="")
+    unique_mount_point = Column(String, default="None")
+
     # 卷文件系统类型，如ext4、xfs、btrfs等
     file_system = Column(String, default="")
+
     # 卷其他信息
     info = Column(Text, default="")
 
@@ -104,6 +131,8 @@ class SuperVolumeStructureModel(Base):
     volume_id = Column(String, unique=True, nullable=False)
     # 添加时间
     add_time = Column(String)
+    # 状态，指是否还在使用这个映射关系
+    state = Column(Enum(RelationState), default=RelationState.USING)
     # 其他信息
     info = Column(Text, default="")
 
@@ -115,7 +144,7 @@ class SuperVolumeModel(Base):
     __tablename__ = "super_volumes"
 
     # 超级卷id
-    id = Column(Integer, primary_key=True)
+    id = Column(String, primary_key=True)
     # 超级卷名称，一个方便记忆的名称
     name = Column(String, unique=True, nullable=False)
     # 超级卷类型，如单磁带卷、多磁带卷、RAID5卷等
@@ -127,7 +156,7 @@ class SuperVolumeModel(Base):
     # 最后一次检查时间
     last_check_time = Column(String)
     # 超级卷状态，如健康、故障等
-    state = Column(String, default="healthy")
+    state = Column(Enum(DeviceState), default=DeviceState.HEALTHY)
     # 超级卷其他信息
     info = Column(Text, default="")
 
