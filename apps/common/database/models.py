@@ -26,7 +26,8 @@ class DeviceState(enum.Enum):
     HEALTHY = "healthy" # 正常使用的
     DANGER = "danger" # 危险，冗余出现故障，但是暂时可以使用
     FAULT = "fault" # 故障，无法使用
-    UNUSED = "unused" # 未使用，指统一淘汰的
+    NO_LONGER_USED = "no_longer_used"  # 不再使用
+    REMOVED = "removed" # 已移除，指已经从数据库中移除的
 
 # 定义枚举类
 class RelationState(enum.Enum):
@@ -154,7 +155,41 @@ class SuperVolumeModel(Base):
     # 超级卷其他信息
     info = Column(Text, default="")
 
-class FileModel(Base):
+class FileSourcesModel(Base):
+    """
+    文件级抽象，用于对文件的管理
+    包括：
+    - 文件的id值
+    - 文件的sha512值
+    - 文件的MD5值
+    - 文件的大小
+    - 文件的添加时间
+    - 文件的原始路径
+    - 文件当前的路径
+    - 文件当前所在的卷
+    - 文件当前的名称
+    - 文件的状态
+    - 文件的其他信息
+    """
+    __tablename__ = "fileSources"
+    #自增主键
+    id = Column(Integer, primary_key=True)
+    # 文件md5值
+    sha512 = Column(String, nullable=False)
+    # 文件md5值
+    md5 = Column(String, nullable=False)
+    # 文件大小（字节）
+    size = Column(Integer)
+    # 文件添加时间
+    add_time = Column(DateTime, default=datetime.utcnow)
+    # 文件原始路径
+    from_path = Column(Text)
+    # 文件状态，如健康、故障，密码丢失等
+    state = Column(String, default="online")
+    # 文件其他信息
+    info = Column(Text, default="")
+
+class FileLocationsModel(Base):
     """
     文件级抽象，用于对文件的管理
     包括：
@@ -168,12 +203,11 @@ class FileModel(Base):
     - 文件的状态
     - 文件的其他信息
     """
-
-    __tablename__ = "files"
-    __table_args__ = (
-        PrimaryKeyConstraint("md5", "now_path","now_volume"),# pk 应该把当前卷也写进去
-        UniqueConstraint("now_path", "now_volume"),
-    )
+    __tablename__ = "fileLocations"
+    #自增主键
+    id = Column(Integer, primary_key=True)
+    # 文件md5值
+    sha512 = Column(String, nullable=False)
     # 文件md5值
     md5 = Column(String, nullable=False)
     # 文件大小（字节）
@@ -192,7 +226,6 @@ class FileModel(Base):
     state = Column(String, default="online")
     # 文件其他信息
     info = Column(Text, default="")
-
 class CacheModel(Base):
     """
     缓存级抽象，用于对缓存的管理
