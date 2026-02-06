@@ -17,7 +17,7 @@ def serial2path(serial):
     Returns:
         str: 磁盘序列号，如果获取失败则返回 None
     """
-    system = config_manager().get("system")
+    system = config_manager.get("system")
     
     if system == "windows":
         from .windows.serial2path import serial2path as impl

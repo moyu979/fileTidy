@@ -1,25 +1,3 @@
-"""
-文件哈希计算模块
-
-提供文件MD5和sha512哈希值计算功能，支持单个文件和目录的批量计算。
-
-主要功能：
-    - 计算单个文件的MD5哈希值
-    - 递归计算目录中所有文件的MD5哈希值
-    - 支持大文件分块读取，避免内存溢出
-    - 自动处理文件读取错误，目录遍历时跳过无法读取的文件
-
-配置项：
-    - hash_check_memery: 哈希计算时的块大小（MB），默认512MB
-
-使用示例：
-    >>> from utils.get_hash import get_hash
-    >>> # 计算单个文件的哈希
-    >>> result = get_hash("/path/to/file.txt")
-    >>> # 计算目录中所有文件的哈希
-    >>> results = get_hash("/path/to/directory")
-"""
-
 import hashlib
 import os
 import queue
@@ -27,7 +5,7 @@ from typing import List
 import threading
 from typing import Optional
 
-from common.config.config import config_manager
+from apps.common.config.config import config_manager
 
 
 def _md5_file(path: str) -> str:
@@ -138,6 +116,65 @@ def sha512_file(
     t_hasher.join()
 
     return h.hexdigest()
+
+
+def compute_hash(path: str, enable_sha512: bool = True, enable_md5: bool = True) -> dict:
+    """
+    计算文件的哈希值，支持同时计算多个哈希算法
+    
+    Args:
+        path: 需要计算哈希的文件路径
+        enable_sha512: 是否启用SHA512计算
+        enable_md5: 是否启用MD5计算
+        
+    Returns:
+        dict: 包含计算结果的字典，key为"sha512"或"md5"，value为对应的哈希值
+              只包含启用的哈希算法的结果
+        
+    Raises:
+        FileNotFoundError: 文件不存在
+        PermissionError: 没有读取权限
+        OSError: 其他文件系统错误
+        ValueError: 至少需要启用一个哈希算法
+    """
+    if not enable_sha512 and not enable_md5:
+        raise ValueError("至少需要启用一个哈希算法（sha512或md5）")
+    
+    # 获取分块大小
+    try:
+        chunk_size = int(config_manager.get("hash_once")) * 1024 * 1024
+    except (ValueError):
+        # 默认值：512M
+        chunk_size = 512 * 1024 * 1024
+    
+    # 初始化需要的哈希器
+    hashers = {}
+    if enable_sha512:
+        hashers["sha512"] = hashlib.sha512()
+    if enable_md5:
+        hashers["md5"] = hashlib.md5()
+    
+    # 分块读取并更新所有启用的哈希器
+    try:
+        with open(path, "rb") as stream:
+            for chunk in iter(lambda: stream.read(chunk_size), b""):
+                for hasher in hashers.values():
+                    hasher.update(chunk)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"文件不存在: {path}")
+    except PermissionError:
+        raise PermissionError(f"没有权限读取文件: {path}")
+    except OSError as e:
+        raise OSError(f"读取文件失败 {path}: {e}")
+    
+    # 返回结果字典
+    result = {}
+    if enable_sha512:
+        result["sha512"] = hashers["sha512"].hexdigest()
+    if enable_md5:
+        result["md5"] = hashers["md5"].hexdigest()
+    
+    return result
 
 
 def get_hash(path: str,method="sha512") -> List[List[str]]:

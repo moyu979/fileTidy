@@ -1,5 +1,4 @@
 """
-ok
 SQLAlchemy ORM 模型定义。
 """
 
@@ -27,7 +26,7 @@ class DeviceState(enum.Enum):
     DANGER = "danger" # 危险，冗余出现故障，但是暂时可以使用
     FAULT = "fault" # 故障，无法使用
     NO_LONGER_USED = "no_longer_used"  # 不再使用
-    REMOVED = "removed" # 已移除，指已经从数据库中移除的
+    REMOVED = "removed" # 已移除（软删除，记录仍保留在数据库中）
 
 # 定义枚举类
 class RelationState(enum.Enum):
@@ -165,9 +164,6 @@ class FileSourcesModel(Base):
     - 文件的大小
     - 文件的添加时间
     - 文件的原始路径
-    - 文件当前的路径
-    - 文件当前所在的卷
-    - 文件当前的名称
     - 文件的状态
     - 文件的其他信息
     """
@@ -204,8 +200,9 @@ class FileLocationsModel(Base):
     - 文件的其他信息
     """
     __tablename__ = "fileLocations"
-    #自增主键
-    id = Column(Integer, primary_key=True)
+    __table_args__ = (
+        PrimaryKeyConstraint("now_volume", "now_path"),
+    )
     # 文件md5值
     sha512 = Column(String, nullable=False)
     # 文件md5值
@@ -214,18 +211,15 @@ class FileLocationsModel(Base):
     size = Column(Integer)
     # 文件添加时间
     add_time = Column(DateTime, default=datetime.utcnow)
-    # 文件原始路径
-    from_path = Column(Text)
     # 文件当前路径，除去卷路径和**/datas/**过渡路径
     now_path = Column(Text, nullable=False)
     # 文件当前所在的卷
     now_volume = Column(String)
-    # 文件当前的名称
-    now_name = Column(String)
     # 文件状态，如健康、故障，密码丢失等
     state = Column(String, default="online")
     # 文件其他信息
     info = Column(Text, default="")
+
 class CacheModel(Base):
     """
     缓存级抽象，用于对缓存的管理

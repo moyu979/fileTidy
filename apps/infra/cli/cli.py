@@ -7,6 +7,7 @@
 import cmd
 import sys
 from .device_manager import DeviceManager
+from .file_manager import FileManager
 
 
 class FileTidyCLI(cmd.Cmd):
@@ -28,6 +29,7 @@ class FileTidyCLI(cmd.Cmd):
         super().__init__()
         # 初始化子命令组
         self.device_manager = DeviceManager()
+        self.file_manager = FileManager()
     
     def do_devicemanager(self, arg):
         """
@@ -41,6 +43,19 @@ class FileTidyCLI(cmd.Cmd):
     def do_dm(self, arg):
         """devicemanager 的简写"""
         self.do_devicemanager(arg)
+    
+    def do_filemanager(self, arg):
+        """
+        进入文件管理子命令组
+        
+        用法: filemanager
+        输入 'help' 查看文件管理相关命令
+        """
+        self.file_manager.cmdloop()
+    
+    def do_fm(self, arg):
+        """filemanager 的简写"""
+        self.do_filemanager(arg)
     
     def do_quit(self, arg):
         """退出程序"""

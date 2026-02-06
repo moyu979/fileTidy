@@ -29,10 +29,8 @@ from .models import (
     VolumeModel,
     SuperVolumeModel,
     DeviceState,
-    FileModel,
-    CacheModel,
-    VolumeStructureModel,
-    SuperVolumeStructureModel,
+    FileSourcesModel,
+    FileLocationsModel,
 )
 
 

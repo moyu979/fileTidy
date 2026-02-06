@@ -6,7 +6,7 @@ def get_capacity(device_path):
         from .windows.get_capacity import get_capacity as impl
     elif config_manager.get("system") == "Linux":
         from .linux.get_capacity import get_capacity as impl
-    elif config_manager.get("system").get("system") == "macos":
+    elif config_manager.get("system") == "macos":
         from .macos.get_capacity import get_capacity as impl
     else:
         raise ValueError("不支持的系统")

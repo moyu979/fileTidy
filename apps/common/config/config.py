@@ -8,6 +8,7 @@ import threading
 import time
 
 from apps.common.config.globalVars import CONFIG_PATH
+from apps.common.config import globalVars
 from apps.common.log.logger import Logger as logger
 
 
@@ -73,6 +74,11 @@ class ConfigManager:
     def get(cls, key):
         """获取配置值"""
         with cls._config_lock:
+            # 先检查是否在 globalVars 中
+            if hasattr(globalVars, key):
+                return getattr(globalVars, key)
+            
+            # 如果不在 globalVars 中，从 config_dict 中获取
             value = cls.config_dict.get(key, None)
             if value is None:
                 logger.error(f"配置值不存在: {key}")

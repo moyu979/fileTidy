@@ -1,7 +1,7 @@
 {
     "workspace_path": "./data",
     "conf_reload_interval": 60,
-    "hash_once": 512,
+    "hash_once": 1024000,
 
     "restapi_port": 5001,
     "restapi_host": "0.0.0.0"

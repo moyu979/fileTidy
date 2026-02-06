@@ -6,7 +6,7 @@ def get_type(device_path):
         from .windows.get_type import get_type as impl
     elif config_manager.get("system") == "Linux":
         from .linux.get_type import get_type as impl
-    elif config_manager.get("system").get("system") == "macos":
+    elif config_manager.get("system") == "macos":
         from .macos.get_type import get_type as impl
     else:
         raise ValueError("不支持的系统")
