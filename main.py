@@ -1,27 +1,69 @@
-import sys
-from apps.core.initer import init
-from apps.infra.restapi.restapi import start_rest_api
-from apps.infra.cli.cli import main as start_cli
+"""
+DDD 过渡版本入口：仅负责命令行参数解析，启动逻辑后续再接。
+"""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from application import app
+from bootstrap import bootstrap
+from setup import setup
+
+def _api_port(value: str) -> int:
+    try:
+        port = int(value, 10)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(f"无效端口: {value!r}") from e
+    if not 1 <= port <= 65535:
+        raise argparse.ArgumentTypeError(f"端口必须在 1–65535 之间: {port}")
+    return port
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="fileTidy DDD 过渡版：数据库目录、运行模式与日志等级配置",
+    )
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=Path("./datas"),
+        metavar="DIR",
+        help="存放运行所需数据库等数据的目录（默认：./datas）",
+    )
+    parser.add_argument(
+        "--mode",
+        action="append",
+        choices=("cli", "api"),
+        dest="modes",
+        metavar="MODE",
+        help=(
+            "运行模式，可重复指定以同时启用：cli=命令行，api=FastAPI。"
+            "示例：--mode cli --mode api。省略时默认仅 api。"
+        ),
+    )
+    return parser
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    # 去重且保持顺序；未传 --mode 时与旧行为一致，默认只启动 api
+    if args.modes:
+        args.modes = list(dict.fromkeys(args.modes))
+    else:
+        args.modes = ["api"]
+    args.data_dir = args.data_dir.expanduser().resolve()
+    return args
+
+
+def main():
+    args = parse_args()
+    app=bootstrap(args)
+
+    
+    # 后续在此根据 _.modes / _.data_dir / 日志等级等接入初始化与启动
 
 if __name__ == "__main__":
-    # 初始化系统（配置、日志、数据库等）
-    init()
-    
-    # 根据命令行参数选择启动模式
-    if len(sys.argv) > 1:
-        mode = sys.argv[1].lower()
-        if mode == 'cli' or mode == '--cli':
-            # 启动 CLI 命令行工具
-            start_cli()
-        elif mode == 'api' or mode == '--api':
-            # 启动 REST API 服务器
-            start_rest_api()
-        else:
-            print(f"未知模式: {mode}")
-            print("用法: python main.py [cli|api]")
-            print("  cli  - 启动命令行工具（网络 API 失效时的临时工具组）")
-            print("  api  - 启动 REST API 服务器")
-            sys.exit(1)
-    else:
-        # 默认启动 REST API
-        start_rest_api()
+    main()

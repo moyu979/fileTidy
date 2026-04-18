@@ -1,0 +1,6 @@
+# DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+# 命令行日志等级
+cli_log_level: INFO
+# 文件日志等级
+file_log_level: INFO

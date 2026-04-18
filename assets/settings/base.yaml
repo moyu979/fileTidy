@@ -1,0 +1,6 @@
+# 工作目录路径
+workspace_path: ./data
+# 配置重载间隔
+conf_reload_interval: 60
+# 哈希一次的文件大小
+hash_once: 1024000
