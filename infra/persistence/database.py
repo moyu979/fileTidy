@@ -2,7 +2,7 @@
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
+from contextlib import contextmanager
 
 def build_session_factory(database_url: str):
     connect_args = {}
@@ -22,3 +22,15 @@ def build_session_factory(database_url: str):
     )
 
     return SessionLocal, engine
+
+@contextmanager
+def session_scope(session_factory):
+    session = session_factory()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

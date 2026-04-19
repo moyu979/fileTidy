@@ -73,7 +73,24 @@ class Config:
                 )
             self._sections[stem] = raw  # type: ignore[assignment]
 
+        self._sections = self._replace_workspace_path(self._sections)
+        self._sections["base"]["workspace_path"] = str(self.data_dir)
         return dict(self._sections)
+
+    def _replace_workspace_path(self, obj: Any) -> Any:
+        token = "${workspace_path}"
+        replacement = str(self.data_dir)
+
+        if isinstance(obj, str):
+            return obj.replace(token, replacement)
+        if isinstance(obj, dict):
+            return {k: self._replace_workspace_path(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [self._replace_workspace_path(v) for v in obj]
+        if isinstance(obj, tuple):
+            return tuple(self._replace_workspace_path(v) for v in obj)
+
+        return obj
 
     def __str__(self, *, indent: int | None = 2, ensure_ascii: bool = False) -> str:
         """将当前已加载的配置（各 yaml 合并后的 dict）序列化为 JSON 字符串。"""

@@ -5,8 +5,7 @@ import shutil
 
 def setup(args: argparse.Namespace) -> None:
     setup_file_structure(args)
-    setup_database(args)
-    
+
 def setup_file_structure(args: argparse.Namespace) -> None:
     if args.data_dir is None:
         # 如果工作目录没有被输入的话，就注册一个新的

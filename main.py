@@ -3,14 +3,17 @@ DDD 过渡版本入口：仅负责命令行参数解析，启动逻辑后续再�
 """
 
 from __future__ import annotations
-
+import logging
 import argparse
 from pathlib import Path
 
-from application import app
 from bootstrap import bootstrap
+from infra.config.config import Config
+from interface.cli.cli import FileTidyCLI
+from interface.fastapi import run_service
 from setup import setup
 
+logger = logging.getLogger(__name__)
 def _api_port(value: str) -> int:
     try:
         port = int(value, 10)
@@ -53,17 +56,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     if args.modes:
         args.modes = list(dict.fromkeys(args.modes))
     else:
-        args.modes = ["api"]
+        args.modes = ["cli"]
     args.data_dir = args.data_dir.expanduser().resolve()
     return args
 
 
 def main():
     args = parse_args()
-    app=bootstrap(args)
+    setup(args)
+    app,config=bootstrap(args)
+    if "cli" in args.modes:
+        cli = FileTidyCLI(app=app)
+        cli.cmdloop()
+        logger.info("cli mode completed")
+    if "api" in args.modes:
+        run_service(app,config)
+        logger.info("api mode completed")
 
-    
-    # 后续在此根据 _.modes / _.data_dir / 日志等级等接入初始化与启动
 
 if __name__ == "__main__":
     main()

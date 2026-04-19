@@ -1,1 +1,1 @@
-path:
+path: "sqlite:///${workspace_path}/database.db"
