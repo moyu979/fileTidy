@@ -1,6 +1,7 @@
 from abc import ABC
 
 from domain.storage.device.base import Device
+from domain.storage.super_device.base import SuperDevice
 
 
 class device_repository_abc(ABC):
@@ -10,8 +11,5 @@ class device_repository_abc(ABC):
     def is_exist(self, device: Device) -> bool:
         pass
 
-    def reg_device(self, device: Device) -> None:
-        pass
-
-    def load_device(self, serial: str) -> Device:
+    def reg_super_device(self, super_device: SuperDevice) -> None:
         pass

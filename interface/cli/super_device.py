@@ -63,6 +63,7 @@ class SuperDeviceCLI(cmd.Cmd):
             if device_id == "q":
                 break
             devices.append(device_id)
+        assert len(devices) > 0
 
         self.app.super_device_service.reg_super_device(
             name=name,

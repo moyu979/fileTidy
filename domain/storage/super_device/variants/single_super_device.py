@@ -1,0 +1,20 @@
+import datetime
+from domain.storage.device.base import Device
+from domain.storage.super_device.base import SuperDevice
+from infra.persistence.models import SuperDeviceState
+
+
+class SingleSuperDevice(SuperDevice):
+    def __init__(self,
+        serial: str,
+        name: str,
+        type: str,
+        need_all_devices_online: bool,
+        add_time: datetime,
+        last_check_time: datetime,
+        state: SuperDeviceState,
+        capacity: int,
+        info: str,
+        devices: list[Device],
+    ):
+        super().__init__(serial, name, type, need_all_devices_online, add_time, last_check_time, state, capacity, info, devices)

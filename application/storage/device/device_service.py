@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 from application.storage.device.device_factory import device_factory
+from shared.time_defaults import LAST_CHECK_TIME_ORIGIN
 from domain.storage.device.base import Device
 from domain.storage.device.events import DeviceRegistered
 from infra.operate_log.operate_log import log_event
@@ -15,36 +16,6 @@ class device_service:
     def __init__(self,device_repository) -> None:
         self.device_repository = device_repository
         logger.info("Device service initialized")
-
-    def reg_device(self, 
-        serial: str,
-        name: str,
-        type: str,
-        add_time,
-        last_check_time,
-        capacity: int|None,
-        info: str|None,
-        state: str|None,
-        device_path: str|None,
-    ) -> None:
-        device = device_factory.new_device(
-            serial=serial,
-            name=name,
-            type=type,
-            add_time=add_time,
-            last_check_time=last_check_time,
-            capacity=capacity,
-            info=info,
-            state=state,
-            device_path=device_path,
-        )
-
-        if self.device_repository.is_exist(device):
-            raise ValueError(f"device {serial} already exists")
-
-        self.device_repository.reg_device(device)
-        log_event(DeviceRegistered(device))
-        return device
 
     def reg_device_by_path(self, 
         device_path: str|None,
@@ -62,7 +33,7 @@ class device_service:
 
         add_time = datetime.now()
 
-        last_check_time = datetime.now()
+        last_check_time = LAST_CHECK_TIME_ORIGIN
 
         capacity = get_capacity(device_path)
         if capacity is None:
@@ -84,8 +55,42 @@ class device_service:
         )
 
         if self.device_repository.is_exist(device):
-            raise ValueError(f"device {serial} already exists")
+            raise ValueError(f"device {serial} at {device_path} already exists")
 
+        self.device_repository.reg_device(device)
+        log_event(DeviceRegistered(device))
+        return device
+
+    def reg_device_by_info(self,
+        serial: str,
+        name: str|None,
+        type: str|None,
+        add_time: datetime|None,
+        last_check_time: datetime|None,
+        capacity: int|None,
+        info: str|None,
+        state: str|None,
+        device_path: str|None,
+    ) -> None:
+        if name is None:
+            name = serial[:8]
+        if add_time is None:
+            add_time = datetime.now()
+        if last_check_time is None:
+            last_check_time = LAST_CHECK_TIME_ORIGIN
+        device = device_factory.new_device(
+            serial=serial,
+            name=name,
+            type=type,
+            add_time=add_time,
+            last_check_time=last_check_time,
+            capacity=capacity,  
+            info=info,
+            state=state,
+            device_path=device_path,
+        )
+        if self.device_repository.is_exist(device):
+            raise ValueError(f"device {serial} already exists")
         self.device_repository.reg_device(device)
         log_event(DeviceRegistered(device))
         return device
@@ -97,6 +102,6 @@ class device_service:
         return device_factory.load_device(
             serial=serial,
             device_path=device_path,
-            session_factory=self.device_repository.session_factory,
+            device_repository=self.device_repository,
         )
 

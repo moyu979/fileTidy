@@ -29,3 +29,11 @@ class device_repository(device_repository_abc):
             session.add(device_model)
             session.commit()
             
+    def load_device(self, serial: str) -> Device:
+        with session_scope(self.session_factory) as session:
+            device_model = session.query(DeviceModel).filter(DeviceModel.serial == serial).first()
+            if device_model is None:
+                return None
+            else:
+                # 将load的所有字段打包成字典返回
+                return device_model.to_dict()

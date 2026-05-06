@@ -84,7 +84,7 @@ class DeviceCLI(cmd.Cmd):
                     print("警告: 容量格式不正确，将使用 None")
                     capacity = None
             try:
-                self.app.device_service.reg_device(
+                self.app.device_service.reg_device_by_info(
                     serial=serial,
                     name=name,
                     type=type,
