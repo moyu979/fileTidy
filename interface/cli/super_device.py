@@ -49,7 +49,7 @@ class SuperDeviceCLI(cmd.Cmd):
         name = input("请输入超级设备名称，可以留空: ").strip() or None
         type = input("请输入超级设备类型: ").strip() or None
         info = input("请输入超级设备其他信息: ").strip() or None
-        need_all_devices_online = input("请输入是否需要全部设备同时上线: ").strip() or None
+        need_all_devices_online = input("请输入是否需要全部设备同时上线: (y or n)").strip() or None
 
         if need_all_devices_online == "y":
             need_all_devices_online = True
