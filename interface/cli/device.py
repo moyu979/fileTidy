@@ -37,7 +37,7 @@ class DeviceCLI(cmd.Cmd):
             return True
         return False
 
-    def do_add(self, arg: str) -> None:
+    def do_reg(self, arg: str) -> None:
         """
         添加新设备
 
@@ -50,44 +50,73 @@ class DeviceCLI(cmd.Cmd):
         print("\n开始添加设备...")
         print("（直接敲回车表示使用默认值 None 或留空）\n")
 
-        serial = input("请输入设备序列号: ").strip()
-        if not serial:
-            print("错误: 序列号不能为空")
-            return
-
-        path = input("请输入设备路径: ").strip()
-        device_path = path if path else None
-
         name_input = input("请输入设备名称 (直接回车使用占位名): ").strip()
-        name = name_input if name_input else f"device-{serial[:8]}"
-
-        type_input = input("请输入设备类型 (hdd/ssd/tape/tf_sd_card，直接回车使用 None): ").strip()
-        type = type_input if type_input else None
-
-        capacity_input = input("请输入设备容量（字节，直接回车使用 None）: ").strip()
-        capacity: int | None = None
-        if capacity_input:
-            try:
-                capacity = int(capacity_input)
-            except ValueError:
-                print("警告: 容量格式不正确，将使用 None")
-                capacity = None
+        name = name_input if name_input else None
 
         info_input = input("请输入设备其他信息 (直接回车使用 None): ").strip()
         info = info_input if info_input else None
 
-        try:
-            self.app.device_service.reg_device(
-                serial=serial,
-                name=name,
-                type=type,
-                add_time=None,
-                last_check_time=None,
-                capacity=capacity,
-                info=info,
-                state=None,
+        path = input("请输入设备路径: ").strip()
+        device_path = path if path else None
+
+        if device_path is not None:
+            self.app.device_service.reg_device_by_path(
                 device_path=device_path,
+                name=name,
+                info=info,
             )
-            print(f"\n成功登记设备: {name} (序列号: {serial})")
-        except Exception as e:
-            print(f"\n错误: {e}")
+            return
+        else:
+            serial = input("请输入设备序列号: ").strip()
+            if not serial:
+                print("错误: 序列号不能为空")
+                return
+
+            type_input = input("请输入设备类型 (hdd/ssd/tape/tf_sd_card，直接回车使用 None): ").strip()
+            type = type_input if type_input else None
+
+            capacity_input = input("请输入设备容量（字节，直接回车使用 None）: ").strip()
+            capacity: int | None = None
+            if capacity_input:
+                try:
+                    capacity = int(capacity_input)
+                except ValueError:
+                    print("警告: 容量格式不正确，将使用 None")
+                    capacity = None
+            try:
+                self.app.device_service.reg_device(
+                    serial=serial,
+                    name=name,
+                    type=type,
+                    add_time=None,
+                    last_check_time=None,
+                    capacity=capacity,
+                    info=info,
+                    state=None,
+                    device_path=device_path,
+                )
+                print(f"\n成功登记设备: {name} (序列号: {serial})")
+            except Exception as e:
+                print(f"\n错误: {e}")
+
+    def do_load(self, arg: str) -> None:
+        """
+        加载设备
+
+        用法: load
+        将提示您依次输入参数，直接敲回车表示使用默认值（None 或空）
+        """
+        if self._missing_service():
+            return
+        serial = input("请输入设备序列号: ").strip() or None
+        device_path = input("请输入设备路径: ").strip() or None
+
+        device = self.app.device_service.load_device(
+            serial=serial,
+            device_path=device_path,
+        )
+        if device is None:
+            print("\n未找到对应设备记录。")
+            return
+        print(f"\n成功加载设备: {device.name} (序列号: {device.serial})")
+        print(device.to_json())

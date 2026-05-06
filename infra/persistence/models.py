@@ -5,6 +5,7 @@ SQLAlchemy ORM 模型定义。
 from __future__ import annotations
 import enum
 from datetime import datetime
+from re import sub
 from sqlalchemy import (
     Column,
     Integer,
@@ -14,6 +15,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Enum,
     DateTime,
+    Boolean,
 )
 from sqlalchemy.orm import declarative_base
 
@@ -23,7 +25,13 @@ Base = declarative_base()
 # 定义枚举类
 class DeviceState(enum.Enum):
     HEALTHY = "healthy" # 正常使用的
-    DANGER = "danger" # 危险，冗余出现故障，但是暂时可以使用
+    DANGER = "danger" # 危险，但是暂时可以使用，主要用来描述有坏到等隐患的设备
+    FAULT = "fault" # 故障，无法使用
+    REMOVED = "removed" # 已移除（软删除，记录仍保留在数据库中）
+
+class SuperDeviceState(enum.Enum):
+    HEALTHY = "healthy" # 正常使用的
+    DANGER = "danger" # 危险，冗余出现故障，但是暂时可以使用，主要用来描述有坏到等隐患的设备
     FAULT = "fault" # 故障，无法使用
     REMOVED = "removed" # 已移除（软删除，记录仍保留在数据库中）
 
@@ -49,7 +57,7 @@ class DeviceModel(Base):
     # 设备名称，一个方便记忆的名称
     name = Column(String, unique=True, nullable=False)
     # 设备类型，如硬盘、磁带、TF卡等
-    kind = Column(String)
+    type = Column(String)
     # 设备添加时间
     add_time = Column(DateTime, default=datetime.utcnow)
     # 设备最后一次检查时间
@@ -61,19 +69,18 @@ class DeviceModel(Base):
     # 设备其他半格式化信息
     info = Column(Text, default="")
 
-
-class VolumeStructureModel(Base):
+class DeviceStructureModel(Base):
     """
     中间架构抽象，用于描述设备如何组织成文件系统
     """
-    __tablename__ = "volume_structures"
+    __tablename__ = "device_structures"
     __table_args__ = (
-        PrimaryKeyConstraint("volume_id", "device_id"),
+        PrimaryKeyConstraint("super_device_id", "sub_device_id"),
     )
     # 卷id
-    volume_id = Column(String, nullable=False)
+    super_device_id = Column(String, nullable=False)
     # 使用哪个设备
-    device_id = Column(String, nullable=False)
+    sub_device_id = Column(String, nullable=False)
     # 添加时间
     add_time = Column(DateTime, default=datetime.utcnow)
     # 状态，指是否还在使用这个映射关系
@@ -81,6 +88,29 @@ class VolumeStructureModel(Base):
     # 其他信息
     info = Column(Text, default="")
 
+class SuperDeviceModel(Base):
+    __tablename__ = "super_devices"
+    __table_args__ = (
+        PrimaryKeyConstraint("super_device_id"),
+    )
+    # 超级设备id
+    super_device_id = Column(String, nullable=False)
+    # 超级设备名称
+    name = Column(String, unique=True, nullable=False)
+    # 超级设备类型 如：磁带卷、硬盘卷、RAID5卷等
+    type = Column(String)
+    # 是否需要全部设备同时上线
+    need_all_devices_online = Column(Boolean, default=False)
+    # 登记时间
+    add_time = Column(DateTime, default=datetime.utcnow)
+    # 最后一次检查时间
+    last_check_time = Column(DateTime, nullable=True)
+    # 超级设备状态，如健康、故障等
+    state = Column(Enum(DeviceState), default=DeviceState.HEALTHY)
+    # 超级设备容量（字节）
+    capacity = Column(Integer)
+    # 超级设备其他信息
+    info = Column(Text, default="")
 
 class VolumeModel(Base):
     """
@@ -90,13 +120,10 @@ class VolumeModel(Base):
 
     # 卷id  
     id = Column(String, primary_key=True)
+    # 建立在哪个超设备上
+    super_device_id = Column(String, nullable=False)
     # 卷名称，一个方便记忆的名称
     name = Column(String, unique=True, nullable=False)
-    # 卷类型，如单磁带卷、多磁带卷、RAID5卷等，与VolumeStructure一起，构成挂载文件系统时的指南
-    # 同一个卷，应当由相同的设备构成，否则可能会造成不可知的问题
-    kind = Column(String) # 需要给一个枚举类，用于表示卷的类型
-    # 用何技术组成的卷，例如，win存储池，zfs，硬件阵列
-    method = Column(String)
     # 添加时间
     add_time = Column(DateTime, default=datetime.utcnow)
     # 最后一次检查时间
@@ -141,7 +168,7 @@ class SuperVolumeModel(Base):
     # 超级卷名称，一个方便记忆的名称
     name = Column(String, unique=True, nullable=False)
     # 超级卷类型，如单磁带卷、多磁带卷、RAID5卷等
-    kind = Column(String)
+    type = Column(String)
     # 用何种方式组合的 eg：snapraid，tape自己完成的……等等
     method = Column(String)
     # 添加时间

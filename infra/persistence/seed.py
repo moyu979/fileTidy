@@ -29,7 +29,7 @@ def _ensure_device(session: Session, now: datetime):
             DeviceModel(
                 serial="EXTERNAL_DEVICE",
                 name="EXTERNAL_DEVICE",
-                kind="disk",
+                type="any",
                 add_time=now,
                 last_check_time=now,
                 state=DeviceState.HEALTHY,
@@ -44,8 +44,9 @@ def _ensure_volume(session: Session, now: datetime):
         session.add(
             VolumeModel(
                 id="EXTERNAL_VOLUME",
+                super_device_id="EXTERNAL_DEVICE",
                 name="EXTERNAL_VOLUME",
-                kind="single_disk",
+                file_system="any",
                 add_time=now,
                 last_check_time=now,
                 state=DeviceState.HEALTHY,
@@ -61,7 +62,7 @@ def _ensure_supervolume(session: Session, now: datetime):
             SuperVolumeModel(
                 id="EXTERNAL_SUPERVOLUME",
                 name="EXTERNAL_SUPERVOLUME",
-                kind="single",
+                type="single",
                 add_time=now,
                 last_check_time=now,
                 state=DeviceState.HEALTHY,

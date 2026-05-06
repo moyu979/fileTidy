@@ -49,7 +49,7 @@ class EventLogger:
 
 # ---------- 对外 API ----------
 
-def init_event_logger(config: dict):
+def setup_event_logger(config: dict):
     global _logger
     _logger = EventLogger(config)
 

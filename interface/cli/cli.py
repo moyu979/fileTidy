@@ -11,6 +11,7 @@ import sys
 from typing import TYPE_CHECKING
 
 from interface.cli.device import DeviceCLI
+from interface.cli.superdevice import SuperDeviceCLI
 
 if TYPE_CHECKING:
     from application.app import App
@@ -33,6 +34,7 @@ class FileTidyCLI(cmd.Cmd):
     def __init__(self, app: "App | None" = None) -> None:
         super().__init__()
         self._device_cli = DeviceCLI(app=app)
+        self.super_device_cli = SuperDeviceCLI(app=app)
 
     def do_device(self, arg: str) -> None:
         """
