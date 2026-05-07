@@ -1,8 +1,17 @@
 import json
 import os
 from datetime import datetime
+from enum import Enum
 
 _logger = None   # ⭐ 全局单例
+
+
+def _json_default(obj):
+    if isinstance(obj, Enum):
+        return obj.value
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
 class EventLogger:
@@ -17,7 +26,9 @@ class EventLogger:
 
         filepath = self._get_log_file_path()
         with open(filepath, "a", encoding="utf-8") as f:
-            f.write(json.dumps(record) + "\n")
+            f.write(
+                json.dumps(record, ensure_ascii=False, default=_json_default) + "\n"
+            )
 
     def load_all(self):
         records = []

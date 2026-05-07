@@ -19,10 +19,10 @@ class SuperDeviceCLI(cmd.Cmd):
   设备管理
 ========================================
 输入 'help' 查看可用命令
-输入 'back' 返回主菜单
+输入 'back' 或 Ctrl+D 返回主菜单
 """
 
-    prompt = "filetidy/device> "
+    prompt = "filetidy/super_device> "
 
     def __init__(self, app: App | None) -> None:
         super().__init__()
@@ -36,6 +36,15 @@ class SuperDeviceCLI(cmd.Cmd):
             print("错误: 设备服务不可用。")
             return True
         return False
+
+    def do_back(self, arg: str) -> bool:
+        """返回主菜单"""
+        return True
+
+    def do_EOF(self, arg: str) -> bool:
+        """Ctrl+D 返回主菜单"""
+        print()
+        return True
 
     def do_reg(self, arg: str) -> None:
         """
@@ -68,7 +77,11 @@ class SuperDeviceCLI(cmd.Cmd):
         self.app.super_device_service.reg_super_device(
             name=name,
             type=type,
-            info=info,
             need_all_devices_online=need_all_devices_online,
+            add_time=None,
+            last_check_time=None,
+            state=None,
+            capacity=None,
             devices=devices,
+            info=info,
         )

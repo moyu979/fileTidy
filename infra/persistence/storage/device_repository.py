@@ -18,7 +18,7 @@ class device_repository(device_repository_abc):
         device_model = DeviceModel(
                 serial=device.serial,
                 name=device.name,
-                kind=device.type,
+                type=device.type,
                 add_time=device.add_time,
                 last_check_time=device.last_check_time,
                 capacity=device.capacity,

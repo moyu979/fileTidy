@@ -1,3 +1,4 @@
+from abc import ABC
 from domain.storage.device.base import Device
 
 

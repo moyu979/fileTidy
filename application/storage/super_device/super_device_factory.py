@@ -1,6 +1,6 @@
 import datetime
 
-from application.storage.device import device_factory
+from application.storage.device.device_factory import device_factory
 from domain.storage.device.base import Device
 from domain.storage.super_device.variants.single_super_device import SingleSuperDevice
 from infra.persistence.models import SuperDeviceState

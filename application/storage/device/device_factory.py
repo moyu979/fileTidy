@@ -171,8 +171,11 @@ class device_factory:
             )
         else:
             raise ValueError(f"invalid kind: {type}")
-
-        if state is None:
+        # 如果是DeviceState类型，则直接使用
+        if isinstance(state, DeviceState):
+            state = state.value
+        # 如果是字符串，则需要转换为DeviceState类型
+        elif state is None:
             state = DeviceState.HEALTHY
         elif state == "health":
             state = DeviceState.HEALTHY

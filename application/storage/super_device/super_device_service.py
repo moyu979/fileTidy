@@ -1,7 +1,7 @@
 from datetime import datetime
 import logging
 
-from application.storage.super_device import super_device_factory
+from application.storage.super_device.super_device_factory import super_device_factory
 from infra.persistence.models import SuperDeviceState
 from infra.persistence.storage import super_device_repository
 from infra.system.path_manager.is_path import is_path
@@ -19,9 +19,13 @@ class super_device_service:
     def reg_super_device(self, 
         name: str,
         type: str,
-        info: str,
         need_all_devices_online: bool,
+        add_time: datetime,
+        last_check_time: datetime,
+        state: SuperDeviceState,
+        capacity: int,
         devices: list[str],
+        info: str,
     ) -> None:
         serial = generate_id("")
         if name is None:

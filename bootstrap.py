@@ -1,13 +1,13 @@
 import argparse
 from zipapp import create_archive
 from application.app import App
-from application.storage.super_device import super_device_service
+from application.storage.super_device.super_device_service import super_device_service
 from application.storage.volume.volume_service import volume_service
 from infra.config.config import Config
 from infra.log.logger import setup_logging
 from infra.persistence.database import build_session_factory
 from infra.persistence.init_db import init_database
-from infra.persistence.storage import super_device_repository
+from infra.persistence.storage.super_device_repository import super_device_repository
 from infra.persistence.storage.volume_repository import volume_repository
 from infra.persistence.storage.device_repository import device_repository
 from application.storage.device.device_service import device_service

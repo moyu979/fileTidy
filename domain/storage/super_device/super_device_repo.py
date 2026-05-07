@@ -4,7 +4,7 @@ from domain.storage.device.base import Device
 from domain.storage.super_device.base import SuperDevice
 
 
-class device_repository_abc(ABC):
+class super_device_repository_abc(ABC):
     def __init__(self) -> None:
         pass
 

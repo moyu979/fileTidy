@@ -19,7 +19,7 @@ class DeviceCLI(cmd.Cmd):
   设备管理
 ========================================
 输入 'help' 查看可用命令
-输入 'back' 返回主菜单
+输入 'back' 或 Ctrl+D 返回主菜单
 """
 
     prompt = "filetidy/device> "
@@ -36,6 +36,15 @@ class DeviceCLI(cmd.Cmd):
             print("错误: 设备服务不可用。")
             return True
         return False
+
+    def do_back(self, arg: str) -> bool:
+        """返回主菜单"""
+        return True
+
+    def do_EOF(self, arg: str) -> bool:
+        """Ctrl+D 返回主菜单"""
+        print()
+        return True
 
     def do_reg(self, arg: str) -> None:
         """
