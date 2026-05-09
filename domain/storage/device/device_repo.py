@@ -15,3 +15,6 @@ class device_repository_abc(ABC):
 
     def load_device(self, serial: str) -> Device:
         pass
+
+    def list_devices(self) -> list[Device]:
+        pass

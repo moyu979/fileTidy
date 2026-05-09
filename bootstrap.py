@@ -1,6 +1,8 @@
 import argparse
 from zipapp import create_archive
 from application.app import App
+from application.storage.device.device_factory import device_factory
+from application.storage.super_device.super_device_factory import super_device_factory
 from application.storage.super_device.super_device_service import super_device_service
 from application.storage.volume.volume_service import volume_service
 from infra.config.config import Config
@@ -29,9 +31,11 @@ def bootstrap(args: argparse.Namespace):
 
     device_repository_instance = device_repository(session_factory)
     device_service_instance = device_service(device_repository_instance)
-
+    device_factory.set_device_repository(device_repository_instance)
+    
     super_device_repository_instance = super_device_repository(session_factory)
     super_device_service_instance = super_device_service(super_device_repository_instance)
+    super_device_factory.set_super_device_repository(super_device_repository_instance)
     
     volume_repository_instance = volume_repository(session_factory)
     volume_service_instance = volume_service(volume_repository_instance, device_repository_instance)

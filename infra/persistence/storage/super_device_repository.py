@@ -10,7 +10,7 @@ class super_device_repository(super_device_repository_abc):
 
     def reg_super_device(self, super_device: SuperDevice) -> None:
         super_device_model = SuperDeviceModel(
-            super_device_id=super_device.serial,
+            serial=super_device.serial,
             name=super_device.name,
             type=super_device.type,
             need_all_devices_online=super_device.need_all_devices_online,

@@ -91,10 +91,10 @@ class DeviceStructureModel(Base):
 class SuperDeviceModel(Base):
     __tablename__ = "super_devices"
     __table_args__ = (
-        PrimaryKeyConstraint("super_device_id"),
+        PrimaryKeyConstraint("serial"),
     )
     # 超级设备id
-    super_device_id = Column(String, nullable=False)
+    serial = Column(String, nullable=False)
     # 超级设备名称
     name = Column(String, unique=True, nullable=False)
     # 超级设备类型 如：磁带卷、硬盘卷、RAID5卷等
@@ -106,7 +106,7 @@ class SuperDeviceModel(Base):
     # 最后一次检查时间
     last_check_time = Column(DateTime, nullable=True)
     # 超级设备状态，如健康、故障等
-    state = Column(Enum(DeviceState), default=DeviceState.HEALTHY)
+    state = Column(Enum(SuperDeviceState), default=SuperDeviceState.HEALTHY)
     # 超级设备容量（字节）
     capacity = Column(Integer)
     # 超级设备其他信息

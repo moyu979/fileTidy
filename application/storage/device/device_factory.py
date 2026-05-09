@@ -19,26 +19,45 @@ from infra.system.storage.device.get_capacity import get_capacity
 logger = logging.getLogger(__name__)
 
 class device_factory:
+    
+    device_repository: device_repository
+
+    @classmethod
+    def set_device_repository(cls, device_repository: device_repository) -> None:
+        cls.device_repository = device_repository
+
     def __init__(self) -> None:
         pass
 
-    @staticmethod
+    @classmethod
     def load_device(
-        serial: str | None,
-        device_path: str | None,
-        device_repository: device_repository,
+        cls,
+        serial: str | None = None,
+        device_path: str | None = None,
     ) -> Device | None:
         if serial is None and device_path is not None:
             serial = get_serial(device_path)
         if serial is None:
             raise ValueError("serial and device_path are both None")
 
-        device_dict = device_repository.load_device(serial)
+        device_dict = cls.device_repository.load_device(serial)
         if device_dict is None:
             return None
         else:
             if device_dict["type"] == "hdd":
                 return HddDevice(
+                    serial=device_dict["serial"],
+                    name=device_dict["name"],
+                    type=device_dict["type"],
+                    add_time=device_dict["add_time"],
+                    last_check_time=device_dict["last_check_time"],
+                    capacity=device_dict["capacity"],
+                    info=device_dict["info"],
+                    state=device_dict["state"],
+                    device_path=device_path,
+                )
+            if device_dict["type"] == "ssd":
+                return SsdDevice(
                     serial=device_dict["serial"],
                     name=device_dict["name"],
                     type=device_dict["type"],
@@ -119,7 +138,8 @@ class device_factory:
             
         if info is None:
             info = ""
-
+        if name is None:
+            name = serial[:8]
         device=None
         if type=="ssd":
             device = SsdDevice(

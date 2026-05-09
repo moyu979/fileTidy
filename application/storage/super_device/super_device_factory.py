@@ -1,14 +1,24 @@
 import datetime
 
 from application.storage.device.device_factory import device_factory
+#from application.storage.super_device.super_device_repository import super_device_repository
 from domain.storage.device.base import Device
+from domain.storage.super_device.super_device_repo import super_device_repository_abc
 from domain.storage.super_device.variants.single_super_device import SingleSuperDevice
 from infra.persistence.models import SuperDeviceState
 
 
 class super_device_factory:
-    @staticmethod
+
+    super_device_repository: super_device_repository_abc
+    
+    @classmethod
+    def set_super_device_repository(cls, super_device_repository: super_device_repository_abc) -> None:
+        cls.super_device_repository = super_device_repository
+        
+    @classmethod
     def new_super_device(
+        cls,
         serial: str,
         name: str,
         type: str,
@@ -18,8 +28,10 @@ class super_device_factory:
         state: SuperDeviceState,
         capacity: int,
         info: str,
-        devices: list[any],
+        devices: list,
     ):
+        if serial is None:
+            raise ValueError("serial is None")
         device_items = []
         for device in devices:
             if isinstance(device, Device):

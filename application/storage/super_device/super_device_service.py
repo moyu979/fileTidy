@@ -3,7 +3,7 @@ import logging
 
 from application.storage.super_device.super_device_factory import super_device_factory
 from infra.persistence.models import SuperDeviceState
-from infra.persistence.storage import super_device_repository
+from infra.persistence.storage.super_device_repository import super_device_repository
 from infra.system.path_manager.is_path import is_path
 from infra.system.storage.device import get_serial
 from shared.id_generator import generate_id
@@ -12,7 +12,7 @@ from shared.time_defaults import LAST_CHECK_TIME_ORIGIN
 logger = logging.getLogger(__name__)
 
 class super_device_service:   
-    def __init__(self,device_repository) -> None:
+    def __init__(self, super_device_repository) -> None:
         self.super_device_repository = super_device_repository
         logger.info("super_device service initialized")
 
@@ -27,9 +27,9 @@ class super_device_service:
         devices: list[str],
         info: str,
     ) -> None:
-        serial = generate_id("")
+        super_device_serial = generate_id("")
         if name is None:
-            name = serial[:8]
+            name = super_device_serial[:8]
         if type is None:
             raise ValueError("type is None")
         if need_all_devices_online is None:
@@ -53,7 +53,7 @@ class super_device_service:
             sericals.append(serial)
 
         super_device = super_device_factory.new_super_device(
-            serial=serial,
+            serial=super_device_serial,
             name=name,
             type=type,
             need_all_devices_online=need_all_devices_online,

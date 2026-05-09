@@ -129,3 +129,14 @@ class DeviceCLI(cmd.Cmd):
             return
         print(f"\n成功加载设备: {device.name} (序列号: {device.serial})")
         print(device.to_json())
+    def do_list(self, arg: str) -> None:
+        """
+        列出所有设备
+
+        用法: list
+        """
+        if self._missing_service():
+            return
+        devices = self.app.device_service.list_devices()
+        for device in devices:
+            print(device)

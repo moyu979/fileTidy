@@ -102,6 +102,10 @@ class device_service:
         return device_factory.load_device(
             serial=serial,
             device_path=device_path,
-            device_repository=self.device_repository,
         )
+
+    def list_devices(self) -> list[Device]:
+        return self.device_repository.list_devices()
+        
+
 
