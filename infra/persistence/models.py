@@ -18,27 +18,14 @@ from sqlalchemy import (
     Boolean,
 )
 from sqlalchemy.orm import declarative_base
-
-
+from domain.storage.device.enum import DeviceState
+from domain.storage.super_device.enum import SuperDeviceState
+from domain.storage.volume.enum import VolumeState
 Base = declarative_base()
 
 # 定义枚举类
-class DeviceState(enum.Enum):
-    HEALTHY = "healthy" # 正常使用的
-    DANGER = "danger" # 危险，但是暂时可以使用，主要用来描述有坏到等隐患的设备
-    FAULT = "fault" # 故障，无法使用
-    REMOVED = "removed" # 已移除（软删除，记录仍保留在数据库中）
-# 定义枚举类
-class VolumeState(enum.Enum):
-    HEALTHY = "healthy" # 正常使用的
-    DANGER = "danger" # 危险，但是暂时可以使用，主要用来描述有坏到等隐患的设备
-    FAULT = "fault" # 故障，无法使用
-    REMOVED = "removed" # 已移除（软删除，记录仍保留在数据库中）
-class SuperDeviceState(enum.Enum):
-    HEALTHY = "healthy" # 正常使用的
-    DANGER = "danger" # 危险，冗余出现故障，但是暂时可以使用，主要用来描述有坏到等隐患的设备
-    FAULT = "fault" # 故障，无法使用
-    REMOVED = "removed" # 已移除（软删除，记录仍保留在数据库中）
+
+
 
 # 定义枚举类
 class RelationState(enum.Enum):
