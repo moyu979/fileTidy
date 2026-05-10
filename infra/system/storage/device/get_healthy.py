@@ -1,4 +1,4 @@
-from infra.persistence.models import DeviceState
+from domain.storage.device.enum import DeviceState
 
 
 def get_healthy(path: str) -> DeviceState:

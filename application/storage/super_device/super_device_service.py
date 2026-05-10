@@ -4,7 +4,7 @@ import logging
 from application.storage.super_device.super_device_factory import super_device_factory
 from domain.storage.super_device.events import SuperDeviceRegistered
 from infra.operate_log.operate_log import log_event
-from infra.persistence.models import SuperDeviceState
+from domain.storage.super_device.enum import SuperDeviceState
 from infra.persistence.storage.super_device_repository import super_device_repository
 from infra.system.path_manager.is_path import is_path
 from infra.system.storage.device import get_serial

@@ -5,7 +5,8 @@ from enum import Enum
 
 from domain.storage.device.base import Device as DeviceBase
 from domain.storage.super_device.base import SuperDevice
-from infra.persistence.models import VolumeState
+from domain.storage.volume.enum import VolumeState
+
 
 class Volume(ABC):
     def __init__(self,

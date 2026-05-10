@@ -7,7 +7,7 @@ from shared.time_defaults import LAST_CHECK_TIME_ORIGIN
 from domain.storage.device.base import Device
 from domain.storage.device.events import DeviceRegistered
 from infra.operate_log.operate_log import log_event
-from infra.persistence.models import DeviceState
+from domain.storage.device.enum import DeviceState
 from infra.system.storage.device.get_capacity import get_capacity
 from infra.system.storage.device.get_serial import get_serial
 from infra.system.storage.device.get_type import get_type

@@ -7,9 +7,8 @@ from .models import (
     DeviceModel,
     VolumeModel,
     SuperVolumeModel,
-    DeviceState,
 )
-
+from domain.storage.device.enum import DeviceState
 
 def seed_defaults(session: Session):
     """

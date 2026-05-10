@@ -5,7 +5,7 @@ from application.storage.device.device_factory import device_factory
 from domain.storage.device.base import Device
 from domain.storage.super_device.super_device_repo import super_device_repository_abc
 from domain.storage.super_device.variants.single_super_device import SingleSuperDevice
-from infra.persistence.models import SuperDeviceState
+from domain.storage.super_device.enum import SuperDeviceState
 
 
 class super_device_factory:

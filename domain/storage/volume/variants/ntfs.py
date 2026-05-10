@@ -1,7 +1,7 @@
 from datetime import datetime
 from domain.storage.super_device.base import SuperDevice
 from domain.storage.volume.base import DeviceBase, Volume
-from infra.persistence.models import VolumeState
+from domain.storage.volume.enum import VolumeState
 
 
 class ntfs(Volume):

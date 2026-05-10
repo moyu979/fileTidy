@@ -6,7 +6,8 @@ from infra.persistence.storage import device_repository
 from shared.time_defaults import LAST_CHECK_TIME_ORIGIN
 from domain.storage.device.base import Device
 from infra.persistence.database import session_scope
-from infra.persistence.models import DeviceModel, DeviceState
+from infra.persistence.models import DeviceModel
+from domain.storage.device.enum import DeviceState
 from domain.storage.device.variants.HDD import HddDevice
 from domain.storage.device.variants.SSD import SsdDevice
 from domain.storage.device.variants.Tape import TapeDevice

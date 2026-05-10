@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 
 from domain.storage.device.base import Device
-from infra.persistence.models import SuperDeviceState
+from domain.storage.super_device.enum import SuperDeviceState
 
 
 class SuperDevice(ABC):
