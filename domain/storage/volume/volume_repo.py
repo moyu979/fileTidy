@@ -1,14 +1,14 @@
 from abc import ABC
 
-from domain.storage.device.base import Device
+from domain.storage.volume.base import Volume
 
 
 class volume_repository_abc(ABC):
     def __init__(self) -> None:
         pass
 
-    def is_exist(self, device: Device) -> bool:
+    def is_exist(self, volume: Volume) -> bool:
         pass
 
-    def reg_volume(self, device: Device) -> None:
+    def reg_volume(self, volume: Volume) -> None:
         pass

@@ -1,6 +1,8 @@
 from datetime import datetime
 import logging
+import os
 from application.storage.device.device_factory import device_factory
+from infra.system.storage.device.get_healthy import get_healthy
 from shared.time_defaults import LAST_CHECK_TIME_ORIGIN
 from domain.storage.device.base import Device
 from domain.storage.device.events import DeviceRegistered
@@ -18,30 +20,32 @@ class device_service:
         logger.info("Device service initialized")
 
     def reg_device_by_path(self, 
-        device_path: str|None,
+        device_path: str,
         name: str|None,
         info: str|None,
     ) -> None:
 
+        device_path=os.path.abspath(device_path)
         serial = get_serial(device_path)
         if serial is None:
             raise ValueError(f"device path {device_path} is not a valid device path")
+        if name is None:
+            name=serial
 
         type = get_type(device_path)
         if type is None:
-            raise ValueError(f"device path {device_path} is not a valid device path")
-
+            raise ValueError(f"device path {device_path} can not get type")
+        
         add_time = datetime.now()
 
         last_check_time = LAST_CHECK_TIME_ORIGIN
 
         capacity = get_capacity(device_path)
         if capacity is None:
-            raise ValueError(f"device path {device_path} is not a valid device path")
+            raise ValueError(f"device path {device_path} cannot get capacity")
 
-        state = DeviceState.HEALTHY
+        state = get_healthy(device_path)
 
-        device_path = device_path
         device = device_factory.new_device(
             serial=serial,
             name=name,
@@ -59,7 +63,7 @@ class device_service:
 
         self.device_repository.reg_device(device)
         log_event(DeviceRegistered(device))
-        return device
+        return device.to_json()
 
     def reg_device_by_info(self,
         serial: str,
@@ -93,19 +97,20 @@ class device_service:
             raise ValueError(f"device {serial} already exists")
         self.device_repository.reg_device(device)
         log_event(DeviceRegistered(device))
-        return device
+        return device.to_json()
 
     def load_device(self,
         serial: str|None,
         device_path: str|None,
     ) -> Device | None:
-        return device_factory.load_device(
+        device=device_factory.load_device(
             serial=serial,
             device_path=device_path,
         )
+        return device.to_json() if device else None
 
     def list_devices(self) -> list[Device]:
-        return self.device_repository.list_devices()
+        return [device.to_json() for device in self.device_repository.list_devices()]
         
 
 

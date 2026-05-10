@@ -11,7 +11,7 @@ import cmd
 from application.app import App
 
 
-class DeviceCLI(cmd.Cmd):
+class VolumeCLI(cmd.Cmd):
     """卷相关命令行界面"""
 
     intro = """
@@ -48,19 +48,14 @@ class DeviceCLI(cmd.Cmd):
 
     def do_init(self, arg: str) -> None:
         """
-        添加新设备
-
-        用法: add
-        将提示您依次输入参数，直接敲回车表示使用默认值（None 或空）
+        初始化一个新卷，并且将其中的文件标记到file的初始化目录里
         """
 
-        path=input("请输入卷路径: ").strip()
+        pass
 
-        
-        if self._missing_service():
-            return
+    def reg_init(self, arg: str) -> None:
+        """
+        将一个卷记录到数据库
+        """
 
-        print("\n开始添加卷...")
-        print("（直接敲回车表示使用默认值 None 或留空）\n")
-
-        # todo：后面再写
+        pass

@@ -56,27 +56,39 @@ class SuperDeviceCLI(cmd.Cmd):
         if self._missing_service():
             return
         name = input("请输入超级设备名称，可以留空: ").strip() or None
-        type = input("请输入超级设备类型: ").strip() or None
-        info = input("请输入超级设备其他信息: ").strip() or None
-        need_all_devices_online = input("请输入是否需要全部设备同时上线: (y or n)").strip() or None
+        print(
+            "请选择超级设备类型（与系统编号一致）:\n"
+            "  1 — single\n"
+        )
+        code = input("请输入编号 (1): ").strip()
+        if code == "1":
+            super_device_type = "single"
+        else:
+            print("无效输入，请输入 1 表示 single。")
+            return
 
+        info = input("请输入超级设备其他信息: ").strip() or None
+
+        need_all_devices_online = input("请输入是否需要全部设备同时上线: (y or n)").strip() or None
         if need_all_devices_online == "y":
             need_all_devices_online = True
         else:
             need_all_devices_online = False
 
-        # 这里加一个，输入设备id，直到输入q为止
+        # 这里加一个，输入设备id，直到输入q或空为止
         devices = []
         while True:
             device_id = input("请输入设备id: ").strip()
             if device_id == "q":
+                break
+            if device_id == "":
                 break
             devices.append(device_id)
         assert len(devices) > 0
 
         self.app.super_device_service.reg_super_device(
             name=name,
-            type=type,
+            type=super_device_type,
             need_all_devices_online=need_all_devices_online,
             add_time=None,
             last_check_time=None,

@@ -4,7 +4,7 @@ from domain.storage.super_device.base import SuperDevice
 from infra.persistence.models import SuperDeviceState
 
 
-class SingleSuperDevice(SuperDevice):
+class RaidzSuperDevice(SuperDevice):
     def __init__(self,
         serial: str,
         name: str,

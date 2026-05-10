@@ -28,7 +28,12 @@ class DeviceState(enum.Enum):
     DANGER = "danger" # 危险，但是暂时可以使用，主要用来描述有坏到等隐患的设备
     FAULT = "fault" # 故障，无法使用
     REMOVED = "removed" # 已移除（软删除，记录仍保留在数据库中）
-
+# 定义枚举类
+class VolumeState(enum.Enum):
+    HEALTHY = "healthy" # 正常使用的
+    DANGER = "danger" # 危险，但是暂时可以使用，主要用来描述有坏到等隐患的设备
+    FAULT = "fault" # 故障，无法使用
+    REMOVED = "removed" # 已移除（软删除，记录仍保留在数据库中）
 class SuperDeviceState(enum.Enum):
     HEALTHY = "healthy" # 正常使用的
     DANGER = "danger" # 危险，冗余出现故障，但是暂时可以使用，主要用来描述有坏到等隐患的设备
@@ -119,8 +124,8 @@ class VolumeModel(Base):
     __tablename__ = "volumes"
 
     # 卷id  
-    id = Column(String, primary_key=True)
-    # 建立在哪个超设备上
+    serial = Column(String, primary_key=True)
+    # 建立在哪个设备上，可以是超设备或者设备
     super_device_id = Column(String, nullable=False)
     # 卷名称，一个方便记忆的名称
     name = Column(String, unique=True, nullable=False)
@@ -129,7 +134,7 @@ class VolumeModel(Base):
     # 最后一次检查时间
     last_check_time = Column(DateTime, nullable=True)
     # 卷状态，如健康、故障等
-    state = Column(Enum(DeviceState), default=DeviceState.HEALTHY)
+    state = Column(Enum(VolumeState), default=VolumeState.HEALTHY)
     # 卷容量（字节）
     capacity = Column(Integer)
     # 卷挂载点，一个唯一的挂载点，用于全局文件索引
