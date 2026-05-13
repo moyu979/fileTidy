@@ -1,6 +1,7 @@
 # infrastructure/persistence/seed.py
 
 from datetime import datetime
+from domain.storage.volume.enum import VolumeState
 from sqlalchemy.orm import Session
 
 from .models import (
@@ -42,13 +43,13 @@ def _ensure_volume(session: Session, now: datetime):
     if session.get(VolumeModel, "EXTERNAL_VOLUME") is None:
         session.add(
             VolumeModel(
-                id="EXTERNAL_VOLUME",
+                serial="EXTERNAL_VOLUME",
                 super_device_id="EXTERNAL_DEVICE",
                 name="EXTERNAL_VOLUME",
                 file_system="any",
                 add_time=now,
                 last_check_time=now,
-                state=DeviceState.HEALTHY,
+                state=VolumeState.HEALTHY,
                 capacity=0,
                 info="用于默认和缺省的类",
             )

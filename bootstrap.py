@@ -1,5 +1,4 @@
 import argparse
-from zipapp import create_archive
 from application.app import App
 from application.storage.device.device_factory import device_factory
 from application.storage.super_device.super_device_factory import super_device_factory
@@ -10,11 +9,13 @@ from infra.config.config import Config
 from infra.log.logger import setup_logging
 from infra.persistence.database import build_session_factory
 from infra.persistence.init_db import init_database
+from infra.persistence.storage.file_repository import file_repository
 from infra.persistence.storage.super_device_repository import super_device_repository
 from infra.persistence.storage.volume_repository import volume_repository
 from infra.persistence.storage.device_repository import device_repository
 from application.storage.device.device_service import device_service
 from infra.operate_log.operate_log import setup_event_logger
+from infra.system.storage.file.hash import file_hash
 
 import logging
 
@@ -37,9 +38,12 @@ def bootstrap(args: argparse.Namespace):
     super_device_repository_instance = super_device_repository(session_factory)
     super_device_service_instance = super_device_service(super_device_repository_instance)
     super_device_factory.set_super_device_repository(super_device_repository_instance)
-    
+
+    file_repository_instance = file_repository(session_factory)
+    file_hasher = file_hash(config)
+    file_service_instance = file_service(file_repository_instance, file_hasher)
+
     volume_repository_instance = volume_repository(session_factory)
-    file_service_instance = file_service()
     volume_service_instance = volume_service(
         volume_repository_instance,
         device_repository_instance,

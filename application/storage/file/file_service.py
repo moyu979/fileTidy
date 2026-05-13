@@ -6,13 +6,13 @@ from domain.storage.file.file_repo import file_repository_abc
 from domain.storage.file.file_source import file_source
 from domain.storage.volume.base import Volume
 from infra.system.storage.file.get_file_size import get_file_size
-from infra.system.storage.file.hash import get_md5, get_sha512
+from infra.system.storage.file.hash import file_hash
 
 
 class file_service:
-    def __init__(self,file_repo:file_repository_abc) -> None:
-        self.file_repo=file_repo
-        pass
+    def __init__(self, file_repo: file_repository_abc, hasher: file_hash) -> None:
+        self.file_repo = file_repo
+        self._hasher = hasher
 
     def reg_file_by_path(self, path: str | Path, volume: Volume) -> None:
         self.reg_file_source_by_path(path, volume)
@@ -20,8 +20,8 @@ class file_service:
     def reg_file_source_by_path(self, path: str | Path, volume: Volume) -> None:
         abs_path = Path(path).resolve()
         path_str = str(abs_path)
-        md5 = get_md5(path_str)
-        sha512 = get_sha512(path_str)
+        md5 = self._hasher.get_md5(path_str)
+        sha512 = self._hasher.get_sha512(path_str)
         size = get_file_size(path_str)
         add_time = datetime.now()
         from_path = path_str

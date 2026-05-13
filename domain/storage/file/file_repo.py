@@ -7,7 +7,7 @@ from domain.storage.super_device.base import SuperDevice
 
 
 class file_repository_abc(ABC):
-    def __init__(self) -> None:
+    def __init__(self,) -> None:
         pass
 
     def is_exist(self) -> bool:
