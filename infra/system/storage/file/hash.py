@@ -8,7 +8,7 @@ from typing import Optional
 from apps.common.config.config import config_manager
 
 
-def _md5_file(path: str) -> str:
+def get_md5(path: str) -> str:
     """
     计算文件的MD5哈希值
     
@@ -41,12 +41,12 @@ def _md5_file(path: str) -> str:
     except OSError as e:
         raise OSError(f"读取文件失败 {path}: {e}")
 
-def sha512_file(
+def get_sha512(
     file_path: str,
     *,
     max_mem_bytes: int = None,  # 512MB
     chunk_num: int = 8,       # 8MB
-    use_threads: bool = True,
+    use_threads: bool = False,
 ) -> str:
     """
     计算文件的 SHA-512 摘要，支持单线程 / 双线程，

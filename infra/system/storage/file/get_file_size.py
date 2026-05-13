@@ -1,7 +1,7 @@
 import os
 
 
-def get_size(path: str) -> int:
+def get_file_size(path: str) -> int:
     """
     获取文件的大小（字节计）
     

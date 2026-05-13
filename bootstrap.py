@@ -4,6 +4,7 @@ from application.app import App
 from application.storage.device.device_factory import device_factory
 from application.storage.super_device.super_device_factory import super_device_factory
 from application.storage.super_device.super_device_service import super_device_service
+from application.storage.file.file_service import file_service
 from application.storage.volume.volume_service import volume_service
 from infra.config.config import Config
 from infra.log.logger import setup_logging
@@ -38,7 +39,12 @@ def bootstrap(args: argparse.Namespace):
     super_device_factory.set_super_device_repository(super_device_repository_instance)
     
     volume_repository_instance = volume_repository(session_factory)
-    volume_service_instance = volume_service(volume_repository_instance, device_repository_instance)
+    file_service_instance = file_service()
+    volume_service_instance = volume_service(
+        volume_repository_instance,
+        device_repository_instance,
+        file_service_instance,
+    )
 
     app = App(device_service_instance, volume_service_instance,super_device_service_instance)
     
