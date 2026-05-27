@@ -1,5 +1,5 @@
 from domain.storage.super_device.base import SuperDevice
-from domain.storage.super_device.super_device_repo import super_device_repository_abc
+from domain.storage.super_device.repo import super_device_repository_abc
 from infra.persistence.database import session_scope
 from infra.persistence.models import DeviceStructureModel, RelationState, SuperDeviceModel
 
@@ -12,7 +12,7 @@ class super_device_repository(super_device_repository_abc):
         super_device_model = SuperDeviceModel(
             serial=super_device.serial,
             name=super_device.name,
-            type=super_device.type,
+            type=super_device.sdtype,
             need_all_devices_online=super_device.need_all_devices_online,
             add_time=super_device.add_time,
             last_check_time=super_device.last_check_time,
@@ -27,7 +27,7 @@ class super_device_repository(super_device_repository_abc):
         for device in super_device.devices:
             device_structure_model = DeviceStructureModel(
                 super_device_id=super_device.serial,
-                sub_device_id=device.serial,
+                sub_device_id=device,
                 add_time=super_device.add_time,
                 state=RelationState.USING,
                 info=super_device.info,

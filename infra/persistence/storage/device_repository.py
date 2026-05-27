@@ -1,5 +1,6 @@
 from domain.storage.device.base import Device
-from domain.storage.device.device_repo import device_repository_abc
+from domain.storage.device.repo import device_repository_abc
+from domain.storage.device.factory import device_from_dict
 from infra.persistence.database import session_scope
 from infra.persistence.models import DeviceModel
 
@@ -17,7 +18,7 @@ class device_repository(device_repository_abc):
         device_model = DeviceModel(
                 serial=device.serial,
                 name=device.name,
-                type=device.type,
+                type=device.dtype,
                 add_time=device.add_time,
                 last_check_time=device.last_check_time,
                 capacity=device.capacity,
@@ -28,14 +29,27 @@ class device_repository(device_repository_abc):
             session.add(device_model)
             session.commit()
             
-    def load_device(self, serial: str) -> Device:
+    def load_device(self, serial: str) -> Device | None:
         with session_scope(self.session_factory) as session:
             device_model = session.query(DeviceModel).filter(DeviceModel.serial == serial).first()
             if device_model is None:
                 return None
-            else:
-                # 将 load 的字段打包成字典再构造 Device
-                data = {
+            return device_from_dict({
+                "serial": device_model.serial,
+                "name": device_model.name,
+                "type": device_model.type,
+                "add_time": device_model.add_time,
+                "last_check_time": device_model.last_check_time,
+                "capacity": device_model.capacity,
+                "info": device_model.info,
+                "state": device_model.state,
+            })
+
+    def list_devices(self) -> list[Device]:
+        with session_scope(self.session_factory) as session:
+            device_models = session.query(DeviceModel).all()
+            return [
+                device_from_dict({
                     "serial": device_model.serial,
                     "name": device_model.name,
                     "type": device_model.type,
@@ -44,23 +58,6 @@ class device_repository(device_repository_abc):
                     "capacity": device_model.capacity,
                     "info": device_model.info,
                     "state": device_model.state,
-                }
-                return data
-
-    def list_devices(self) -> list:
-        with session_scope(self.session_factory) as session:
-            device_models = session.query(DeviceModel).all()
-            return [
-                Device(
-                    *[
-                        device_model.serial,  # serial
-                        device_model.name,  # name
-                        device_model.type,  # type
-                        device_model.add_time,  # add_time
-                        device_model.last_check_time,  # last_check_time
-                        device_model.capacity,  # capacity
-                        device_model.info,  # info
-                    ],
-                )
+                })
                 for device_model in device_models
             ]
