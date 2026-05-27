@@ -69,7 +69,22 @@ class super_device_service:
 
         self.super_device_repository.reg_super_device(super_device)
         log_event(SuperDeviceRegistered(super_device))
-        return device.to_json()
+        return super_device.to_json()
+
+    def load_super_device(
+        self,
+        serial: str | None = None,
+        super_device_path: str | None = None,
+    ) -> str | None:
+        if serial is None and super_device_path is not None:
+            serial = get_serial(super_device_path)
+        if serial is None:
+            return None
+        sd = self.super_device_repository.get_super_device(serial)
+        return sd.to_json() if sd else None
+
+    def list_super_devices(self) -> list[str]:
+        return [sd.to_json() for sd in self.super_device_repository.list_super_device()]
 
 
 
