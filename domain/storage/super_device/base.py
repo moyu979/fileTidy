@@ -11,18 +11,18 @@ class SuperDevice(ABC):
     def __init__(self,
         serial: str,
         name: str,
-        type: str,
+        sdtype: str,
         need_all_devices_online: bool,
         add_time: datetime,
         last_check_time: datetime,
         state: SuperDeviceState,
         capacity: int,
         info: str,
-        devices: list[Device],
+        devices: list[str],
     ) -> None:
         self.serial = serial
         self.name = name
-        self.type = type
+        self.sdtype = sdtype
         self.need_all_devices_online = need_all_devices_online
         self.add_time = add_time
         self.last_check_time = last_check_time
@@ -35,14 +35,14 @@ class SuperDevice(ABC):
         return {
             "serial": self.serial,
             "name": self.name,
-            "type": self.type,
+            "type": self.sdtype,
             "need_all_devices_online": self.need_all_devices_online,
             "add_time": self._ts(self.add_time),
             "last_check_time": self._ts(self.last_check_time),
             "state": self.state,
             "capacity": self.capacity,
             "info": self.info,
-            "devices": [d.to_snapshot() for d in self.devices],
+            "devices": list(self.devices),
         }
 
     def to_json(self) -> str:
