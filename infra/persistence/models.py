@@ -24,10 +24,6 @@ from domain.storage.volume.enum import VolumeState
 Base = declarative_base()
 
 # 定义枚举类
-
-
-
-# 定义枚举类
 class RelationState(enum.Enum):
     USING = "using" # 正在使用
     UNUSED = "unused" # 未使用，一般指代发生替换后之前的设备/卷

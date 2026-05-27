@@ -17,5 +17,7 @@ class SingleSuperDevice(SuperDevice):
         info: str,
         devices: list[str],
     ):
-        assert(len(devices)==1)
-        super().__init__(serial, name, type, need_all_devices_online, add_time, last_check_time, state, capacity, info, devices)
+        assert len(devices) == 1
+        super().__init__(serial, name, sdtype, need_all_devices_online,
+                         add_time, last_check_time, state, capacity, info, devices)
+        

@@ -16,4 +16,5 @@ class RaidzSuperDevice(SuperDevice):
         info: str,
         devices: list[str],
     ):
-        super().__init__(serial, name, sdtype, need_all_devices_online, add_time, last_check_time, state, capacity, info, devices)
+        super().__init__(serial, name, sdtype, need_all_devices_online,
+                         add_time, last_check_time, state, capacity, info, devices)

@@ -39,6 +39,7 @@ def bootstrap(args: argparse.Namespace):
     super_device_repository_instance = super_device_repository(session_factory)
     super_device_service_instance = super_device_service(super_device_repository_instance)
     super_device_factory.set_super_device_repository(super_device_repository_instance)
+    super_device_factory.set_device_repository(device_repository_instance)
 
     file_repository_instance = file_repository(session_factory)
     file_hasher = file_hash(config)
