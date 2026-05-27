@@ -142,7 +142,7 @@ class DeviceCLI(cmd.Cmd):
         if self._missing_service():
             return
         
-        target = input("请输入目标设备: 留空获取全部设备")
+        target = input("请输入目标设备: 留空获取全部设备\n")
         target = target if target else None
 
         if target is None:
