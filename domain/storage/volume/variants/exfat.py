@@ -4,7 +4,7 @@ from domain.storage.volume.base import Volume
 from domain.storage.volume.enum import VolumeState
 
 
-class NtfsVolume(Volume):
+class ExfatVolume(Volume):
     def __init__(
         self,
         serial: str,

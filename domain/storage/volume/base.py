@@ -9,23 +9,22 @@ from domain.storage.volume.enum import VolumeState
 
 
 class Volume(ABC):
-    def __init__(self,
+    def __init__(
+        self,
         serial: str,
-        super_device_id : DeviceBase|SuperDevice,
+        device_id: str,
         name: str,
-        add_time:datetime,
-        last_check_time:datetime,
-        state: str|VolumeState,
-        capacity: int|None,
-        unique_mount_point: str|None,
-        file_system:str,
-        info: str|None,
-        
-        volume_path: str|None,
+        add_time: datetime,
+        last_check_time: datetime,
+        state: str | VolumeState,
+        capacity: int | None,
+        unique_mount_point: str | None,
+        file_system: str,
+        info: str | None,
+        volume_path: str | None,
     ) -> None:
-
         self.serial = serial
-        self.super_device_id = super_device_id
+        self.device_id = device_id
         self.name = name
         self.add_time = add_time
         self.last_check_time = last_check_time
@@ -39,7 +38,7 @@ class Volume(ABC):
     def to_snapshot(self) -> dict:
         return {
             "serial": self.serial,
-            "super_device_id": self._super_device_id_snapshot(),
+            "super_device_id": self.device_id,
             "name": self.name,
             "add_time": self._ts(self.add_time),
             "last_check_time": self._ts(self.last_check_time),
@@ -66,13 +65,8 @@ class Volume(ABC):
             return o.value
         raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
 
-    def _super_device_id_snapshot(self) -> str:
-        sd = self.super_device_id
-        if isinstance(sd, (DeviceBase, SuperDevice)):
-            return sd.serial
-        return sd
-
-    def _ts(self, t):
+    @staticmethod
+    def _ts(t):
         if t is None:
             return None
         if hasattr(t, "isoformat"):

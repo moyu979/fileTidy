@@ -12,3 +12,9 @@ class volume_repository_abc(ABC):
 
     def reg_volume(self, volume: Volume) -> None:
         pass
+
+    def get_volume(self, volume_id:str)->Volume:
+        pass
+
+    def list_volume(self)->list[Volume]:
+        pass
