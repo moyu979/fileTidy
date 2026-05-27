@@ -1,7 +1,7 @@
 from datetime import datetime
 import logging
 
-from application.storage.super_device.super_device_factory import super_device_factory
+from application.storage.super_device.factory import super_device_factory
 from domain.storage.super_device.events import SuperDeviceRegistered
 from infra.operate_log.operate_log import log_event
 from domain.storage.super_device.enum import SuperDeviceState
@@ -20,7 +20,7 @@ class super_device_service:
 
     def reg_super_device(self, 
         name: str,
-        type: str,
+        sdtype: str,
         need_all_devices_online: bool,
         add_time: datetime,
         last_check_time: datetime,
@@ -32,7 +32,7 @@ class super_device_service:
         super_device_serial = generate_id("")
         if name is None:
             name = super_device_serial[:8]
-        if type is None:
+        if sdtype is None:
             raise ValueError("type is None")
         if need_all_devices_online is None:
             need_all_devices_online = True
@@ -57,7 +57,7 @@ class super_device_service:
         super_device = super_device_factory.new_super_device(
             serial=super_device_serial,
             name=name,
-            type=type,
+            sdtype=sdtype,
             need_all_devices_online=need_all_devices_online,
             add_time=add_time,
             last_check_time=last_check_time,
@@ -77,4 +77,5 @@ class super_device_service:
 
         
             
+    
     

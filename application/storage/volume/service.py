@@ -3,13 +3,13 @@ import shutil
 from pathlib import Path
 
 from application.storage.file.file_service import file_service
-from application.storage.volume.volume_factory import volume_factory
+from application.storage.volume.factory import volume_factory
 from domain.storage.device.base import Device as DeviceBase
 from domain.storage.volume.base import Volume
 from domain.storage.volume.enum import VolumeState
 from domain.storage.volume.events import VolumeRegistered
 from domain.storage.volume.volume_repo import volume_repository_abc as VolumeRepository
-from domain.storage.device.device_repo import device_repository_abc as DeviceRepository
+from domain.storage.device.repo import device_repository_abc as DeviceRepository
 from infra.operate_log.operate_log import log_event
 from infra.persistence.storage import device_repository
 from infra.system.storage.volume.get_file_system import get_file_system

@@ -1,7 +1,7 @@
 from datetime import datetime
 import logging
 import os
-from application.storage.device.device_factory import device_factory
+from application.storage.device.factory import device_factory
 from infra.system.storage.device.get_healthy import get_healthy
 from shared.time_defaults import LAST_CHECK_TIME_ORIGIN
 from domain.storage.device.base import Device
