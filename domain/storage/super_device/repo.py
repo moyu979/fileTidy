@@ -17,5 +17,5 @@ class super_device_repository_abc(ABC):
     def get_super_device(self,super_device_serial) -> SuperDevice:
         pass
 
-    def list_super_device(self) -> list(SuperDevice):
+    def list_super_device(self) -> list[SuperDevice]:
         pass
