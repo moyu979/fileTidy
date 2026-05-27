@@ -1,4 +1,7 @@
+from typing import Any
+
 from domain.storage.super_device.base import SuperDevice
+from domain.storage.super_device.factory import super_device_from_dict
 from domain.storage.super_device.repo import super_device_repository_abc
 from infra.persistence.database import session_scope
 from infra.persistence.models import DeviceStructureModel, RelationState, SuperDeviceModel
@@ -36,5 +39,50 @@ class super_device_repository(super_device_repository_abc):
         with session_scope(self.session_factory) as session:
             session.add_all(devices)
             session.commit()
+
+    @staticmethod
+    def _model_to_dict(model: SuperDeviceModel, device_ids: list[str]) -> dict[str, Any]:
+        return {
+            "serial": model.serial,
+            "name": model.name,
+            "type": model.type,
+            "need_all_devices_online": model.need_all_devices_online,
+            "add_time": model.add_time,
+            "last_check_time": model.last_check_time,
+            "state": model.state,
+            "capacity": model.capacity,
+            "info": model.info,
+            "devices": device_ids,
+        }
+
+    def get_super_device(self, super_device_serial: str) -> SuperDevice | None:
+        with session_scope(self.session_factory) as session:
+            model = session.query(SuperDeviceModel).filter(
+                SuperDeviceModel.serial == super_device_serial
+            ).first()
+            if model is None:
+                return None
+            structure_rows = session.query(DeviceStructureModel).filter(
+                DeviceStructureModel.super_device_id == super_device_serial,
+                DeviceStructureModel.state == RelationState.USING,
+            ).all()
+            device_ids = [row.sub_device_id for row in structure_rows]
+            data = self._model_to_dict(model, device_ids)
+            return super_device_from_dict(data)
+
+
+    def list_super_device(self) -> list[SuperDevice]:
+        with session_scope(self.session_factory) as session:
+            models = session.query(SuperDeviceModel).all()
+            result = []
+            for model in models:
+                structure_rows = session.query(DeviceStructureModel).filter(
+                    DeviceStructureModel.super_device_id == model.serial,
+                    DeviceStructureModel.state == RelationState.USING,
+                ).all()
+                device_ids = [row.sub_device_id for row in structure_rows]
+                data = self._model_to_dict(model, device_ids)
+                result.append(super_device_from_dict(data))
+            return result
             
     
