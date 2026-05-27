@@ -7,7 +7,7 @@ class TfSdCardDevice(Device):
     def __init__(self, 
     serial: str,
     name: str,
-    kind: str|None,
+    dtype: str|None,
     add_time,
     last_check_time,
     capacity: int|None,
@@ -17,7 +17,7 @@ class TfSdCardDevice(Device):
     ) -> None:
         super().__init__(serial, 
             name, 
-            kind, 
+            dtype, 
             add_time, 
             last_check_time, 
             capacity, 

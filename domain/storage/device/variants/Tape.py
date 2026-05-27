@@ -11,7 +11,7 @@ class TapeDevice(Device):
     def __init__(self, 
     serial: str,
     name: str,
-    kind: str|None,
+    dtype: str|None,
     add_time,
     last_check_time,
     capacity: int|None,
@@ -21,7 +21,7 @@ class TapeDevice(Device):
     ) -> None:
         super().__init__(serial, 
             name, 
-            kind, 
+            dtype, 
             add_time, 
             last_check_time, 
             capacity, 

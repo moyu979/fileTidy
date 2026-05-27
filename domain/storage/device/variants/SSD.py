@@ -7,7 +7,7 @@ class SsdDevice(Device):
     def __init__(self, 
     serial: str,
     name: str,
-    type: str|None,
+    dtype: str|None,
     add_time,
     last_check_time,
     capacity: int|None,
@@ -17,7 +17,7 @@ class SsdDevice(Device):
     ) -> None:
         super().__init__(serial, 
             name, 
-            type, 
+            dtype, 
             add_time, 
             last_check_time, 
             capacity, 
