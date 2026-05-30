@@ -7,7 +7,9 @@ import enum
 from datetime import datetime
 from re import sub
 from sqlalchemy import (
+    BigInteger,
     Column,
+    ForeignKey,
     Integer,
     PrimaryKeyConstraint,
     String,
@@ -19,14 +21,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 from domain.storage.device.enum import DeviceState
-from domain.storage.super_device.enum import SuperDeviceState
+from domain.storage.super_device.enum import SuperDeviceState, RelationState
 from domain.storage.volume.enum import VolumeState
 Base = declarative_base()
-
-# 定义枚举类
-class RelationState(enum.Enum):
-    USING = "using" # 正在使用
-    UNUSED = "unused" # 未使用，一般指代发生替换后之前的设备/卷
 
 
 class DeviceModel(Base):
@@ -43,7 +40,7 @@ class DeviceModel(Base):
     # 设备序列号，对于磁盘来说，是磁盘的序列号，对于磁带来说，是一个自动生成的id，需要手记一下
     serial = Column(String, primary_key=True)
     # 设备名称，一个方便记忆的名称
-    name = Column(String, unique=True, nullable=False)
+    name = Column(String, default="")
     # 设备类型，如硬盘、磁带、TF卡等
     type = Column(String)
     # 设备添加时间
@@ -51,10 +48,10 @@ class DeviceModel(Base):
     # 设备最后一次检查时间
     last_check_time = Column(DateTime, nullable=True)
     # 设备状态，如健康、故障等
-    state = Column(Enum(DeviceState), default=DeviceState.HEALTHY)
+    state = Column(Enum(DeviceState), default=DeviceState.UNKNOWN)
     # 设备容量（字节）
-    capacity = Column(Integer)
-    # 设备其他半格式化信息
+    capacity = Column(BigInteger)
+    # 设备其他半格式化信息，以json形式存储
     info = Column(Text, default="")
 
 class DeviceStructureModel(Base):
@@ -65,10 +62,10 @@ class DeviceStructureModel(Base):
     __table_args__ = (
         PrimaryKeyConstraint("super_device_id", "sub_device_id"),
     )
-    # 卷id
-    super_device_id = Column(String, nullable=False)
-    # 使用哪个设备
-    sub_device_id = Column(String, nullable=False)
+    # 超级设备 id
+    super_device_id = Column(String, ForeignKey("super_devices.serial"), nullable=False)
+    # 子设备 id（Device 的 serial）
+    sub_device_id = Column(String, ForeignKey("device.serial"), nullable=False)
     # 添加时间
     add_time = Column(DateTime, default=datetime.utcnow)
     # 状态，指是否还在使用这个映射关系
@@ -78,13 +75,11 @@ class DeviceStructureModel(Base):
 
 class SuperDeviceModel(Base):
     __tablename__ = "super_devices"
-    __table_args__ = (
-        PrimaryKeyConstraint("serial"),
-    )
+
     # 超级设备id
-    serial = Column(String, nullable=False)
+    serial = Column(String, primary_key=True)
     # 超级设备名称
-    name = Column(String, unique=True, nullable=False)
+    name = Column(String, default="")
     # 超级设备类型 如：磁带卷、硬盘卷、RAID5卷等
     type = Column(String)
     # 是否需要全部设备同时上线
@@ -96,7 +91,7 @@ class SuperDeviceModel(Base):
     # 超级设备状态，如健康、故障等
     state = Column(Enum(SuperDeviceState), default=SuperDeviceState.HEALTHY)
     # 超级设备容量（字节）
-    capacity = Column(Integer)
+    capacity = Column(BigInteger)
     # 超级设备其他信息
     info = Column(Text, default="")
 
@@ -109,19 +104,19 @@ class VolumeModel(Base):
     # 卷id  
     serial = Column(String, primary_key=True)
     # 建立在哪个设备上，可以是超设备或者设备
-    super_device_id = Column(String, nullable=False)
+    super_device_id = Column(String, ForeignKey("super_devices.serial"), nullable=False)
     # 卷名称，一个方便记忆的名称
-    name = Column(String, unique=True, nullable=False)
+    name = Column(String, default="")
     # 添加时间
     add_time = Column(DateTime, default=datetime.utcnow)
     # 最后一次检查时间
     last_check_time = Column(DateTime, nullable=True)
     # 卷状态，如健康、故障等
-    state = Column(Enum(VolumeState), default=VolumeState.HEALTHY)
+    state = Column(Enum(VolumeState), default=VolumeState.UNKNOWN)
     # 卷容量（字节）
-    capacity = Column(Integer)
+    capacity = Column(BigInteger)
     # 卷挂载点，一个唯一的挂载点，用于全局文件索引
-    unique_mount_point = Column(String, default="None")
+    unique_mount_point = Column(String, default="/unknown")
     # 卷文件系统类型，如ext4、xfs、btrfs等
     file_system = Column(String, default="")
     # 卷其他信息
@@ -131,12 +126,12 @@ class VolumeModel(Base):
 class SuperVolumeStructureModel(Base):
     __tablename__ = "super_volume_structures"
     __table_args__ = (
-        PrimaryKeyConstraint("superVolume_id", "volume_id"),
+        PrimaryKeyConstraint("super_volume_id", "volume_id"),
     )
-    # 超级卷id  
-    superVolume_id = Column(String, nullable=False)
-    # 卷id
-    volume_id = Column(String, unique=True, nullable=False)
+    # 超级卷 id
+    super_volume_id = Column(String, ForeignKey("super_volumes.id"), nullable=False)
+    # 卷 id
+    volume_id = Column(String, ForeignKey("volumes.serial"), unique=True, nullable=False)
     # 添加时间
     add_time = Column(DateTime, default=datetime.utcnow)
     # 状态，指是否还在使用这个映射关系
@@ -152,7 +147,7 @@ class SuperVolumeModel(Base):
     __tablename__ = "super_volumes"
 
     # 超级卷id
-    id = Column(String, primary_key=True)
+    serial = Column(String, primary_key=True)
     # 超级卷名称，一个方便记忆的名称
     name = Column(String, unique=True, nullable=False)
     # 超级卷类型，如单磁带卷、多磁带卷、RAID5卷等
@@ -228,7 +223,7 @@ class FileLocationsModel(Base):
     # 文件当前路径，除去卷路径和**/datas/**过渡路径
     now_path = Column(Text, nullable=False)
     # 文件当前所在的卷
-    now_volume = Column(String)
+    now_volume = Column(String, ForeignKey("volumes.serial"))
     # 文件状态，如健康、故障，密码丢失等
     state = Column(String, default="online")
     # 文件其他信息

@@ -1,5 +1,8 @@
 import enum
+
+
 class DeviceState(enum.Enum):
+    UNKNOWN = "unknown" # 刚接入，尚未检测健康状态
     HEALTHY = "healthy" # 正常使用的
     DANGER = "danger" # 危险，但是暂时可以使用，主要用来描述有坏道等隐患的设备
     FAULT = "fault" # 故障，无法使用

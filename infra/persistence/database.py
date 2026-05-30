@@ -1,8 +1,18 @@
 # infrastructure/persistence/db.py
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
+
+
+@event.listens_for(Engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, connection_record):
+    """SQLite 连接后自动开启外键约束。"""
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON;")
+    cursor.close()
+
 
 def build_session_factory(database_url: str):
     connect_args = {}
