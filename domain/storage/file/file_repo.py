@@ -1,9 +1,6 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 
-from domain.storage.device.base import Device
-from domain.storage.file.file_location import file_location
-from domain.storage.file.file_source import file_source
-from domain.storage.super_device.base import SuperDevice
+from domain.storage.file.new_file import NewFile
 
 
 class file_repository_abc(ABC):
@@ -13,6 +10,8 @@ class file_repository_abc(ABC):
     def is_exist(self) -> bool:
         pass
 
-    def reg_file(self, source: file_source,file_location:file_location) -> None:
+    def reg_file(self, new_file: NewFile) -> None:
         pass
+
+    
 

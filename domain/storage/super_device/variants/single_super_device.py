@@ -1,5 +1,4 @@
 import datetime
-from domain.storage.device.base import Device
 from domain.storage.super_device.base import SuperDevice
 from domain.storage.super_device.enum import SuperDeviceState
 

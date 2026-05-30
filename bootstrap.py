@@ -7,6 +7,7 @@ from application.storage.device.service import device_service
 from application.storage.file.file_service import file_service
 from application.storage.super_device.factory import super_device_factory
 from application.storage.super_device.service import super_device_service
+from application.storage.volume.factory import volume_factory
 from application.storage.volume.service import volume_service
 
 from infra.config.config import Config
@@ -18,6 +19,7 @@ from infra.persistence.storage.device_repository import device_repository
 from infra.persistence.storage.file_repository import file_repository
 from infra.persistence.storage.super_device_repository import super_device_repository
 from infra.persistence.storage.volume_repository import volume_repository
+# volume 系统操作已改为直接函数调用，不再需要 adapter
 from infra.system.storage.file.hash import file_hash
 
 logger = logging.getLogger(__name__)
@@ -32,14 +34,14 @@ def bootstrap(args: argparse.Namespace):
     setup_event_logger(config)
     logger.info("Bootstrap log completed")
 
+    # 设备 —— 仓库保持类实例，系统操作改为直接函数调用
     device_repository_instance = device_repository(session_factory)
     device_service_instance = device_service(device_repository_instance)
     device_factory.set_device_repository(device_repository_instance)
-    
+
     super_device_repository_instance = super_device_repository(session_factory)
-    super_device_service_instance = super_device_service(super_device_repository_instance)
-    super_device_factory.set_super_device_repository(super_device_repository_instance)
     super_device_factory.set_device_repository(device_repository_instance)
+    super_device_service_instance = super_device_service(super_device_repository_instance)
 
     file_repository_instance = file_repository(session_factory)
     file_hasher = file_hash(config)
@@ -48,12 +50,11 @@ def bootstrap(args: argparse.Namespace):
     volume_repository_instance = volume_repository(session_factory)
     volume_service_instance = volume_service(
         volume_repository_instance,
-        device_repository_instance,
         file_service_instance,
     )
 
-    app = App(device_service_instance, volume_service_instance,super_device_service_instance)
-    
+    app = App(device_service_instance, volume_service_instance, super_device_service_instance)
+
     logger.info("app bootstrap completed")
-    return app,config
+    return app, config
     

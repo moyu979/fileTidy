@@ -1,10 +1,8 @@
 from datetime import datetime
 from pathlib import Path
 
-from domain.storage.file.file_location import file_location
 from domain.storage.file.file_repo import file_repository_abc
-from domain.storage.file.file_source import file_source
-from domain.storage.volume.base import Volume
+from domain.storage.file.new_file import NewFile
 from infra.system.storage.file.get_file_size import get_file_size
 from infra.system.storage.file.hash import file_hash
 
@@ -14,46 +12,31 @@ class file_service:
         self.file_repo = file_repo
         self._hasher = hasher
 
-    def reg_file_by_path(self, path: str | Path, volume: Volume) -> None:
-        self.reg_file_source_by_path(path, volume)
+    def register_folder(
+        self,
+        folder_path: str,
+        volume_serial: str,
+        volume_path: str,
+    ) -> list[NewFile]:
+        """遍历文件夹下所有文件，生成 NewFile 并登记。"""
+        folder = Path(folder_path).resolve()
+        registered: list[NewFile] = []
 
-    def reg_file_source_by_path(self, path: str | Path, volume: Volume) -> None:
-        abs_path = Path(path).resolve()
-        path_str = str(abs_path)
-        md5 = self._hasher.get_md5(path_str)
-        sha512 = self._hasher.get_sha512(path_str)
-        size = get_file_size(path_str)
-        add_time = datetime.now()
-        from_path = path_str
-        state = "online"
-        info = ""
+        for fpath in sorted(folder.rglob("*"), key=lambda p: str(p)):
+            if not fpath.is_file():
+                continue
+            new_file = NewFile(
+                sha512=self._hasher.get_sha512(str(fpath)),
+                md5=self._hasher.get_md5(str(fpath)),
+                size=get_file_size(str(fpath)),
+                add_time=datetime.fromtimestamp(fpath.stat().st_mtime),
+                path=str(fpath),
+                volume_serial=volume_serial,
+                volume_path=volume_path,
+            )
+            self.file_repo.reg_file(new_file)
+            registered.append(new_file)
 
-        if not volume.volume_path:
-            raise ValueError("volume.volume_path 不能为空")
-        volume_root = Path(volume.volume_path).resolve()
-        # 卷内数据根目录（与 volume 初始化时的 data 目录一致）
-        data_root = volume_root / "data"
-        now_path: Path = abs_path.relative_to(data_root)
-        now_volume = volume.serial
+        return registered
 
-        file_s = file_source(
-            sha512=sha512,
-            md5=md5,
-            size=size,
-            add_time=add_time,
-            from_path=from_path,
-            state=state,
-            info=info,
-        )
-        file_loc = file_location(
-            sha512=sha512,
-            md5=md5,
-            size=size,
-            add_time=add_time,
-            now_path=now_path,
-            now_volume=now_volume,
-            state=state,
-            info=info,
-        )
-        self.file_repo.reg_file(file_s, file_loc)
-
+    

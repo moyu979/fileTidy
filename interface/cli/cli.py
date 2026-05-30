@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from interface.cli.device import DeviceCLI
 from interface.cli.super_device import SuperDeviceCLI
+from interface.cli.volume import VolumeCLI
 
 if TYPE_CHECKING:
     from application.app import App
@@ -34,6 +35,7 @@ class FileTidyCLI(cmd.Cmd):
     def __init__(self, app: "App | None" = None) -> None:
         super().__init__()
         self._device_cli = DeviceCLI(app=app)
+        self._volume_cli = VolumeCLI(app=app)
         self._super_device_cli = SuperDeviceCLI(app=app)
 
     def do_device(self, arg: str) -> None:
@@ -60,7 +62,20 @@ class FileTidyCLI(cmd.Cmd):
 
     def do_sdev(self, arg: str) -> None:
         """super_device 的简写"""
-        self.do_super_device(arg)
+        selvolume(self, arg: str) -> None:
+        """
+        进入卷管理子命令组
+
+        用法: volume
+        输入 'help' 查看卷相关命令
+        """
+        self._volume_cli.cmdloop()
+
+    def do_vol(self, arg: str) -> None:
+        """volume 的简写"""
+        self.do_volume(arg)
+
+    def do_f.do_super_device(arg)
 
     def do_quit(self, arg: str) -> bool | None:
         """退出程序"""

@@ -3,35 +3,57 @@ from enum import Enum
 from pathlib import Path
 
 
-class file_source:
+class NewFile:
+    """
+    代表一个正在被注册的新文件。
+    文件被放入卷时创建，内部同时持有来源视角（绝对路径）和位置视角（卷内相对路径），
+    由 repo 在持久化时拆分为 FileSourcesModel 和 FileLocationsModel 两条记录。
+    """
+
     def __init__(
         self,
-        sha512,
-        md5,
-        size,
+        sha512: str,
+        md5: str,
+        size: int,
         add_time,
-        from_path,
-        state,
-        info,
+        path: str | Path,
+        volume_serial: str,
+        volume_path: str | Path,
+        state: str = "online",
+        info: str = "",
     ) -> None:
         self.sha512 = sha512
         self.md5 = md5
         self.size = size
         self.add_time = add_time
-        self.from_path = from_path
         self.state = state
         self.info = info
+
+        # —— 来源视角 ——
+        self.from_path = path
+
+        # —— 位置视角 ——
+        abs_path = Path(path).resolve()
+        abs_volume_path = Path(volume_path).resolve()
+        data_root = abs_volume_path / "data"
+        self.now_path = abs_path.relative_to(data_root)
+        self.now_volume = volume_serial
 
     def to_snapshot(self) -> dict:
         from_path = self.from_path
         if isinstance(from_path, Path):
             from_path = from_path.as_posix()
+        now_path = self.now_path
+        if isinstance(now_path, Path):
+            now_path = now_path.as_posix()
         return {
             "sha512": self.sha512,
             "md5": self.md5,
             "size": self.size,
             "add_time": self._ts(self.add_time),
             "from_path": from_path,
+            "now_volume": self.now_volume,
+            "now_path": now_path,
             "state": self.state,
             "info": self.info,
         }

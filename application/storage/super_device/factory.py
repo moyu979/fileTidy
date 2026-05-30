@@ -1,23 +1,17 @@
 import datetime
 
-from infra.persistence.storage.device_repository import device_repository
 from domain.storage.device.base import Device
-from domain.storage.super_device.repo import super_device_repository_abc
 from domain.storage.super_device.factory import create_super_device
 from domain.storage.super_device.enum import SuperDeviceState
+from infra.persistence.storage.device_repository import device_repository as _DeviceRepo
 
 
 class super_device_factory:
 
-    super_device_repository: super_device_repository_abc
-    device_repository: device_repository
+    device_repository: _DeviceRepo | None = None
 
     @classmethod
-    def set_super_device_repository(cls, super_device_repository: super_device_repository_abc) -> None:
-        cls.super_device_repository = super_device_repository
-
-    @classmethod
-    def set_device_repository(cls, dr: device_repository) -> None:
+    def set_device_repository(cls, dr: _DeviceRepo) -> None:
         cls.device_repository = dr
 
     @classmethod
@@ -43,7 +37,7 @@ class super_device_factory:
             else:
                 device_items.append(device)
         for device_serial in device_items:
-            if cls.device_repository.load_device(device_serial) is None:
+            if cls.device_repository is None or cls.device_repository.load_device(device_serial) is None:
                 raise ValueError(f"子设备序列号 {device_serial} 不存在，无法创建超级设备")
         return create_super_device(
             serial=serial,

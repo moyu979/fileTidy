@@ -3,7 +3,6 @@ from abc import ABC
 from datetime import datetime
 from enum import Enum
 
-from domain.storage.device.base import Device
 from domain.storage.super_device.enum import SuperDeviceState
 
 

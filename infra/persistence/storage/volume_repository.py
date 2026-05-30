@@ -1,7 +1,7 @@
 from domain.storage.device.base import Device
 from domain.storage.super_device.base import SuperDevice
 from domain.storage.volume.base import Volume
-from domain.storage.volume.volume_repo import volume_repository_abc
+from domain.storage.volume.repo import volume_repository_abc
 from infra.persistence.database import session_scope
 from infra.persistence.models import VolumeModel
 

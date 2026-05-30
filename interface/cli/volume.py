@@ -1,7 +1,5 @@
 """
 卷管理子命令组
-
-与旧版 `DeviceManager` 相同的交互式命令骨架；底层能力随应用层接口逐步接入。
 """
 
 from __future__ import annotations
@@ -85,9 +83,69 @@ class VolumeCLI(cmd.Cmd):
         except Exception as e:
             print(f"\n初始化失败: {e}")
 
-    def reg_init(self, arg: str) -> None:
+    def do_reg(self, arg: str) -> None:
         """
-        将一个卷记录到数据库
+        将一个已经初始化过的卷记录到数据库，只需提供路径
         """
+        if self._missing_service():
+            return
 
-        pass
+        path = input("请输入卷路径: ").strip()
+        if not path:
+            print("错误: 路径不能为空。")
+            return
+
+        name_input = input("请输入卷名称（直接回车则使用序列号）: ").strip()
+        name = name_input if name_input else None
+
+        ump = input("请输入全局唯一挂载点标识 unique_mount_point（直接回车则留空）: ").strip()
+        unique_mount_point = ump if ump else None
+
+        from pathlib import Path as P
+        abs_path = str(P(path).resolve())
+
+        try:
+            result = self.app.volume_service.reg_volume(
+                path=abs_path,
+                name=name,
+                unique_mount_point=unique_mount_point,
+            )
+            print(f"\n登记成功: {result}")
+        except Exception as e:
+            print(f"\n登记失败: {e}")
+
+    def do_get(self, arg: str) -> None:
+        """
+        查询卷
+
+        用法: get
+        输入卷序列号查询，留空则列出全部。
+        """
+        if self._missing_service():
+            return
+
+        target = input("请输入卷序列号（留空则列出全部）: ").strip()
+        if not target:
+            self.do_list(arg)
+            return
+
+        volume = self.app.volume_service.get_volume(target)
+        if volume is None:
+            print("\n未找到该卷。")
+            return
+        print(f"\n{volume}")
+
+    def do_list(self, arg: str) -> None:
+        """
+        列出所有卷
+
+        用法: list
+        """
+        if self._missing_service():
+            return
+        volumes = self.app.volume_service.list_volumes()
+        if not volumes:
+            print("（无卷）")
+            return
+        for v in volumes:
+            print(v)

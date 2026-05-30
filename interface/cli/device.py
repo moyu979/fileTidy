@@ -1,7 +1,5 @@
 """
 设备子命令组
-
-与旧版 `DeviceManager` 相同的交互式命令骨架；底层能力随应用层接口逐步接入。
 """
 
 from __future__ import annotations
@@ -10,6 +8,7 @@ import cmd
 
 from application.app import App
 from infra.system.path_manager.is_path import is_path
+
 
 class DeviceCLI(cmd.Cmd):
     """设备相关命令行界面"""
@@ -50,7 +49,7 @@ class DeviceCLI(cmd.Cmd):
         """
         添加新设备
 
-        用法: add
+        用法: reg
         将提示您依次输入参数，直接敲回车表示使用默认值（None 或空）
         """
         if self._missing_service():
@@ -90,18 +89,18 @@ class DeviceCLI(cmd.Cmd):
                 "  4x — 磁带 LTO-x（例如 45 表示 LTO5，规则同系统：去掉所有字符 4 后的部分为代次）\n"
                 "  输入 None 或直接回车 — 不指定类型\n"
             )
-            device_type: str | None
-            
+            device_type: str | None = None
+
             code = input("请输入编号 (1/2/3/4…/None/回车): ").strip()
             if code == "" or code == "None":
                 device_type = None
-            if code == "1":
+            elif code == "1":
                 device_type = "ssd"
-            if code == "2":
+            elif code == "2":
                 device_type = "hdd"
-            if code == "3":
+            elif code == "3":
                 device_type = "tf_sd_card"
-            if code.startswith("4"):
+            elif code.startswith("4"):
                 device_type = f"Tape-lto{code.replace('4', '')}".lower()
             else:
                 print("无效输入，请按菜单输入 1、2、3、以 4 开头的磁带编号、None 或回车。")
@@ -115,7 +114,7 @@ class DeviceCLI(cmd.Cmd):
                 except ValueError:
                     print("警告: 容量格式不正确，将使用原输入值")
                     capacity = capacity_input
-                    
+
             try:
                 result = self.app.device_service.reg_device_by_info(
                     serial=serial,
@@ -136,13 +135,13 @@ class DeviceCLI(cmd.Cmd):
         """
         加载设备
 
-        用法: load
+        用法: get
         将提示您依次输入参数，直接敲回车表示使用默认值（None 或空）
         """
         if self._missing_service():
             return
-        
-        target = input("请输入目标设备: 留空获取全部设备\n")
+
+        target = input("请输入目标设备: 留空获取全部设备\n").strip()
         target = target if target else None
 
         if target is None:
@@ -152,16 +151,15 @@ class DeviceCLI(cmd.Cmd):
         if is_path(target):
             device = self.app.device_service.load_device(
                 device_path=target,
-                serial=None
+                serial=None,
             )
         else:
             device = self.app.device_service.load_device(
                 serial=target,
-                device_path=None
+                device_path=None,
             )
 
         print(f"\n成功加载设备: {device}")
-        
 
     def do_list(self, arg: str) -> None:
         """
