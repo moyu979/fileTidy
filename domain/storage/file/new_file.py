@@ -17,8 +17,8 @@ class NewFile:
         size: int,
         add_time,
         path: str | Path,
-        volume_serial: str,
-        volume_path: str | Path,
+        now_path: str | Path,
+        now_volume: str,
         state: str = "online",
         info: str = "",
     ) -> None:
@@ -33,11 +33,8 @@ class NewFile:
         self.from_path = path
 
         # —— 位置视角 ——
-        abs_path = Path(path).resolve()
-        abs_volume_path = Path(volume_path).resolve()
-        data_root = abs_volume_path / "data"
-        self.now_path = abs_path.relative_to(data_root)
-        self.now_volume = volume_serial
+        self.now_path = now_path
+        self.now_volume = now_volume
 
     def to_snapshot(self) -> dict:
         from_path = self.from_path

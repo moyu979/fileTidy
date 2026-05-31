@@ -51,6 +51,8 @@ def bootstrap(args: argparse.Namespace):
     volume_service_instance = volume_service(
         volume_repository_instance,
         file_service_instance,
+        device_repository_instance,
+        super_device_repository_instance,
     )
 
     app = App(device_service_instance, volume_service_instance, super_device_service_instance)

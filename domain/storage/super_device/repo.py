@@ -8,7 +8,7 @@ class super_device_repository_abc(ABC):
     def __init__(self) -> None:
         pass
 
-    def is_exist(self, device: Device) -> bool:
+    def is_exist(self, device: Device | str) -> bool:
         pass
 
     def reg_super_device(self, super_device: SuperDevice) -> None:
