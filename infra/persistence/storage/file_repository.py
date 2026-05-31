@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from domain.storage.file.file_repo import file_repository_abc
+from domain.storage.file.repo import file_repository_abc
 from domain.storage.file.new_file import NewFile
 from infra.persistence.database import session_scope
 from infra.persistence.models import FileLocationsModel, FileSourcesModel

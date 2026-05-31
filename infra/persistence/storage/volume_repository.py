@@ -7,7 +7,7 @@ from infra.persistence.models import VolumeModel
 
 
 class volume_repository(volume_repository_abc):
-    def __init__(self,session_factory) -> None:
+    def __init__(self, session_factory) -> None:
         self.session_factory = session_factory
         super().__init__()
 
@@ -16,14 +16,10 @@ class volume_repository(volume_repository_abc):
             return session.query(VolumeModel).filter(VolumeModel.serial == volume.serial).first() is not None
 
     def reg_volume(self, volume: Volume) -> None:
-        sd = volume.device_id
-        if isinstance(sd, (Device, SuperDevice)):
-            super_device_id = sd.serial
-        else:
-            super_device_id = sd
+
         volume_model = VolumeModel(
             serial=volume.serial,
-            super_device_id=super_device_id,
+            super_device_id=volume.device_id,
             name=volume.name,
             add_time=volume.add_time,
             last_check_time=volume.last_check_time,
