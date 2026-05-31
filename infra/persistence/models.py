@@ -36,7 +36,7 @@ class DeviceModel(Base):
     - 其他硬件设备
     主要用于提供操作硬件设备的抽象
     """
-    __tablename__ = "device"
+    __tablename__ = "devices"
     # 设备序列号，对于磁盘来说，是磁盘的序列号，对于磁带来说，是一个自动生成的id，需要手记一下
     serial = Column(String, primary_key=True)
     # 设备名称，一个方便记忆的名称
@@ -65,7 +65,7 @@ class DeviceStructureModel(Base):
     # 超级设备 id
     super_device_id = Column(String, ForeignKey("super_devices.serial"), nullable=False)
     # 子设备 id（Device 的 serial）
-    sub_device_id = Column(String, ForeignKey("device.serial"), nullable=False)
+    sub_device_id = Column(String, ForeignKey("devices.serial"), nullable=False)
     # 添加时间
     add_time = Column(DateTime, default=datetime.utcnow)
     # 状态，指是否还在使用这个映射关系
@@ -129,7 +129,7 @@ class SuperVolumeStructureModel(Base):
         PrimaryKeyConstraint("super_volume_id", "volume_id"),
     )
     # 超级卷 id
-    super_volume_id = Column(String, ForeignKey("super_volumes.id"), nullable=False)
+    super_volume_id = Column(String, ForeignKey("super_volumes.serial"), nullable=False)
     # 卷 id
     volume_id = Column(String, ForeignKey("volumes.serial"), unique=True, nullable=False)
     # 添加时间

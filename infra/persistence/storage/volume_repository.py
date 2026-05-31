@@ -16,7 +16,7 @@ class volume_repository(volume_repository_abc):
             return session.query(VolumeModel).filter(VolumeModel.serial == volume.serial).first() is not None
 
     def reg_volume(self, volume: Volume) -> None:
-        sd = volume.super_device_id
+        sd = volume.device_id
         if isinstance(sd, (Device, SuperDevice)):
             super_device_id = sd.serial
         else:
