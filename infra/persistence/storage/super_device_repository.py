@@ -10,7 +10,13 @@ class super_device_repository(super_device_repository_abc):
     def __init__(self,session_factory) -> None:
         self.session_factory = session_factory
         super().__init__()
-
+    def is_exist(self, super_device: SuperDevice | str) -> bool:
+        if isinstance(super_device, SuperDevice):
+            serial = super_device.serial
+        else:
+            serial = super_device
+        with session_scope(self.session_factory) as session:
+            return session.query(SuperDeviceModel).filter(SuperDeviceModel.serial == serial).first() is not None
     def reg_super_device(self, super_device: SuperDevice) -> None:
         super_device_model = SuperDeviceModel(
             serial=super_device.serial,
