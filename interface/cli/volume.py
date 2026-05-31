@@ -65,7 +65,7 @@ class VolumeCLI(cmd.Cmd):
         name = name_input if name_input else None
 
         ump_input = input(
-            "请输入全局唯一挂载点标识 unique_mount_point（直接回车则留空）: "
+            "请输入全局唯一挂载点标识 unique_mount_point（直接回车则默认为/unknown）: "
         ).strip()
         unique_mount_point = ump_input if ump_input else None
 

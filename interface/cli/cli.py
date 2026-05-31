@@ -62,20 +62,14 @@ class FileTidyCLI(cmd.Cmd):
 
     def do_sdev(self, arg: str) -> None:
         """super_device 的简写"""
-        selvolume(self, arg: str) -> None:
-        """
-        进入卷管理子命令组
+        self.do_super_device(arg)
 
-        用法: volume
-        输入 'help' 查看卷相关命令
-        """
+    def do_volume(self,arg: str) -> None:
         self._volume_cli.cmdloop()
 
     def do_vol(self, arg: str) -> None:
         """volume 的简写"""
         self.do_volume(arg)
-
-    def do_f.do_super_device(arg)
 
     def do_quit(self, arg: str) -> bool | None:
         """退出程序"""
