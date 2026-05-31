@@ -115,6 +115,24 @@ class DeviceCLI(cmd.Cmd):
                     print("警告: 容量格式不正确，将使用原输入值")
                     capacity = capacity_input
 
+            print(
+                "请选择设备状态:\n"
+                "  1 — UNKNOWN (未知，默认)\n"
+                "  2 — HEALTHY (健康)\n"
+                "  3 — DANGER (危险)\n"
+                "  4 — FAULT (故障)\n"
+                "  5 — REMOVED (已移除)\n"
+            )
+            state_code = input("请输入编号 (1-5，直接回车默认 1): ").strip()
+            state_map = {
+                "1": "UNKNOWN",
+                "2": "HEALTHY",
+                "3": "DANGER",
+                "4": "FAULT",
+                "5": "REMOVED",
+            }
+            state = state_map.get(state_code, "UNKNOWN")
+
             try:
                 result = self.app.device_service.reg_device_by_info(
                     serial=serial,
@@ -124,7 +142,7 @@ class DeviceCLI(cmd.Cmd):
                     last_check_time=None,
                     capacity=capacity,
                     info=info,
-                    state=None,
+                    state=state,
                     device_path=device_path,
                 )
                 print(f"\n成功登记设备: {result}")
