@@ -13,6 +13,7 @@ from infra.system.storage.device.get_type import get_type
 from infra.system.storage.device.get_capacity import get_capacity
 from infra.system.storage.device.get_healthy import get_healthy
 from shared.time_defaults import LAST_CHECK_TIME_ORIGIN
+from domain.storage.device.enum import DeviceState
 from domain.storage.device.events import DeviceRegistered
 from infra.operate_log.operate_log import log_event
 
@@ -68,6 +69,15 @@ class device_service:
         log_event(DeviceRegistered(device))
         return device.to_json()
 
+    @staticmethod
+    def _parse_state(state: str | None) -> DeviceState:
+        if state is None:
+            return DeviceState.UNKNOWN
+        try:
+            return DeviceState[state.upper()]
+        except KeyError:
+            return DeviceState.UNKNOWN
+
     def reg_device_by_info(
         self,
         serial: str,
@@ -87,6 +97,10 @@ class device_service:
         if last_check_time is None:
             last_check_time = LAST_CHECK_TIME_ORIGIN
 
+        state = self._parse_state(state)
+
+        if device_path:
+            device_path = os.path.abspath(device_path)
         device = device_factory.new_device(
             serial=serial,
             name=name,
