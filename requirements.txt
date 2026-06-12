@@ -1,0 +1,19 @@
+# ============================================
+# fileTidy - Python Dependencies
+# Generated from conda env "fileTidy"
+# ============================================
+
+# --- Web API ---
+fastapi>=0.136.0
+uvicorn>=0.44.0
+
+# --- Database ---
+SQLAlchemy>=2.0.45
+
+# --- Configuration ---
+PyYAML>=6.0.3
+
+# --- File / Image Processing ---
+Pillow>=12.1.0
+numpy>=2.0.0
+python-barcode>=0.16.1
