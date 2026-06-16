@@ -1,9 +1,7 @@
-from domain.storage.device.base import Device
-from domain.storage.super_device.base import SuperDevice
 from domain.storage.volume.base import Volume
 from domain.storage.volume.repo import volume_repository_abc
 from infra.persistence.database import session_scope
-from infra.persistence.models import VolumeModel
+from infra.persistence.models import DeviceModel, SuperDeviceModel, VolumeModel
 
 
 class volume_repository(volume_repository_abc):
@@ -16,7 +14,6 @@ class volume_repository(volume_repository_abc):
             return session.query(VolumeModel).filter(VolumeModel.serial == volume.serial).first() is not None
 
     def reg_volume(self, volume: Volume) -> None:
-
         volume_model = VolumeModel(
             serial=volume.serial,
             super_device_id=volume.device_id,
@@ -32,6 +29,23 @@ class volume_repository(volume_repository_abc):
             info=volume.info if volume.info is not None else "",
         )
         with session_scope(self.session_factory) as session:
+            # 兜底校验：super_device_id 必须是存在的 Device 或 SuperDevice
+            device_exists = (
+                session.query(DeviceModel)
+                .filter(DeviceModel.serial == volume.device_id)
+                .first()
+                is not None
+            )
+            super_device_exists = (
+                session.query(SuperDeviceModel)
+                .filter(SuperDeviceModel.serial == volume.device_id)
+                .first()
+                is not None
+            )
+            if not device_exists and not super_device_exists:
+                raise ValueError(
+                    f"super_device_id '{volume.device_id}' 既不是有效 Device，也不是有效 SuperDevice"
+                )
             session.add(volume_model)
             session.commit()
 

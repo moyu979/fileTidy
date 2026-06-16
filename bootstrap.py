@@ -7,6 +7,8 @@ from application.storage.device.service import device_service
 from application.storage.file.file_service import file_service
 from application.storage.super_device.factory import super_device_factory
 from application.storage.super_device.service import super_device_service
+from application.storage.super_volume.factory import super_volume_factory
+from application.storage.super_volume.service import super_volume_service
 from application.storage.volume.factory import volume_factory
 from application.storage.volume.service import volume_service
 
@@ -18,6 +20,7 @@ from infra.persistence.init_db import init_database
 from infra.persistence.storage.device_repository import device_repository
 from infra.persistence.storage.file_repository import file_repository
 from infra.persistence.storage.super_device_repository import super_device_repository
+from infra.persistence.storage.super_volume_repo import super_Volume_repository
 from infra.persistence.storage.volume_repository import volume_repository
 # volume 系统操作已改为直接函数调用，不再需要 adapter
 from infra.system.storage.file.hash import file_hash
@@ -55,7 +58,19 @@ def bootstrap(args: argparse.Namespace):
         super_device_repository_instance,
     )
 
-    app = App(device_service_instance, volume_service_instance, super_device_service_instance)
+    super_volume_repository_instance = super_Volume_repository(session_factory)
+    super_volume_factory.set_volume_repository(volume_repository_instance)
+    super_volume_service_instance = super_volume_service(
+        super_volume_repository_instance,
+        volume_repository_instance,
+    )
+
+    app = App(
+        device_service_instance,
+        volume_service_instance,
+        super_device_service_instance,
+        super_volume_service_instance,
+    )
 
     logger.info("app bootstrap completed")
     return app, config

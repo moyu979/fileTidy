@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 import shutil
 from pathlib import Path
@@ -6,10 +5,7 @@ from pathlib import Path
 from application.storage.file.file_service import file_service
 from application.storage.volume.factory import volume_factory
 from domain.storage.device.repo import device_repository_abc as DeviceRepository
-from domain.storage.super_device.enum import SuperDeviceState
-from domain.storage.super_device.events import SuperDeviceRegistered
 from domain.storage.super_device.repo import super_device_repository_abc as SuperDeviceRepository
-from domain.storage.super_device.variants.single_super_device import SingleSuperDevice
 from domain.storage.volume.base import Volume
 from domain.storage.volume.enum import VolumeState
 from domain.storage.volume.events import VolumeRegistered
@@ -42,37 +38,17 @@ class volume_service:
     # ── 内部辅助 ──────────────────────────────────────────────
 
     def _resolve_super_device_id(self, super_device_id: str, add_time) -> str:
-        """如果 super_device_id 对应的是 Device，则自动创建 SuperDevice 并返回新 serial。"""
-        # 查 super_devices 表 → 存在就直接用
-        print("111")
+        """校验 super_device_id 是有效的 Device 或 SuperDevice，不自动升级。"""
         if self.super_device_repository.is_exist(super_device_id):
             return super_device_id
 
-        # 查 devices 表 → 存在则升级
-        if not self.device_repository.is_exist(super_device_id):
-            raise ValueError(
-                f"无法解析 super_device_id '{super_device_id}'："
-                f"该 ID 既不是 SuperDevice，也不是 Device"
-            )
+        if self.device_repository.is_exist(super_device_id):
+            return super_device_id
 
-        dev = self.device_repository.load_device(super_device_id)
-
-        new_serial = generate_id(suffix="")
-        new_sd = SingleSuperDevice(
-            serial=new_serial,
-            name="",
-            sdtype="single",
-            need_all_devices_online=False,
-            add_time=add_time,
-            last_check_time=dev.last_check_time,
-            state=SuperDeviceState.HEALTHY,
-            capacity=-1,
-            info=json.dumps({"from": "auto generate"}, ensure_ascii=False),
-            devices=[super_device_id],
+        raise ValueError(
+            f"无法解析 super_device_id '{super_device_id}'："
+            f"该 ID 既不是 SuperDevice，也不是 Device"
         )
-        self.super_device_repository.reg_super_device(new_sd)
-        log_event(SuperDeviceRegistered(new_sd))
-        return new_serial
 
     def _build_and_save_volume(
         self,

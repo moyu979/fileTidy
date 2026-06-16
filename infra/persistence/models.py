@@ -22,6 +22,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base
 from domain.storage.device.enum import DeviceState
 from domain.storage.super_device.enum import SuperDeviceState, RelationState
+from domain.storage.super_volume.enum import SuperVolumeState
 from domain.storage.volume.enum import VolumeState
 Base = declarative_base()
 
@@ -103,8 +104,8 @@ class VolumeModel(Base):
 
     # 卷id  
     serial = Column(String, primary_key=True)
-    # 建立在哪个设备上，可以是超设备或者设备
-    super_device_id = Column(String, ForeignKey("super_devices.serial"), nullable=False)
+    # 建立在哪个设备上，可以是设备(device)或者超级设备(super device)
+    super_device_id = Column(String, nullable=False)
     # 卷名称，一个方便记忆的名称
     name = Column(String, default="")
     # 添加时间
@@ -159,7 +160,7 @@ class SuperVolumeModel(Base):
     # 最后一次检查时间
     last_check_time = Column(DateTime, nullable=True)
     # 超级卷状态，如健康、故障等
-    state = Column(Enum(DeviceState), default=DeviceState.HEALTHY)
+    state = Column(Enum(SuperVolumeState), default=SuperVolumeState.HEALTHY)
     # 超级卷其他信息
     info = Column(Text, default="")
 

@@ -1,8 +1,10 @@
 from datetime import datetime
 from pathlib import Path
 
+from domain.storage.file.events import FileRegistered
 from domain.storage.file.repo import file_repository_abc
 from domain.storage.file.new_file import NewFile
+from infra.operate_log.operate_log import log_event
 from infra.system.storage.file.get_file_size import get_file_size
 from infra.system.storage.file.hash import file_hash
 
@@ -41,7 +43,7 @@ class file_service:
             )
             self.file_repo.reg_file(new_file)
             registered.append(new_file)
-
+            log_event(FileRegistered(new_file))
         return registered
 
     

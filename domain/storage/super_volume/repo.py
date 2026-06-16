@@ -1,6 +1,7 @@
 from abc import ABC
 
 from domain.storage.super_volume.base import SuperVolume
+from domain.storage.super_volume.structure import SuperVolumeStructure
 
 
 class super_volume_repository_abc(ABC):
@@ -17,4 +18,11 @@ class super_volume_repository_abc(ABC):
         pass
 
     def list_super_volume(self) -> list[SuperVolume]:
+        pass
+
+    def add_volumes(
+        self,
+        structures: list[SuperVolumeStructure],
+    ) -> None:
+        """向已存在的超级卷添加一批子卷关联。"""
         pass
