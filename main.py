@@ -52,9 +52,9 @@ def build_parser() -> argparse.ArgumentParser:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = build_parser()
     args = parser.parse_args(argv)
-    # 去重且保持顺序；未传 --mode 时与旧行为一致，默认只启动 api
+    # 去重；未传 --mode 时与旧行为一致，默认只启动 cli
     if args.modes:
-        args.modes = list(dict.fromkeys(args.modes))
+        args.modes = list(set(args.modes))
     else:
         args.modes = ["cli"]
     args.data_dir = args.data_dir.expanduser().resolve()
