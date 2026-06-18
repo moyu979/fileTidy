@@ -114,6 +114,60 @@ class VolumeCLI(cmd.Cmd):
         except Exception as e:
             print(f"\n登记失败: {e}")
 
+    def do_register_volume_by_csv(self, arg: str) -> None:
+        """
+        通过 CSV 文件登记卷及其文件记录
+
+        用法: register_volume_by_csv
+        输入卷路径和 CSV 文件路径，CSV 须包含列: sha256, hash, size, path
+        不校验挂载点，适用于卷已卸载的场景。
+        """
+        if self._missing_service():
+            return
+
+        path = input("请输入卷路径: ").strip()
+        if not path:
+            print("错误: 路径不能为空。")
+            return
+
+        csv_path = input("请输入 CSV 文件路径: ").strip()
+        if not csv_path:
+            print("错误: CSV 文件路径不能为空。")
+            return
+
+        name_input = input("请输入卷名称（直接回车则使用序列号）: ").strip()
+        name = name_input if name_input else None
+
+        ump = input("请输入全局唯一挂载点标识 unique_mount_point（直接回车则留空）: ").strip()
+        unique_mount_point = ump if ump else None
+
+        info_input = input("请输入卷备注/其他信息（直接回车则留空）: ").strip()
+        info = info_input if info_input else ""
+
+        from pathlib import Path as P
+        abs_path = str(P(path).resolve())
+        abs_csv = str(P(csv_path).resolve())
+
+        try:
+            import pandas as pd
+            df = pd.read_csv(abs_csv)
+            required = {"sha256", "hash", "size", "path"}
+            missing = required - set(df.columns)
+            if missing:
+                print(f"错误: CSV 缺少必要列: {missing}")
+                return
+
+            result = self.app.volume_service.register_volume_by_csv(
+                path=abs_path,
+                df=df,
+                name=name,
+                unique_mount_point=unique_mount_point,
+                info=info,
+            )
+            print(f"\n登记成功: {result}")
+        except Exception as e:
+            print(f"\n登记失败: {e}")
+
     def do_get(self, arg: str) -> None:
         """
         查询卷

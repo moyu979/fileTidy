@@ -13,6 +13,7 @@ from .models import (
 )
 from domain.storage.device.enum import DeviceState
 from domain.storage.super_device.enum import RelationState, SuperDeviceState
+from domain.storage.super_volume.enum import SuperVolumeState
 
 def seed_defaults(session: Session):
     """
@@ -106,7 +107,7 @@ def _ensure_supervolume(session: Session, now: datetime):
                 type="single",
                 add_time=now,
                 last_check_time=now,
-                state=DeviceState.HEALTHY,
+                state=SuperVolumeState.HEALTHY,
                 info="用于默认和缺省的类",
             )
         )

@@ -70,9 +70,11 @@ class device_service:
         return device.to_json()
 
     @staticmethod
-    def _parse_state(state: str | None) -> DeviceState:
+    def _parse_state(state: str | DeviceState | None) -> DeviceState:
         if state is None:
             return DeviceState.UNKNOWN
+        if isinstance(state, DeviceState):
+            return state
         try:
             return DeviceState[state.upper()]
         except KeyError:
@@ -87,7 +89,7 @@ class device_service:
         last_check_time: datetime | None,
         capacity: int | None,
         info: str | None,
-        state: str | None,
+        state: str | DeviceState | None,
         device_path: str | None,
     ) -> str:
         if name is None:

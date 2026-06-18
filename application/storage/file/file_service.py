@@ -1,6 +1,8 @@
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
+
 from domain.storage.file.events import FileRegistered
 from domain.storage.file.repo import file_repository_abc
 from domain.storage.file.new_file import NewFile
@@ -44,6 +46,46 @@ class file_service:
             self.file_repo.reg_file(new_file)
             registered.append(new_file)
             log_event(FileRegistered(new_file))
+        return registered
+
+    def register_by_csv(
+        self,
+        df: pd.DataFrame,
+        volume_serial: str,
+        volume_path: str,
+    ) -> list[NewFile]:
+        """通过 DataFrame 登记文件记录。
+
+        DataFrame 必须包含列: sha256, hash, size, path
+        - sha256: 文件的 SHA-256 哈希（存入 sha512 字段）
+        - hash:   文件的 MD5 哈希
+        - size:   文件大小（字节）
+        - path:   文件的绝对路径
+        """
+        data_root = Path(volume_path).resolve()
+        registered: list[NewFile] = []
+        add_time = datetime.now()
+
+        for _, row in df.iterrows():
+            abs_path = str(row["path"])
+            try:
+                now_path = str(Path(abs_path).relative_to(data_root).as_posix())
+            except ValueError:
+                now_path = str(Path(abs_path).name)
+
+            new_file = NewFile(
+                sha512=str(row["sha256"]),
+                md5=str(row["hash"]),
+                size=int(row["size"]),
+                add_time=add_time,
+                path=abs_path,
+                now_path=now_path,
+                now_volume=volume_serial,
+            )
+            self.file_repo.reg_file(new_file)
+            registered.append(new_file)
+            log_event(FileRegistered(new_file))
+
         return registered
 
     

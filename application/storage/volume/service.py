@@ -2,6 +2,8 @@ from datetime import datetime
 import shutil
 from pathlib import Path
 
+import pandas as pd
+
 from application.storage.file.file_service import file_service
 from application.storage.volume.factory import volume_factory
 from domain.storage.device.repo import device_repository_abc as DeviceRepository
@@ -59,7 +61,7 @@ class volume_service:
         info: str,
         unique_mount_point: str | None,
     ) -> Volume:
-        """构造 Volume 对象、写入仓库、打事件日志，并遍历注册文件。"""
+        """构造 Volume 对象、写入仓库、打事件日志（不含文件注册）。"""
         super_device_id = get_super_device_id(str(base))
         add_time = datetime.now()
         last_check_time = LAST_CHECK_TIME_ORIGIN
@@ -86,15 +88,6 @@ class volume_service:
 
         self.volume_repository.reg_volume(volume)
         log_event(VolumeRegistered(volume))
-
-        # 注册 datas 下所有文件
-        datas_dir = base / "datas"
-        if datas_dir.is_dir():
-            self.file_service.register_folder(
-                folder_path=str(datas_dir),
-                volume_serial=volume.serial,
-                volume_path=str(datas_dir),
-            )
 
         return volume
 
@@ -132,13 +125,24 @@ class volume_service:
         meta_dir.mkdir()
         (meta_dir / serial).touch()
 
-        return self._build_and_save_volume(
+        volume = self._build_and_save_volume(
             serial=serial,
             base=base,
             name=name or serial,
             info=info,
             unique_mount_point=unique_mount_point,
         )
+
+        # 注册 datas 下所有文件
+        datas_dir = base / "datas"
+        if datas_dir.is_dir():
+            self.file_service.register_folder(
+                folder_path=str(datas_dir),
+                volume_serial=volume.serial,
+                volume_path=str(datas_dir),
+            )
+
+        return volume
 
     # ── 登记已有卷 ────────────────────────────────────────────
 
@@ -177,6 +181,69 @@ class volume_service:
             info="",
             unique_mount_point=unique_mount_point,
         )
+
+        # 注册 datas 下所有文件
+        datas_dir = base / "datas"
+        if datas_dir.is_dir():
+            self.file_service.register_folder(
+                folder_path=str(datas_dir),
+                volume_serial=volume.serial,
+                volume_path=str(datas_dir),
+            )
+
+        return volume.to_json()
+
+    # ── 通过 CSV 登记 ────────────────────────────────────────
+
+    def register_volume_by_csv(
+        self,
+        path: str,
+        df: pd.DataFrame,
+        name: str | None = None,
+        unique_mount_point: str | None = None,
+        info: str = "",
+    ) -> str:
+        """通过 DataFrame 登记卷及其文件记录。
+
+        卷信息由参数直接传入，文件信息由 DataFrame 提供。
+        DataFrame 必须包含列: sha256, hash, size, path
+        不校验挂载点，适用于卷已卸载的场景。
+        """
+        base = Path(path).resolve()
+        datas_dir = base / "datas"
+        meta_dir = base / "meta"
+
+        if not datas_dir.is_dir():
+            raise ValueError("卷目录下缺少 datas 文件夹")
+        if not meta_dir.is_dir():
+            raise ValueError("卷目录下缺少 meta 文件夹")
+
+        actual_dirs = {p.name for p in base.iterdir() if p.is_dir()}
+        expected = {"datas", "meta"}
+        if extra := actual_dirs - expected:
+            raise ValueError(f"卷目录下只能有 datas 和 meta，发现多余项: {extra}")
+
+        meta_files = [f for f in meta_dir.iterdir() if f.is_file()]
+        if len(meta_files) != 1:
+            raise ValueError(f"meta 目录下应当只有一个文件作为序列号，发现 {len(meta_files)} 个")
+        serial = meta_files[0].name
+
+        # 只登记卷（不含文件遍历）
+        volume = self._build_and_save_volume(
+            serial=serial,
+            base=base,
+            name=name or serial,
+            info=info,
+            unique_mount_point=unique_mount_point,
+        )
+
+        # 通过 DataFrame 登记文件
+        self.file_service.register_by_csv(
+            df=df,
+            volume_serial=volume.serial,
+            volume_path=str(datas_dir),
+        )
+
         return volume.to_json()
 
     # ── 查询 ────────────────────────────────────────────────
