@@ -45,3 +45,5 @@ class file_repository(file_repository_abc):
         with session_scope(self.session_factory) as session:
             session.add(source_row)
             session.merge(location_row)
+
+

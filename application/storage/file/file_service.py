@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from domain.storage.file.events import FileRegistered
+from domain.storage.file.events import FileCopied, FileMoved, FileRegistered
 from domain.storage.file.repo import file_repository_abc
 from domain.storage.file.new_file import NewFile
 from infra.operate_log.operate_log import log_event
@@ -87,5 +87,45 @@ class file_service:
             log_event(FileRegistered(new_file))
 
         return registered
+
+    # ── TODO: moveFile ─────────────────────────────────────────
+
+    def moveFile(self, source_path: str, target_path: str) -> None:
+        """移动文件：将文件从 source_path 移动到 target_path。
+
+        待实现步骤：
+        1. 通过 source_path 查询其所在卷的卷号（volume_serial）
+           — 可借助 infra.system.storage.volume 模块或 volume_repo 根据
+             mount point / volume_path 反查卷号。
+        2. 通过 target_path 查询目标卷的卷号（target_volume_serial）。
+        3. 在数据库中更新该文件的记录：
+           - now_path → target_path（相对于目标卷的卷内相对路径）
+           - now_volume → target_volume_serial
+           - 使用 self.file_repo 提供的方法更新。
+        4. 使用 log_event(FileMoved(...)) 记录操作日志。
+        """
+        # TODO: 待实现
+        raise NotImplementedError("moveFile 尚未实现")
+
+    # ── TODO: copyFile ─────────────────────────────────────────
+
+    def copyFile(self, source_path: str, target_path: str) -> None:
+        """复制文件：将 source_path 的文件复制到 target_path。
+
+        待实现步骤：
+        1. 通过 source_path 查询源文件的数据库记录（获取 sha512、md5、size 等信息）。
+        2. 通过 source_path 查询其所在卷的卷号（source_volume_serial）。
+        3. 通过 target_path 查询目标卷的卷号（target_volume_serial）。
+        4. 构造一个新的 NewFile 对象：
+           - sha512/md5/size 沿用源文件的值
+           - path → source_path（来源绝对路径）
+           - now_path → target_path（相对于目标卷的卷内相对路径）
+           - now_volume → target_volume_serial
+           - add_time → datetime.now()
+        5. 使用 self.file_repo.reg_file() 新增记录。
+        6. 使用 log_event(FileCopied(...)) 记录操作日志。
+        """
+        # TODO: 待实现
+        raise NotImplementedError("copyFile 尚未实现")
 
     

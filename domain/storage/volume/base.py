@@ -1,8 +1,9 @@
 import json
-from abc import ABC
+from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
 
+from domain.storage.file.new_file import NewFile
 from domain.storage.super_device.base import SuperDevice
 from domain.storage.volume.enum import VolumeState
 
@@ -63,6 +64,47 @@ class Volume(ABC):
         if isinstance(o, Enum):
             return o.value
         raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+
+    # ── 卷内文件查询 / 扫描（repo 由调用方传入）──────────────
+
+    @abstractmethod
+    def list_files(
+        self,
+        repo,
+        directory: str = "/",
+    ) -> list[NewFile]:
+        """列出本卷在数据库中记录的文件。
+
+        委托给传入的 repo 实现，避免 Volume 构造时绑定具体 repo。
+
+        Args:
+            repo: volume_repository_abc 实现，用于执行数据库查询。
+            directory: 卷内相对路径，默认 "/" 表示全部。
+
+        Returns:
+            list[NewFile]: 匹配的文件列表。
+        """
+        ...
+
+    @abstractmethod
+    def scan_files(
+        self,
+        repo,
+        directory: str = "/",
+    ) -> tuple[list[NewFile], list[NewFile]]:
+        """扫描本卷在磁盘上实际存在的文件，交叉比对后返回两组结果。
+
+        委托给传入的 repo 实现。Volume 自身不持有任何 repo 引用。
+
+        Args:
+            repo: volume_repository_abc 实现。
+            directory: 卷内相对路径，默认 "/" 表示 datas 下全部。
+
+        Returns:
+            tuple[list[NewFile], list[NewFile]]:
+                (存在于数据库的文件列表, 不存在于数据库的文件列表)
+        """
+        ...
 
     @staticmethod
     def _ts(t):

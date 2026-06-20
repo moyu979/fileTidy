@@ -59,10 +59,10 @@ def main():
     SERIAL_PREFIX = "20260220165613"
     ADD_TIME = _parse_addtime("20260220165613")
     LAST_CHECK_TIME = LAST_CHECK_TIME_ORIGIN  # 使用跨层约定的未巡检占位时间
-    CAPACITY = 1500 * 1024 * 1024 * 1024  # 1500 GiB
+    CAPACITY = 1500 * 1000 * 1000 * 1000  # 1.5 TB (1000进制)
     DEVICE_TYPE = "lto5"
     DEVICE_NAME_PREFIX = "LTO5-Tape"
-    INFO = "批量注册脚本自动创建"
+    INFO = "{}"
     STATE = DeviceState.UNKNOWN
 
     total = 24

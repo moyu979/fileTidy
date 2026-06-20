@@ -2,9 +2,17 @@
 ID 生成器，基于时间戳生成唯一ID
 """
 
+import argparse
 import time
 import threading
 from datetime import datetime
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Generate a timestamp-based unique ID")
+    parser.add_argument("suffix", nargs="?", default="", help="Optional suffix for the ID")
+    args = parser.parse_args()
+    print(generate_id(args.suffix))
 
 
 class IDGenerator:
@@ -82,6 +90,10 @@ def generate_id(suffix=""):
         str: 生成的ID，格式：YYYYMMDDHHmmss_sequence 或 YYYYMMDDHHmmss_sequence_suffix
     """
     return IDGenerator.generate(suffix=suffix)
+
+
+if __name__ == "__main__":
+    main()
 
 
 __all__ = [

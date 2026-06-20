@@ -17,12 +17,20 @@ import os
 import sys
 from pathlib import Path
 
+# 每次读取的块大小（字节），可通过环境变量 `GEN_CSV_CHUNK` 调整
+# 推荐默认值 4MiB：在大多数场景下能平衡系统调用和内存占用。
+DEFAULT_CHUNK = 512 * 1024 * 1024
+try:
+    CHUNK_SIZE = int(os.environ.get("GEN_CSV_CHUNK", DEFAULT_CHUNK))
+except Exception:
+    CHUNK_SIZE = DEFAULT_CHUNK
+
 
 def sha256_of(path: str) -> str:
     """计算文件的 SHA-256 摘要。"""
     h = hashlib.sha256()
     with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(64 * 1024), b""):
+        for chunk in iter(lambda: f.read(CHUNK_SIZE), b""):
             h.update(chunk)
     return h.hexdigest()
 
@@ -31,7 +39,7 @@ def md5_of(path: str) -> str:
     """计算文件的 MD5 摘要。"""
     h = hashlib.md5()
     with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(64 * 1024), b""):
+        for chunk in iter(lambda: f.read(CHUNK_SIZE), b""):
             h.update(chunk)
     return h.hexdigest()
 
@@ -43,36 +51,89 @@ def generate_csv(target_dir: str, output_path: str) -> int:
         print(f"错误: 路径不存在或不是目录: {target}")
         sys.exit(1)
 
-    rows: list[dict[str, str]] = []
+    files = sorted([p for p in target.rglob("*") if p.is_file()])
+    if not files:
+        print(f"未找到文件: {target}")
+        return 0
 
-    print(f"正在扫描: {target}")
-    for fpath in sorted(target.rglob("*")):
-        if not fpath.is_file():
-            continue
-        abs_path = str(fpath)
-        print(f"  处理: {abs_path}")
-        rows.append(
-            {
-                "sha256": sha256_of(abs_path),
-                "hash": md5_of(abs_path),
-                "size": str(fpath.stat().st_size),
-                "path": abs_path,
-            }
-        )
+    total_size = sum(p.stat().st_size for p in files)
+    processed_size = 0
+    processed_count = 0
 
     out = Path(output_path).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["sha256", "hash", "size", "path"])
         writer.writeheader()
-        writer.writerows(rows)
 
-    print(f"\n完成! 共 {len(rows)} 个文件，已写入: {out}")
-    return len(rows)
+        print(f"正在扫描: {target}")
+        first = True
+        bar_len = 40
+        for fpath in files:
+            abs_path = str(fpath)
+            size = fpath.stat().st_size
+
+            if first:
+                print(abs_path)
+                prev_percent = processed_size / total_size if total_size else 1.0
+                filled = int(prev_percent * bar_len)
+                bar = "[" + "#" * filled + "-" * (bar_len - filled) + "]"
+                print(f"{bar} {prev_percent*100:6.2f}%")
+                first = False
+            else:
+                # 上一次输出占两行，向上移动两行并覆盖
+                print("\x1b[2A", end="")
+                print("\x1b[2K" + abs_path)
+                prev_percent = processed_size / total_size if total_size else 1.0
+                filled = int(prev_percent * bar_len)
+                bar = "[" + "#" * filled + "-" * (bar_len - filled) + "]"
+                print("\x1b[2K" + f"{bar} {prev_percent*100:6.2f}%")
+            sys.stdout.flush()
+
+            # 单次读取文件，同时计算 sha256 和 md5（节省 I/O 成本）
+            sha_h = hashlib.sha256()
+            md5_h = hashlib.md5()
+            with open(abs_path, "rb") as fh:
+                for chunk in iter(lambda: fh.read(CHUNK_SIZE), b""):
+                    sha_h.update(chunk)
+                    md5_h.update(chunk)
+            sha = sha_h.hexdigest()
+            md5 = md5_h.hexdigest()
+
+            writer.writerow({
+                "sha256": sha,
+                "hash": md5,
+                "size": str(size),
+                "path": abs_path,
+            })
+
+            processed_size += size
+            processed_count += 1
+            percent = processed_size / total_size if total_size else 1.0
+            filled = int(percent * bar_len)
+            new_bar = "[" + "#" * filled + "-" * (bar_len - filled) + "]"
+            # 更新进度条行（向上移动一行覆盖进度行）
+            print("\x1b[1A", end="")
+            print("\x1b[2K" + f"{new_bar} {percent*100:6.2f}%")
+            sys.stdout.flush()
+
+    # 输出空行，确保光标移到进度显示下方
+    print()
+
+    print(f"\n完成! 共 {processed_count} 个文件，已写入: {out}")
+    return processed_count
 
 
 def main() -> None:
-    target_dir = input("请输入要扫描的文件夹路径: ").strip()
+    if len(sys.argv) == 3:
+        target_dir = sys.argv[1].strip()
+        memo = sys.argv[2].strip()
+    else:
+        print("用法: python gen_csv.py <目录路径> <CSV助记名>")
+        print("未提供参数，回退到人工输入模式——\n")
+        target_dir = input("请输入要扫描的文件夹路径: ").strip()
+        memo = input("请输入助记词（用作 CSV 文件名）: ").strip()
+
     if not target_dir:
         print("错误: 路径不能为空。")
         sys.exit(1)
@@ -81,7 +142,6 @@ def main() -> None:
         print(f"错误: 路径不存在或不是目录: {target_dir}")
         sys.exit(1)
 
-    memo = input("请输入助记词（用作 CSV 文件名）: ").strip()
     if not memo:
         print("错误: 助记词不能为空。")
         sys.exit(1)
