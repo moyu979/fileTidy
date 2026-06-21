@@ -2,7 +2,7 @@ from domain.storage.device.base import Device
 from domain.storage.device.repo import device_repository_abc
 from domain.storage.device.factory import device_from_dict
 from infra.persistence.database import session_scope
-from infra.persistence.models import DeviceModel
+from infra.persistence.models import DeviceModel, DeviceStructureModel, VolumeModel
 
 class device_repository(device_repository_abc):
     def __init__(self,session_factory) -> None:
@@ -65,3 +65,51 @@ class device_repository(device_repository_abc):
                 })
                 for device_model in device_models
             ]
+
+    def update_device(self, serial: str, **fields) -> None:
+        """更新设备指定字段。"""
+        with session_scope(self.session_factory) as session:
+            device_model = (
+                session.query(DeviceModel)
+                .filter(DeviceModel.serial == serial)
+                .first()
+            )
+            if device_model is None:
+                raise ValueError(f"device {serial} not found")
+            for key, value in fields.items():
+                setattr(device_model, key, value)
+            session.commit()
+
+    def update_serial(self, old_serial: str, new_serial: str) -> None:
+        """重置设备序列号，同步更新关联表中的外键引用。"""
+        with session_scope(self.session_factory) as session:
+            # 更新设备自身主键
+            row = (
+                session.query(DeviceModel)
+                .filter(DeviceModel.serial == old_serial)
+                .first()
+            )
+            if row is None:
+                raise ValueError(f"device {old_serial} not found")
+            session.delete(row)
+            session.flush()
+
+            row.serial = new_serial
+            session.add(row)
+            session.flush()
+
+            # 更新 volumes 中引用的 super_device_id
+            (
+                session.query(VolumeModel)
+                .filter(VolumeModel.super_device_id == old_serial)
+                .update({"super_device_id": new_serial})
+            )
+
+            # 更新 device_structures 中引用的 sub_device_id
+            (
+                session.query(DeviceStructureModel)
+                .filter(DeviceStructureModel.sub_device_id == old_serial)
+                .update({"sub_device_id": new_serial})
+            )
+
+            session.commit()

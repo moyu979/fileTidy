@@ -16,13 +16,26 @@ _type_map = {
 }
 
 
+def _resolve_class(dtype: str | None) -> type[Device]:
+    """根据 type 字符串查找对应的 Device 子类。"""
+    if dtype is None:
+        return Device
+    cls = _type_map.get(dtype)
+    if cls is not None:
+        return cls
+    # 磁带带代次：tape-lto5 → TapeDevice
+    if dtype.startswith("tape"):
+        return TapeDevice
+    return Device
+
+
 def device_from_dict(data: dict, device_path: str | None = None) -> Device:
     """从字典重建对应子类的 Device 实例"""
     serial = data.get("serial")
     if not serial:
         raise ValueError("device_from_dict: missing required field 'serial'")
 
-    cls = _type_map.get(data.get("type"), Device)
+    cls = _resolve_class(data.get("type"))
     return cls(
         serial=serial,
         name=data.get("name", ""),

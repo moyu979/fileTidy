@@ -22,7 +22,7 @@ class volume_repository_abc(ABC):
 
     # ── 卷内文件查询 / 扫描 ─────────────────────────────────
 
-    @abstractmethod
+    #@abstractmethod
     def list_files(
         self,
         volume_id: str,
@@ -43,7 +43,7 @@ class volume_repository_abc(ABC):
         """
         ...
 
-    @abstractmethod
+    #@abstractmethod
     def scan_files(
         self,
         volume_id: str,
