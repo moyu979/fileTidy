@@ -15,6 +15,7 @@
 import logging
 import sys
 import os
+import time
 from datetime import datetime
 
 # ── 将项目根目录加入 sys.path ──────────────────────────────────────────────
@@ -73,6 +74,8 @@ def main():
     print(f"{'序号':>4}  {'序列号':<22}  {'结果':<10}")
     print("-" * 42)
 
+    start_time = time.time()
+
     for i in range(1, total + 1):
         serial = f"{SERIAL_PREFIX}{i:03d}"
         name = f"{DEVICE_NAME_PREFIX}-{i:03d}"
@@ -98,6 +101,27 @@ def main():
         except Exception as e:
             print(f"{i:>4}  {serial:<22}  ❌ 异常: {e}")
             failed += 1
+
+        # ── 进度条（含已用时间和预估剩余时间） ──
+        elapsed = time.time() - start_time
+        avg_per_item = elapsed / i
+        eta = avg_per_item * (total - i)
+
+        # 格式化时间 mm:ss
+        def _fmt(secs: float) -> str:
+            m, s = divmod(int(round(secs)), 60)
+            return f"{m:02d}:{s:02d}"
+
+        bar_len = 30
+        filled = int(bar_len * i / total)
+        bar = "█" * filled + "░" * (bar_len - filled)
+        print(
+            f"  [{bar}] {i}/{total}  ┃ 已用 {_fmt(elapsed)}  ┃ 预估剩余 {_fmt(eta)}",
+            end="\r",
+            flush=True,
+        )
+
+    print()  # 换行，结束进度条行
 
     # ── 3. 汇总 ──────────────────────────────────────────────────────────────
     print("\n" + "=" * 60)
