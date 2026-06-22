@@ -2,7 +2,6 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12+-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.136+-green)
-![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-orange)
 
 
 **fileTidy** 是一个基于 **领域驱动设计（DDD）** 的存储设备生命周期管理工具，提供从物理设备到文件系统的多层次抽象管理能力。支持命令行（CLI）和 REST API 两种交互方式。
