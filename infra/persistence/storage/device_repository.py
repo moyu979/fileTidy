@@ -98,11 +98,11 @@ class device_repository(device_repository_abc):
             session.add(row)
             session.flush()
 
-            # 更新 volumes 中引用的 super_device_id
+            # 更新 volumes 中引用的 device_id
             (
                 session.query(VolumeModel)
-                .filter(VolumeModel.super_device_id == old_serial)
-                .update({"super_device_id": new_serial})
+                .filter(VolumeModel.device_id == old_serial)
+                .update({"device_id": new_serial})
             )
 
             # 更新 device_structures 中引用的 sub_device_id

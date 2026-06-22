@@ -2,6 +2,8 @@ import json
 from enum import Enum
 from pathlib import Path
 
+from domain.storage.file.enum import FileState
+
 
 class NewFile:
     """
@@ -19,7 +21,7 @@ class NewFile:
         path: str | Path,
         now_path: str | Path,
         now_volume: str,
-        state: str = "online",
+        state: str | FileState = FileState.ONLINE,
         info: str = "",
     ) -> None:
         self.sha512 = sha512

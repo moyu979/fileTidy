@@ -16,7 +16,7 @@ class volume_repository(volume_repository_abc):
     def reg_volume(self, volume: Volume) -> None:
         volume_model = VolumeModel(
             serial=volume.serial,
-            super_device_id=volume.device_id,
+            device_id=volume.device_id,
             name=volume.name,
             add_time=volume.add_time,
             last_check_time=volume.last_check_time,
@@ -29,7 +29,7 @@ class volume_repository(volume_repository_abc):
             info=volume.info if volume.info is not None else "",
         )
         with session_scope(self.session_factory) as session:
-            # 兜底校验：super_device_id 必须是存在的 Device 或 SuperDevice
+            # 兜底校验：device_id 必须是存在的 Device 或 SuperDevice
             device_exists = (
                 session.query(DeviceModel)
                 .filter(DeviceModel.serial == volume.device_id)
@@ -44,7 +44,7 @@ class volume_repository(volume_repository_abc):
             )
             if not device_exists and not super_device_exists:
                 raise ValueError(
-                    f"super_device_id '{volume.device_id}' 既不是有效 Device，也不是有效 SuperDevice"
+                    f"device_id '{volume.device_id}' 既不是有效 Device，也不是有效 SuperDevice"
                 )
             session.add(volume_model)
             session.commit()

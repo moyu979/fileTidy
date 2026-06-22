@@ -22,6 +22,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base
 from domain.storage.device.enum import DeviceState
 from domain.storage.super_device.enum import SuperDeviceState, RelationState
+from domain.storage.file.enum import FileState
 from domain.storage.super_volume.enum import SuperVolumeState
 from domain.storage.volume.enum import VolumeState
 Base = declarative_base()
@@ -105,7 +106,7 @@ class VolumeModel(Base):
     # 卷id  
     serial = Column(String, primary_key=True)
     # 建立在哪个设备上，可以是设备(device)或者超级设备(super device)
-    super_device_id = Column(String, nullable=False)
+    device_id = Column(String, nullable=False)
     # 卷名称，一个方便记忆的名称
     name = Column(String, default="")
     # 添加时间
@@ -225,8 +226,8 @@ class FileLocationsModel(Base):
     now_path = Column(Text, nullable=False)
     # 文件当前所在的卷
     now_volume = Column(String, ForeignKey("volumes.serial"))
-    # 文件状态，如健康、故障，密码丢失等
-    state = Column(String, default="online")
+    # 文件状态，如在线、丢失、损坏等
+    state = Column(Enum(FileState), default=FileState.ONLINE)
     # 文件其他信息
     info = Column(Text, default="")
 

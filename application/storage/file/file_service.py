@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from domain.storage.file.enum import FileState
 from domain.storage.file.events import FileCopied, FileMoved, FileRegistered
 from domain.storage.file.repo import file_repository_abc
 from domain.storage.file.new_file import NewFile
@@ -21,11 +22,17 @@ class file_service:
         folder_path: str,
         volume_serial: str,
         volume_path: str,
+        add_time: datetime | None = None,
     ) -> list[NewFile]:
-        """遍历文件夹下所有文件，生成 NewFile 并登记。"""
+        """遍历文件夹下所有文件，生成 NewFile 并登记。
+
+        Args:
+            add_time: 文件的登记时间，不传则使用函数调用时的当前时间。
+        """
         """file path 要带datas层，volume path也已经带了datas"""
         folder = Path(folder_path).resolve()
         data_root = Path(volume_path).resolve()
+        add_time = add_time or datetime.now()
         registered: list[NewFile] = []
 
         for fpath in sorted(folder.rglob("*"), key=lambda p: str(p)):
@@ -34,11 +41,12 @@ class file_service:
             abs_path = fpath.resolve()
             now_path = abs_path.relative_to(data_root).as_posix()
 
+            hashes = self._hasher.compute_hash(str(fpath), enable_sha512=True, enable_md5=True)
             new_file = NewFile(
-                sha512=self._hasher.get_sha512(str(fpath)),
-                md5=self._hasher.get_md5(str(fpath)),
+                sha512=hashes["sha512"],
+                md5=hashes["md5"],
                 size=get_file_size(str(fpath)),
-                add_time=datetime.fromtimestamp(fpath.stat().st_mtime),
+                add_time=add_time,
                 path=str(fpath),
                 now_path=now_path,
                 now_volume=volume_serial,
@@ -53,6 +61,7 @@ class file_service:
         df: pd.DataFrame,
         volume_serial: str,
         volume_path: str,
+        add_time: datetime | None = None,
     ) -> list[NewFile]:
         """通过 DataFrame 登记文件记录。
 
@@ -61,10 +70,13 @@ class file_service:
         - hash:   文件的 MD5 哈希
         - size:   文件大小（字节）
         - path:   文件的绝对路径
+
+        Args:
+            add_time: 文件的登记时间，不传则使用当前时间。
         """
         data_root = Path(volume_path).resolve()
         registered: list[NewFile] = []
-        add_time = datetime.now()
+        add_time = add_time or datetime.now()
 
         for _, row in df.iterrows():
             abs_path = str(row["path"])
@@ -81,6 +93,7 @@ class file_service:
                 path=abs_path,
                 now_path=now_path,
                 now_volume=volume_serial,
+                state=FileState.UNKNOWN,
             )
             self.file_repo.reg_file(new_file)
             registered.append(new_file)

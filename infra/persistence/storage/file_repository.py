@@ -23,6 +23,12 @@ class file_repository(file_repository_abc):
         pass
 
     def reg_file(self, new_file: NewFile) -> None:
+        # TODO: 重复登记同一文件时：
+        #   1. session.add(source_row) → FileSourcesModel 无唯一约束，
+        #      会产生冗余记录。
+        #   2. session.merge(location_row) → FileLocationsModel 的
+        #      (now_volume, now_path) 主键已存在时静默覆盖，无任何通知。
+        #   应统一处理重复策略（报错 / 跳过 / 覆盖并记录日志）。
         source_row = FileSourcesModel(
             sha512=new_file.sha512,
             md5=new_file.md5,

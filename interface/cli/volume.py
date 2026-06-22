@@ -7,9 +7,41 @@ from __future__ import annotations
 import cmd
 
 from application.app import App
+from domain.storage.volume.enum import VolumeTypeMenu
 
 
 class VolumeCLI(cmd.Cmd):
+    """卷相关命令行界面"""
+
+    # ── KV 输入辅助 ───────────────────────────────────────────
+
+    @staticmethod
+    def _parse_kv_pairs(*pairs: str) -> dict[str, str]:
+        """将 key:value 字符串列表解析为字典。"""
+        d = {}
+        for pair in pairs:
+            if ":" not in pair:
+                raise ValueError(f"无法解析「{pair}」，应为 key:value 格式")
+            key, val = pair.split(":", maxsplit=1)
+            d[key.strip()] = val.strip()
+        return d
+
+    def _interactive_kv(self) -> dict[str, str]:
+        """交互输入 key:value 对，空行结束。"""
+        print("输入 key:value 对（每行一对，空行结束）:")
+        d = {}
+        while True:
+            line = input().strip()
+            if not line:
+                break
+            try:
+                k, v = line.split(":", maxsplit=1)
+                d[k.strip()] = v.strip()
+            except ValueError:
+                print(f"跳过无效行「{line}」，应为 key:value")
+        return d
+
+    # ── 核心逻辑 ─────────────────────────────────────────────
     """卷相关命令行界面"""
 
     intro = """
@@ -52,7 +84,7 @@ class VolumeCLI(cmd.Cmd):
             return
 
         print("\n初始化新卷（会整理挂载点目录下的内容并登记 data 内已有文件）...")
-        print("（与 volume_service.init_volume 参数一致；卷名留空则使用自动生成的序列号）\n")
+        print("（卷名留空则使用自动生成的序列号）\n")
 
         path = input("请输入卷挂载点路径（须为已挂载目录）: ").strip()
         if not path:
@@ -65,16 +97,19 @@ class VolumeCLI(cmd.Cmd):
         name = name_input if name_input else None
 
         ump_input = input(
-            "请输入全局唯一挂载点标识 unique_mount_point（直接回车则默认为/unknown）: "
+            "请输入全局唯一挂载点标识 unique_mount_point（直接回车则默认为 /unknown，建议使用绝对路径）: "
         ).strip()
         unique_mount_point = ump_input if ump_input else None
 
-        info_input = input("请输入卷备注/其他信息（直接回车则留空）: ").strip()
-        info = info_input if info_input else ""
+        print("—— 以下为卷其他信息（info）——")
+        info = self._interactive_kv()
+
+        from pathlib import Path as P
+        abs_path = str(P(path).resolve())
 
         try:
             volume = self.app.volume_service.init_volume(
-                path=path,
+                path=abs_path,
                 name=name,
                 unique_mount_point=unique_mount_point,
                 info=info,
@@ -85,49 +120,101 @@ class VolumeCLI(cmd.Cmd):
 
     def do_reg(self, arg: str) -> None:
         """
-        将一个已经初始化过的卷记录到数据库，只需提供路径
+        登记已有卷
+
+        用法: reg
+          - 输入路径 → 自动检测卷信息（需挂载）
+          - 留空    → 手动输入所有卷信息（无需挂载）
         """
         if self._missing_service():
             return
 
-        path = input("请输入卷路径: ").strip()
-        if not path:
-            print("错误: 路径不能为空。")
-            return
+        path = input("请输入卷路径（直接回车则手动输入所有卷信息，无需挂载）: ").strip()
 
         name_input = input("请输入卷名称（直接回车则使用序列号）: ").strip()
         name = name_input if name_input else None
 
-        ump = input("请输入全局唯一挂载点标识 unique_mount_point（直接回车则留空）: ").strip()
+        ump = input("请输入全局唯一挂载点标识 unique_mount_point（直接回车则留空，建议使用绝对路径）: ").strip()
         unique_mount_point = ump if ump else None
 
-        from pathlib import Path as P
-        abs_path = str(P(path).resolve())
+        print("—— 以下为卷其他信息（info）——")
+        info = self._interactive_kv()
 
-        try:
-            result = self.app.volume_service.reg_volume(
-                path=abs_path,
-                name=name,
-                unique_mount_point=unique_mount_point,
-            )
-            print(f"\n登记成功: {result}")
-        except Exception as e:
-            print(f"\n登记失败: {e}")
+        if path:
+            # ── 有路径 → 自动检测 ──
+            from pathlib import Path as P
+            abs_path = str(P(path).resolve())
+
+            reg_files_input = input("是否同时登记 datas 下的文件（y/N，默认 N）: ").strip().lower()
+            register_files = reg_files_input in ("y", "yes")
+
+            try:
+                result = self.app.volume_service.reg_volume(
+                    path=abs_path,
+                    name=name,
+                    unique_mount_point=unique_mount_point,
+                    info=info,
+                    register_files=register_files,
+                )
+                print(f"\n登记成功: {result}")
+            except Exception as e:
+                print(f"\n登记失败: {e}")
+        else:
+            # ── 无路径 → 全手动 ──
+            serial = input("请输入卷序列号: ").strip()
+            if not serial:
+                print("错误: 序列号不能为空。")
+                return
+
+            device_id = input("请输入所属设备序列号: ").strip()
+            if not device_id:
+                print("错误: 所属设备序列号不能为空。")
+                return
+
+            print("\n" + VolumeTypeMenu.prompt_text())
+            while True:
+                code = input(VolumeTypeMenu.input_hint()).strip()
+                file_system = VolumeTypeMenu.from_code(code)
+                if file_system is not None:
+                    break
+                print("无效输入，请按菜单输入对应编号。")
+
+            capacity_input = input("请输入卷容量（字节，直接回车则留空）: ").strip()
+            capacity: int | None = None
+            if capacity_input:
+                try:
+                    capacity = int(capacity_input)
+                except ValueError:
+                    print("警告: 容量格式不正确，将留空")
+
+            path_input = input("请输入卷路径（直接回车则留空）: ").strip()
+            volume_path = path_input if path_input else None
+
+            try:
+                result = self.app.volume_service.register_volume_by_info(
+                    serial=serial,
+                    device_id=device_id,
+                    name=name,
+                    file_system=file_system,
+                    capacity=capacity,
+                    unique_mount_point=unique_mount_point,
+                    volume_path=volume_path,
+                    info=info,
+                )
+                print(f"\n登记成功: {result}")
+            except Exception as e:
+                print(f"\n登记失败: {e}")
 
     def do_register_volume_by_csv(self, arg: str) -> None:
         """
         通过 CSV 文件登记卷及其文件记录
 
         用法: register_volume_by_csv
-        输入卷路径和 CSV 文件路径，CSV 须包含列: sha256, hash, size, path
-        不校验挂载点，适用于卷已卸载的场景。
+        输入卷路径，CSV 须包含列: sha256, hash, size, path
+          - 输入有效路径 → 自动检测卷信息（需挂载）
+          - 留空 → 手动输入所有卷信息（无需挂载）
         """
         if self._missing_service():
-            return
-
-        path = input("请输入卷路径: ").strip()
-        if not path:
-            print("错误: 路径不能为空。")
             return
 
         csv_path = input("请输入 CSV 文件路径: ").strip()
@@ -135,18 +222,52 @@ class VolumeCLI(cmd.Cmd):
             print("错误: CSV 文件路径不能为空。")
             return
 
+        volume_path = input("请输入卷路径（直接回车则手动输入所有卷信息，无需挂载）: ").strip()
+
+        from pathlib import Path as P
+        abs_csv = str(P(csv_path).resolve())
+        from datetime import datetime as dt
+        csv_mtime = dt.fromtimestamp(P(abs_csv).stat().st_mtime)
+
         name_input = input("请输入卷名称（直接回车则使用序列号）: ").strip()
         name = name_input if name_input else None
 
-        ump = input("请输入全局唯一挂载点标识 unique_mount_point（直接回车则留空）: ").strip()
+        ump = input("请输入全局唯一挂载点标识 unique_mount_point（直接回车则留空，建议使用绝对路径）: ").strip()
         unique_mount_point = ump if ump else None
 
-        info_input = input("请输入卷备注/其他信息（直接回车则留空）: ").strip()
-        info = info_input if info_input else ""
+        print("—— 以下为卷其他信息（info）——")
+        info = self._interactive_kv()
 
-        from pathlib import Path as P
-        abs_path = str(P(path).resolve())
-        abs_csv = str(P(csv_path).resolve())
+        if volume_path:
+            # ── 有路径 → 自动检测 ──
+            abs_path = str(P(volume_path).resolve())
+        else:
+            # ── 无路径 → 全手动 ──
+            serial = input("请输入卷序列号: ").strip()
+            if not serial:
+                print("错误: 序列号不能为空。")
+                return
+
+            device_id = input("请输入所属设备序列号: ").strip()
+            if not device_id:
+                print("错误: 所属设备序列号不能为空。")
+                return
+
+            print("\n" + VolumeTypeMenu.prompt_text())
+            while True:
+                code = input(VolumeTypeMenu.input_hint()).strip()
+                file_system = VolumeTypeMenu.from_code(code)
+                if file_system is not None:
+                    break
+                print("无效输入，请按菜单输入对应编号。")
+
+            capacity_input = input("请输入卷容量（字节，直接回车则留空）: ").strip()
+            capacity: int | None = None
+            if capacity_input:
+                try:
+                    capacity = int(capacity_input)
+                except ValueError:
+                    print("警告: 容量格式不正确，将留空")
 
         try:
             import pandas as pd
@@ -157,13 +278,28 @@ class VolumeCLI(cmd.Cmd):
                 print(f"错误: CSV 缺少必要列: {missing}")
                 return
 
-            result = self.app.volume_service.register_volume_by_csv(
-                path=abs_path,
-                df=df,
-                name=name,
-                unique_mount_point=unique_mount_point,
-                info=info,
-            )
+            if volume_path:
+                result = self.app.volume_service.register_volume_by_csv(
+                    path=str(P(volume_path).resolve()),
+                    df=df,
+                    name=name,
+                    unique_mount_point=unique_mount_point,
+                    info=info,
+                    add_time=csv_mtime,
+                )
+            else:
+                result = self.app.volume_service.register_volume_by_csv_data(
+                    df=df,
+                    serial=serial,
+                    device_id=device_id,
+                    name=name,
+                    file_system=file_system,
+                    capacity=capacity,
+                    unique_mount_point=unique_mount_point,
+                    info=info,
+                    volume_path=volume_path,
+                    add_time=csv_mtime,
+                )
             print(f"\n登记成功: {result}")
         except Exception as e:
             print(f"\n登记失败: {e}")
