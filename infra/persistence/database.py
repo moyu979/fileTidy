@@ -1,4 +1,6 @@
-# infrastructure/persistence/db.py
+# CHECK: 待检查 - 基础设施数据库模块 - 数据库连接与会话管理
+
+# infrastructure/persistence/database.py
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
@@ -15,6 +17,17 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):
 
 
 def build_session_factory(database_url: str):
+    """
+    根据数据库 URL 创建 SQLAlchemy 引擎和会话工厂。
+
+    SQLite 数据库会自动设置 check_same_thread=False。
+
+    Args:
+        database_url: 数据库连接 URL
+
+    Returns:
+        (SessionLocal, engine) — 会话工厂和引擎实例
+    """
     connect_args = {}
 
     if database_url.startswith("sqlite"):
@@ -35,6 +48,18 @@ def build_session_factory(database_url: str):
 
 @contextmanager
 def session_scope(session_factory):
+    """
+    提供数据库会话的上下文管理器，自动提交或回滚。
+
+    Args:
+        session_factory: 用于创建 SQLAlchemy 会话的工厂函数
+
+    Yields:
+        SQLAlchemy 会话对象
+
+    Raises:
+        Exception: 会话中发生的异常，会自动触发回滚
+    """
     session = session_factory()
     try:
         yield session

@@ -1,11 +1,11 @@
+# CHECK: 待检查 - 基础设施 ORM 模型 - 数据库表映射
+
 """
 SQLAlchemy ORM 模型定义。
 """
 
 from __future__ import annotations
-import enum
 from datetime import datetime
-from re import sub
 from sqlalchemy import (
     BigInteger,
     Column,
@@ -14,7 +14,6 @@ from sqlalchemy import (
     PrimaryKeyConstraint,
     String,
     Text,
-    UniqueConstraint,
     Enum,
     DateTime,
     Boolean,
@@ -41,7 +40,7 @@ class DeviceModel(Base):
     __tablename__ = "devices"
     # 设备序列号，对于磁盘来说，是磁盘的序列号，对于磁带来说，是一个自动生成的id，需要手记一下
     serial = Column(String, primary_key=True)
-    # 设备名称，一个方便记忆的名称
+    # 设备名称，一个方便记忆的名称，有些磁盘会有friendlyname，但是那个会有重复
     name = Column(String, default="")
     # 设备类型，如硬盘、磁带、TF卡等
     type = Column(String)
@@ -56,11 +55,11 @@ class DeviceModel(Base):
     # 设备其他半格式化信息，以json形式存储
     info = Column(Text, default="")
 
-class DeviceStructureModel(Base):
+class SuperDeviceStructureModel(Base):
     """
-    中间架构抽象，用于描述设备如何组织成文件系统
+    超级设备与设备之间的关联关系映射表，记录设备如何组成超级设备。
     """
-    __tablename__ = "device_structures"
+    __tablename__ = "super_device_structures"
     __table_args__ = (
         PrimaryKeyConstraint("super_device_id", "sub_device_id"),
     )
@@ -76,6 +75,10 @@ class DeviceStructureModel(Base):
     info = Column(Text, default="")
 
 class SuperDeviceModel(Base):
+    """
+    超级设备抽象，用于管理由多个子设备组合而成的逻辑设备。
+    例如 RAID、LVM 等由多个物理设备组成的逻辑存储单元。
+    """
     __tablename__ = "super_devices"
 
     # 超级设备id
@@ -126,6 +129,9 @@ class VolumeModel(Base):
 
 
 class SuperVolumeStructureModel(Base):
+    """
+    超级卷与卷之间的关联关系映射表，记录卷如何组成超级卷。
+    """
     __tablename__ = "super_volume_structures"
     __table_args__ = (
         PrimaryKeyConstraint("super_volume_id", "volume_id"),
@@ -178,7 +184,7 @@ class FileSourcesModel(Base):
     - 文件的状态
     - 文件的其他信息
     """
-    __tablename__ = "fileSources"
+    __tablename__ = "file_sources"
     #自增主键
     id = Column(Integer, primary_key=True)
     # 文件md5值
@@ -192,7 +198,7 @@ class FileSourcesModel(Base):
     # 文件原始路径
     from_path = Column(Text)
     # 文件状态，如健康、故障，密码丢失等
-    state = Column(String, default="online")
+    state = Column(Enum(FileState), default=FileState.ONLINE)
     # 文件其他信息
     info = Column(Text, default="")
 
@@ -210,7 +216,7 @@ class FileLocationsModel(Base):
     - 文件的状态
     - 文件的其他信息
     """
-    __tablename__ = "fileLocations"
+    __tablename__ = "file_locations"
     __table_args__ = (
         PrimaryKeyConstraint("now_volume", "now_path"),
     )
