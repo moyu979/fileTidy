@@ -1,0 +1,4 @@
+# 哈希一次的文件大小：512M
+hash_once: 524288000
+# 是否开启双缓冲区
+enable_double_buffer: true
