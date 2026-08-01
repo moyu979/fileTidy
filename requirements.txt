@@ -1,3 +1,4 @@
+# CHECK: 待检查 - Python 依赖清单
 # ============================================
 # fileTidy - Python Dependencies
 # Generated from conda env "fileTidy"
@@ -12,8 +13,10 @@ SQLAlchemy>=2.0.45
 
 # --- Configuration ---
 PyYAML>=6.0.3
+watchdog>=6.0.0               # 文件系统监听（热更配置用），非必需：缺失时自动降级为轮询
 
 # --- File / Image Processing ---
 Pillow>=12.1.0
 numpy>=2.0.0
+psutil>=5.9.0                   # 系统内存/进程信息读取（system_config 使用）
 python-barcode>=0.16.1
