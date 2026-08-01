@@ -77,7 +77,11 @@ class ConfigWatcher:
             if self._observer is not None or self._poll_thread is not None:
                 return
             self._observer = self._setup_file_watcher()
-            if self._observer is None:
+            if self._observer is not None:
+                logger.info(
+                    "ConfigWatcher 文件监听已启动: %s", self.settings_dir
+                )
+            else:
                 self._stop_event.clear()
                 self._poll_thread = threading.Thread(
                     target=self._poll_loop,

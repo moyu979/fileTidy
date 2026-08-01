@@ -304,11 +304,11 @@ class SystemConfig(ConfigContentManager):
 def main() -> None:
     """演示 SystemConfig 懒调用取数接口并打印摘要。"""
     # 允许直接运行本文件（python infra/config/system_config.py）:
-    # 将项目根目录加入 sys.path，以便导入 shared 等顶层模块
+    # 将项目根目录加入 sys.path，以便导入 infra.common 等模块
     project_root = Path(__file__).resolve().parent.parent.parent
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
-    from shared.capacity_converter import format_capacity
+    from infra.common.capacity_converter import format_capacity
 
     config = SystemConfig()
 

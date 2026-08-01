@@ -47,6 +47,8 @@ class AppConfig:
             yaml.YAMLError: YAML 解析失败（由 SingleFileConfig 构造抛出）。
             ValueError: YAML 根节点不是映射（由 SingleFileConfig 构造抛出）。
         """
+        if workspace_path is None:
+            workspace_path = Path(settings_dir).expanduser().resolve().parent
         self.settings_dir = Path(settings_dir).expanduser().resolve()
         self.watcher = ConfigWatcher(self.settings_dir)
         replacements = (
