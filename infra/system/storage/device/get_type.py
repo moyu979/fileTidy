@@ -1,22 +1,21 @@
-def get_type(path: str) -> str:
-    type=input(f"""
-获取设备类型的功能还没实现，请手动填入
-1:ssd
-2:hdd
-3:tf card
-4x:tape:lto-x
-5:others
-please input the number:
-""")
-    if type == "1":
-        return "SSD".lower()
-    elif type == "2":
-        return "HDD".lower()
-    elif type == "3":
-        return "TF_SD_CARD".lower()
-    elif type.startswith("4"):
-        return f"Tape-lto{type.replace("4", "")}".lower()
-    elif type == "None":
-        return None
-    else:
-        raise ValueError("Invalid type")
+# CHECK: AI生成 - device 转发：获取设备类型
+"""device —— 转发到当前平台：获取设备类型。"""
+
+from infra.system.runtime import current_platform
+
+from ._util import as_device_path
+
+
+def get_type(path_or_serial: str) -> str:
+    """获取设备类型（支持传路径或序列号）。
+
+    Args:
+        path_or_serial: 设备路径或序列号。
+
+    Returns:
+        设备类型字符串。
+
+    Raises:
+        ValueError: 无法将入参解析为设备路径时抛出。
+    """
+    return current_platform().get_type(as_device_path(path_or_serial))

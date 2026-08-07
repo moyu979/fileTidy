@@ -1,5 +1,16 @@
-def get_serial(path: str) -> str:
-    serial=input(f"get serial for {path}: 的功能还没实现，请手动填入，输入空字符以做None")
-    if serial == "":
-        return None
-    return serial
+# CHECK: AI生成 - device 转发：获取设备序列号
+"""device —— 转发到当前平台：获取设备序列号。"""
+
+from infra.system.runtime import current_platform
+
+
+def get_serial(path: str) -> str | None:
+    """获取指定路径对应的设备序列号。
+
+    Args:
+        path: 设备路径。
+
+    Returns:
+        设备序列号。
+    """
+    return current_platform().get_serial(path)
