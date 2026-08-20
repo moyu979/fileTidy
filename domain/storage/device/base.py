@@ -16,8 +16,6 @@ import json
 from abc import ABC
 from enum import Enum
 
-from infra.persistence.database import session_scope
-
 
 # REFACTOR(P0): _json_default(), _ts(), to_json(), to_snapshot() 与 volume/super_device/super_volume/file 中完全重复
 #               应将它们提取到 domain/common/mixins.py 的共享 Mixin 中

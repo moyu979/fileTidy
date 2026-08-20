@@ -94,3 +94,13 @@ class DeviceSerialChanged:
         """
         self.old_serial = old_serial
         self.new_serial = new_serial
+
+
+class DeviceRemoved:
+    """设备移除（软删除）事件。"""
+    def __init__(self, serial: str):
+        """
+        Args:
+            serial: 被移除（标记 REMOVED）设备的序列号。
+        """
+        self.serial = serial
