@@ -20,7 +20,7 @@ def get_type(path: str) -> str:
     """
     type_input = input(
         f"获取设备类型的功能还没实现（{current_os()} 系统下），请手动填入\n"
-        f"1:ssd\n2:hdd\n3:tf card\n4x:tape:lto-x\n5:others\n"
+        f"1:ssd\n2:hdd\n3:tf card\n4:tape\n5:others\n"
         f"please input the number: "
     )
     if type_input == "1":
@@ -30,7 +30,8 @@ def get_type(path: str) -> str:
     elif type_input == "3":
         return "TF_SD_CARD".lower()
     elif type_input.startswith("4"):
-        return f"Tape-lto{type_input.replace('4', '')}".lower()
+        # 磁带：返回纯类型 "tape"；LTO 代次由手动登记流程（reg_device_by_info）录入 info
+        return "tape"
     elif type_input == "None":
         return None
     else:
