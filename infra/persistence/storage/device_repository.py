@@ -18,8 +18,7 @@ from infra.persistence.models import (
 logger = logging.getLogger(__name__)
 
 
-# REFACTOR(P1): 类名 device_repository 应改为 DeviceRepository（PascalCase），符合 PEP8 命名规范
-class device_repository(device_repository_abc):
+class DeviceRepository(device_repository_abc):
     """设备仓库实现，提供设备数据的持久化存储和查询操作。"""
 
     def __init__(self, session_factory) -> None:
