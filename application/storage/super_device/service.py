@@ -1,70 +1,89 @@
+# CHECK: 待检查 - 应用层 SuperDevice 服务 - 超级设备业务用例编排
+
 from datetime import datetime
 import json
 import logging
 
-from application.storage.super_device.factory import super_device_factory
+from domain.storage.super_device.base import SuperDevice
 from domain.storage.super_device.events import (
     SuperDeviceDeviceChanged,
     SuperDeviceFieldUpdated,
-    SuperDeviceInfoAppended,
-    SuperDeviceInfoKeyDeleted,
+    SuperDeviceInfoChanged,
     SuperDeviceInfoSet,
     SuperDeviceRegistered,
+    SuperDeviceRemoved,
+    SuperDeviceSerialChanged,
 )
-from infra.operate_log.operate_log import log_event
+from infra.operation_log.operation_log import log_event
 from domain.storage.super_device.enum import SuperDeviceState
-from infra.persistence.storage.super_device_repository import super_device_repository
+from infra.persistence.storage.super_device_repository import SuperDeviceRepository
 from infra.system.path_manager.is_path import is_path
 from infra.system.storage.device.get_serial import get_serial
-from shared.id_generator import generate_id
-from shared.time_defaults import LAST_CHECK_TIME_ORIGIN
+from infra.common.id_generator import generate_id
+from infra.common.time_defaults import LAST_CHECK_TIME_ORIGIN
 
 logger = logging.getLogger(__name__)
 
-class super_device_service:   
+class SuperDeviceService:
+    """超级设备服务类。
+
+    提供超级设备的注册、查询、字段更新和子设备管理等业务逻辑。
+    """
     def __init__(self, super_device_repository, device_repository=None) -> None:
+        """初始化超级设备服务。
+
+        Args:
+            super_device_repository: 超级设备仓储实例。
+            device_repository: 设备仓储实例（可选）。
+        """
         self.super_device_repository = super_device_repository
         self.device_repository = device_repository
-        logger.info("super_device service initialized")
+        logger.info("SuperDeviceService initialized")
 
-    def reg_super_device(self, 
-        name: str,
-        sdtype: str,
-        need_all_devices_online: bool,
-        add_time: datetime,
-        last_check_time: datetime,
-        state: SuperDeviceState,
-        capacity: int,
-        devices: list[str],
-        info: str,
-    ) -> None:
-        super_device_serial = generate_id("")
-        if name is None:
-            name = super_device_serial[:8]
+    def reg_super_device_manual(self, data: dict) -> str:
+        """离线手动登记超级设备：serial 可选（有输入则用，无输入则自动生成）。
+
+        用户提供 sdtype 及（可选的）其余字段；serial 未提供时由系统自动生成。
+        不探测、不自动采集，直接按传入值 + 默认值构造并落库（公共提交段 _commit）。
+
+        Args:
+            data: 超级设备字段字典。可选键：serial / name / sdtype /
+                need_all_devices_online / add_time / last_check_time / state /
+                capacity / info / devices。默认值：serial→自动生成，name→serial[:8]，
+                need_all_devices_online→True，add_time→now，
+                last_check_time→LAST_CHECK_TIME_ORIGIN，state→HEALTHY，
+                capacity→-1，info→""，devices→[]。
+
+        Returns:
+            登记成功的超级设备序列号。
+
+        Raises:
+            ValueError: sdtype 缺失。
+        """
+        serial = data.get("serial") or generate_id("")
+        name = data.get("name") or serial[:8]
+        sdtype = data.get("sdtype")
         if sdtype is None:
-            raise ValueError("type is None")
+            raise ValueError("reg_super_device_manual: 'sdtype' is required")
+        need_all_devices_online = data.get("need_all_devices_online")
         if need_all_devices_online is None:
             need_all_devices_online = True
-        if add_time is None:
-            add_time = datetime.now()
-        if last_check_time is None:
-            last_check_time = LAST_CHECK_TIME_ORIGIN
-        if state is None:
-            state = SuperDeviceState.HEALTHY
+        add_time = data.get("add_time") or datetime.now()
+        last_check_time = data.get("last_check_time") or LAST_CHECK_TIME_ORIGIN
+        state = data.get("state") or SuperDeviceState.HEALTHY
+        capacity = data.get("capacity")
         if capacity is None:
             capacity = -1
-        if info is None:
-            info = ""
+        info = data.get("info") or ""
         sericals = []
-        for device in devices:
+        for device in data.get("devices", []):
             if is_path(device):
-                serial = get_serial(device)
+                sericals.append(get_serial(device))
             else:
-                serial = device
-            sericals.append(serial)
+                sericals.append(device)
 
-        super_device = super_device_factory.new_super_device(
-            serial=super_device_serial,
+        super_device = SuperDevice.create(
+            serial=serial,
             name=name,
             sdtype=sdtype,
             need_all_devices_online=need_all_devices_online,
@@ -73,18 +92,42 @@ class super_device_service:
             state=state,
             capacity=capacity,
             info=info,
-            devices=devices,
+            devices=sericals,
         )
+        return self._commit(super_device)
 
+    def _commit(self, super_device: SuperDevice) -> str:
+        """登记公共提交段：存在性校验 + 落库 + 事件。
+
+        Args:
+            super_device: 已构造好的 SuperDevice 实例（serial 已确定）。
+
+        Returns:
+            登记成功的超级设备序列号。
+
+        Raises:
+            ValueError: 超级设备已存在。
+        """
+        if self.super_device_repository.is_exist(super_device.serial):
+            raise ValueError(f"super_device {super_device.serial} already exists")
         self.super_device_repository.reg_super_device(super_device)
         log_event(SuperDeviceRegistered(super_device))
-        return super_device.to_json()
+        return super_device.serial
 
     def load_super_device(
         self,
         serial: str | None = None,
         super_device_path: str | None = None,
     ) -> str | None:
+        """加载超级设备，支持通过序列号或路径查询。
+
+        Args:
+            serial: 超级设备序列号。
+            super_device_path: 设备路径（用于解析序列号）。
+
+        Returns:
+            超级设备 JSON 字符串，未找到时返回 None。
+        """
         if serial is None and super_device_path is not None:
             serial = get_serial(super_device_path)
         if serial is None:
@@ -93,12 +136,25 @@ class super_device_service:
         return sd.to_json() if sd else None
 
     def list_super_devices(self) -> list[str]:
+        """列出所有已注册超级设备的 JSON 字符串列表。
+
+        Returns:
+            超级设备 JSON 字符串列表。
+        """
         return [sd.to_json() for sd in self.super_device_repository.list_super_device()]
 
     # ── 字段更新 ──────────────────────────────────────────────────
 
     def set_name(self, serial: str, name: str) -> tuple[str, str]:
-        """更新超级设备名称。返回 (旧值, 新值)。"""
+        """更新超级设备名称。
+
+        Args:
+            serial: 超级设备序列号。
+            name: 新名称。
+
+        Returns:
+            tuple[str, str]: (旧值, 新值)。
+        """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
             raise ValueError(f"super_device {serial} not found")
@@ -108,7 +164,15 @@ class super_device_service:
         return (old, name)
 
     def set_sdtype(self, serial: str, sdtype: str) -> tuple[str, str]:
-        """更新超级设备类型。返回 (旧值, 新值)。"""
+        """更新超级设备类型。
+
+        Args:
+            serial: 超级设备序列号。
+            sdtype: 新类型。
+
+        Returns:
+            tuple[str, str]: (旧值, 新值)。
+        """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
             raise ValueError(f"super_device {serial} not found")
@@ -118,7 +182,15 @@ class super_device_service:
         return (old, sdtype)
 
     def set_state(self, serial: str, state: SuperDeviceState) -> tuple[SuperDeviceState, SuperDeviceState]:
-        """更新超级设备状态。返回 (旧值, 新值)。"""
+        """更新超级设备状态。
+
+        Args:
+            serial: 超级设备序列号。
+            state: 新状态。
+
+        Returns:
+            tuple[SuperDeviceState, SuperDeviceState]: (旧值, 新值)。
+        """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
             raise ValueError(f"super_device {serial} not found")
@@ -128,7 +200,15 @@ class super_device_service:
         return (old, state)
 
     def set_capacity(self, serial: str, capacity: int) -> tuple[int, int]:
-        """更新超级设备容量。返回 (旧值, 新值)。"""
+        """更新超级设备容量。
+
+        Args:
+            serial: 超级设备序列号。
+            capacity: 新容量（字节）。
+
+        Returns:
+            tuple[int, int]: (旧值, 新值)。
+        """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
             raise ValueError(f"super_device {serial} not found")
@@ -138,7 +218,15 @@ class super_device_service:
         return (old, capacity)
 
     def set_need_all_devices_online(self, serial: str, value: bool) -> tuple[bool, bool]:
-        """更新是否需要全部设备同时上线。返回 (旧值, 新值)。"""
+        """更新是否需要全部设备同时上线。
+
+        Args:
+            serial: 超级设备序列号。
+            value: 新值。
+
+        Returns:
+            tuple[bool, bool]: (旧值, 新值)。
+        """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
             raise ValueError(f"super_device {serial} not found")
@@ -151,7 +239,14 @@ class super_device_service:
 
     @staticmethod
     def _parse_info(info_str: str | None) -> dict:
-        """解析 info JSON 文本为字典，空值返回空字典。"""
+        """解析 info JSON 文本为字典。
+
+        Args:
+            info_str: JSON 格式的 info 字符串。
+
+        Returns:
+            解析后的字典，空值返回空字典。
+        """
         if not info_str:
             return {}
         try:
@@ -160,7 +255,15 @@ class super_device_service:
             return {}
 
     def set_info(self, serial: str, info: dict) -> tuple[dict, dict]:
-        """全量替换 info。返回 (旧info, 新info)。"""
+        """全量替换 info。
+
+        Args:
+            serial: 超级设备序列号。
+            info: 新的 info 字典。
+
+        Returns:
+            tuple[dict, dict]: (旧info, 新info)。
+        """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
             raise ValueError(f"super_device {serial} not found")
@@ -171,7 +274,15 @@ class super_device_service:
         return (old, info)
 
     def append_info(self, serial: str, data: dict) -> tuple[dict, dict]:
-        """合并键值对到现有 info。返回 (旧info, 新info)。"""
+        """合并键值对到现有 info。
+
+        Args:
+            serial: 超级设备序列号。
+            data: 待合并的键值对字典。
+
+        Returns:
+            tuple[dict, dict]: (旧info, 新info)。
+        """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
             raise ValueError(f"super_device {serial} not found")
@@ -179,21 +290,42 @@ class super_device_service:
         new_info = {**old, **data}
         new_str = json.dumps(new_info, ensure_ascii=False)
         self.super_device_repository.update_super_device(serial, info=new_str)
-        log_event(SuperDeviceInfoAppended(serial, old, new_info))
+        for key, new_val in data.items():
+            if key in old:
+                log_event(SuperDeviceInfoChanged(serial, "replace", key, old[key], new_val))
+            else:
+                log_event(SuperDeviceInfoChanged(serial, "add", key, None, new_val))
         return (old, new_info)
 
     def delete_info(self, serial: str, key: str) -> tuple[dict, dict]:
-        """从 info 中删除指定键。返回 (旧info, 新info)。"""
+        """从 info 中删除指定键。
+
+        Args:
+            serial: 超级设备序列号。
+            key: 待删除的键名。
+
+        Returns:
+            tuple[dict, dict]: (旧info, 新info)。
+        """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
             raise ValueError(f"super_device {serial} not found")
         old = self._parse_info(sd.info)
         new_info = dict(old)
-        new_info.pop(key, None)
+        old_val = new_info.pop(key, None)
         new_str = json.dumps(new_info, ensure_ascii=False)
         self.super_device_repository.update_super_device(serial, info=new_str)
-        log_event(SuperDeviceInfoKeyDeleted(serial, old, new_info, key))
+        if key in old:
+            log_event(SuperDeviceInfoChanged(serial, "remove", key, old_val, None))
         return (old, new_info)
+
+    def set_serial(self, old_serial: str, new_serial: str) -> tuple[str, str]:
+        """重置超级设备序列号，同步更新关联表。返回 (旧序列号, 新序列号)。"""
+        if not self.super_device_repository.is_exist(old_serial):
+            raise ValueError(f"super_device {old_serial} not found")
+        self.super_device_repository.update_super_device_serial(old_serial, new_serial)
+        log_event(SuperDeviceSerialChanged(old_serial=old_serial, new_serial=new_serial))
+        return (old_serial, new_serial)
 
     # ── 子设备管理 ────────────────────────────────────────────────
 
@@ -231,3 +363,16 @@ class super_device_service:
             raise ValueError(f"super_device {super_device_serial} not found")
         self.super_device_repository.remove_device(super_device_serial, device_serial)
         log_event(SuperDeviceDeviceChanged(super_device_serial, old=device_serial, new=None))
+
+    def remove_super_device(self, serial: str) -> None:
+        """软删除超级设备（标记 REMOVED）。
+
+        Args:
+            serial: 超级设备序列号。
+
+        Raises:
+            ValueError: 超级设备不存在。
+            SuperDeviceInUseError: 超级设备仍被引用（透传自仓储层）。
+        """
+        self.super_device_repository.remove_super_device(serial)
+        log_event(SuperDeviceRemoved(serial))

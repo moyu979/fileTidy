@@ -1,3 +1,5 @@
+# CHECK: 待检查 - CLI 超级设备命令 - 超级设备管理命令行接口
+
 """
 超级设备子命令组
 """
@@ -25,10 +27,20 @@ class SuperDeviceCLI(cmd.Cmd):
     prompt = "filetidy/super_device> "
 
     def __init__(self, app: App | None) -> None:
+        """初始化 SuperDeviceCLI 实例。
+
+        Args:
+            app: 应用实例，可为 None。
+        """
         super().__init__()
         self.app = app
 
     def _missing_service(self) -> bool:
+        """检查超级设备服务是否可用。
+
+        Returns:
+            如果应用未初始化或超级设备服务不可用返回 True，否则返回 False。
+        """
         if self.app is None:
             print("错误: 应用未初始化，无法执行超级设备操作。")
             return True
@@ -48,13 +60,17 @@ class SuperDeviceCLI(cmd.Cmd):
 
     def do_reg(self, arg: str) -> None:
         """
-        添加超级设备
+        添加超级设备（手动登记）
 
         用法: reg
         将提示您依次输入参数，直接敲回车表示使用默认值（None 或空）
         """
         if self._missing_service():
             return
+
+        serial_input = input("请输入超级设备序列号 (直接回车自动生成): ").strip()
+        serial = serial_input or None
+
         name = input("请输入超级设备名称，可以留空: ").strip() or None
 
         print(SuperDeviceTypeMenu.prompt_text())
@@ -81,28 +97,26 @@ class SuperDeviceCLI(cmd.Cmd):
         devices = []
         while True:
             device_id = input("请输入设备id: ").strip()
-            if device_id == "q":
-                break
-            if device_id == "":
+            if device_id == "q" or device_id == "":
                 break
             devices.append(device_id)
         assert len(devices) > 0
 
+        data: dict = {
+            "serial": serial,
+            "name": name,
+            "sdtype": super_device_type,
+            "need_all_devices_online": need_all_devices_online,
+            "devices": devices,
+            "info": info,
+        }
+
         try:
-            result = self.app.super_device_service.reg_super_device(
-                name=name,
-                sdtype=super_device_type,
-                need_all_devices_online=need_all_devices_online,
-                add_time=None,
-                last_check_time=None,
-                state=None,
-                capacity=None,
-                devices=devices,
-                info=info,
-            )
-            print(f"\n成功登记超级设备: {result}")
+            result = self.app.super_device_service.reg_super_device_manual(data)
         except Exception as e:
             print(f"\n错误: {e}")
+            return
+        print(f"\n成功登记超级设备: {result}")
 
     def do_get(self, arg: str) -> None:
         """
@@ -260,7 +274,12 @@ class SuperDeviceCLI(cmd.Cmd):
 
     @staticmethod
     def _print_info_diff(old: dict, new: dict) -> None:
-        """打印 info 变更对比，每行一个 key。"""
+        """打印 info 变更对比，每行一个 key。
+
+        Args:
+            old: 旧的 info 字典。
+            new: 新的 info 字典。
+        """
         all_keys = sorted(set(old) | set(new))
         if not all_keys:
             print("info 无变化。")
@@ -274,7 +293,17 @@ class SuperDeviceCLI(cmd.Cmd):
 
     @staticmethod
     def _parse_kv_pairs(*pairs: str) -> dict[str, str]:
-        """将 key:value 字符串列表解析为字典。"""
+        """将 key:value 字符串列表解析为字典。
+
+        Args:
+            *pairs: 格式为 "key:value" 的字符串列表。
+
+        Returns:
+            解析后的键值对字典。
+
+        Raises:
+            ValueError: 如果某个字符串不包含冒号分隔符则抛出。
+        """
         d = {}
         for pair in pairs:
             if ":" not in pair:
@@ -284,7 +313,11 @@ class SuperDeviceCLI(cmd.Cmd):
         return d
 
     def _interactive_kv(self) -> dict[str, str]:
-        """交互输入 key:value 对，空行结束。"""
+        """交互输入 key:value 对，空行结束。
+
+        Returns:
+            用户输入的键值对字典。
+        """
         print("输入 key:value 对（每行一对，空行结束）:")
         d = {}
         while True:
@@ -362,6 +395,22 @@ class SuperDeviceCLI(cmd.Cmd):
         old, new = self.app.super_device_service.delete_info(serial, key)
         self._print_info_diff(old, new)
 
+    def do_set_serial(self, arg: str) -> None:
+        """重置超级设备序列号。用法: set_serial <旧序列号> <新序列号>"""
+        if self._missing_service():
+            return
+        parts = arg.strip().split()
+        if len(parts) == 2:
+            old_serial, new_serial = parts
+        else:
+            old_serial = input("旧序列号: ").strip()
+            new_serial = input("新序列号: ").strip()
+            if not old_serial or not new_serial:
+                print("旧序列号和新序列号不能为空。")
+                return
+        old, new = self.app.super_device_service.set_serial(old_serial, new_serial)
+        print(f"序列号: {old} → {new}")
+
     # ── 子设备管理 ────────────────────────────────────────────────
 
     def do_add_device(self, arg: str) -> None:
@@ -421,3 +470,22 @@ class SuperDeviceCLI(cmd.Cmd):
             print(f"子设备 {dev_serial} 已从超级设备 {sd_serial} 移除")
         except Exception as e:
             print(f"错误: {e}")
+
+    def do_remove(self, arg: str) -> None:
+        """软删除超级设备（标记 REMOVED）。用法: remove <序列号>"""
+        if self._missing_service():
+            return
+        parts = arg.strip().split()
+        if len(parts) == 1:
+            serial = parts[0]
+        else:
+            serial = input("序列号: ").strip()
+            if not serial:
+                print("序列号不能为空。")
+                return
+        try:
+            self.app.super_device_service.remove_super_device(serial)
+        except Exception as e:
+            print(f"\n错误: {e}")
+            return
+        print(f"已移除超级设备: {serial}")
