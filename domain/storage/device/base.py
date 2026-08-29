@@ -14,12 +14,11 @@
 """
 import json
 from abc import ABC
-from enum import Enum
+
+from domain.common.mixins import JsonSerializableMixin
 
 
-# REFACTOR(P0): _json_default(), _ts(), to_json(), to_snapshot() 与 volume/super_device/super_volume/file 中完全重复
-#               应将它们提取到 domain/common/mixins.py 的共享 Mixin 中
-class Device(ABC):
+class Device(ABC, JsonSerializableMixin):
     # 子类注册表：type 字符串 → 具体变体类（由 __init_subclass__ 自动填充）
     _registry: dict[str, type["Device"]] = {}
 
@@ -180,57 +179,3 @@ class Device(ABC):
             "state": self.state,
             "device_path": self.device_path,
         }
-
-    def to_json(self) -> str:
-        """将设备序列化为 JSON 字符串。
-
-        Returns:
-            JSON 格式的设备信息字符串。
-        """
-        return json.dumps(
-            self.to_snapshot(),
-            ensure_ascii=False,
-            default=self._json_default,
-        )
-
-    def __str__(self) -> str:
-        """返回设备的 JSON 字符串表示。
-
-        Returns:
-            JSON 格式的设备信息字符串。
-        """
-        return self.to_json()
-
-    def _json_default(self, o: object) -> object:
-        """JSON 序列化时的默认类型转换函数。
-
-        处理 Enum 类型的序列化，将枚举值转换为其 value。
-
-        Args:
-            o: 需要序列化的对象。
-
-        Returns:
-            序列化后的值。
-
-        Raises:
-            TypeError: 对象类型不支持 JSON 序列化时抛出。
-        """
-        if isinstance(o, Enum):
-            return o.value
-        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
-
-
-    def _ts(self, t):
-        """将时间值格式化为 ISO 格式字符串。
-
-        Args:
-            t: 时间值，可为 datetime 对象或 None。
-
-        Returns:
-            ISO 格式的时间字符串，如果 t 为 None 则返回 None。
-        """
-        if t is None:
-            return None
-        if hasattr(t, "isoformat"):
-            return t.isoformat()
-        return t
