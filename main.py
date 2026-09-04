@@ -1,8 +1,7 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 主入口文件 - 应用的启动入口
 
-"""
-DDD 过渡版本入口：仅负责命令行参数解析，启动逻辑后续再接。
-"""
+"""DDD 过渡版本入口：参数解析、数据目录准备、启动引导与模式分发。"""
 
 from __future__ import annotations
 import logging
@@ -10,7 +9,6 @@ import argparse
 from pathlib import Path
 
 from bootstrap import bootstrap
-from infra.config.app_config import AppConfig
 from interface.cli.cli import FileTidyCLI
 from interface.fastapi import run_service
 from infra.pre_setup import pre_setup
@@ -87,14 +85,15 @@ def main():
     """
     args = parse_args()
     pre_setup(args)
-    app,config=bootstrap(args)
-    # if "cli" in args.modes:
-    #     cli = FileTidyCLI(app=app)
-    #     cli.cmdloop()
-    #     logger.info("cli mode completed")
-    # if "api" in args.modes:
-    #     run_service(app,config)
-    #     logger.info("api mode completed")
+    app, config = bootstrap(args)
+    post_check()
+    if "cli" in args.modes:
+        cli = FileTidyCLI(app=app)
+        cli.cmdloop()
+        logger.info("cli mode completed")
+    if "api" in args.modes:
+        run_service(app, config)
+        logger.info("api mode completed")
 
 
 if __name__ == "__main__":

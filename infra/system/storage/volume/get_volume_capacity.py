@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 系统卷容量获取 - 读取卷容量信息
 
 def get_volume_capacity(path) -> int | None:

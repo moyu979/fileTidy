@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 领域层 File 仓储接口 - 文件持久化抽象
 # NOTE: file 子系统未完成（设计未定稿），以下为探索/临时实现，勿作为稳定功能依赖；后续可能整体重写或删除。
 
@@ -9,7 +10,7 @@ from domain.storage.file.new_file import NewFile
 
 
 # TODO(P1): is_exist() 缺少文件参数，待设计确定后补充
-class file_repository_abc(ABC):
+class FileRepositoryABC(ABC):
     """文件仓储抽象基类。
 
     定义文件持久化操作的接口规范，所有具体文件仓储实现需继承此类。

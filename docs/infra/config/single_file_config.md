@@ -1,3 +1,4 @@
+<!-- TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。 -->
 # single_file_config.py — 单文件配置通用类（热更新）
 
 对应代码：`infra/config/single_file_config.py`

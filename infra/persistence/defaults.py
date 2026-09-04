@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 基础设施默认数据 - 幂等确保默认占位记录存在
 
 # infrastructure/persistence/defaults.py

@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: ai生成，待检查 - domain/storage/device 包
 
 """
@@ -9,10 +10,10 @@ domain/storage/device 包。
 """
 
 from domain.storage.device.base import Device
-from domain.storage.device.variants.HDD import HddDevice
-from domain.storage.device.variants.SSD import SsdDevice
-from domain.storage.device.variants.Tape import TapeDevice
-from domain.storage.device.variants.TfSd import TfSdCardDevice
+from domain.storage.device.variants.hdd import HddDevice
+from domain.storage.device.variants.ssd import SsdDevice
+from domain.storage.device.variants.tape import TapeDevice
+from domain.storage.device.variants.tf_sd import TfSdCardDevice
 
 __all__ = [
     "Device",

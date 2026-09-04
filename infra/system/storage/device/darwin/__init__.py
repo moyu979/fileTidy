@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: AI生成 - darwin 平台包：macOS 设备操作实现
 """darwin 平台包 —— macOS (Darwin 内核) 设备操作实现。"""
 

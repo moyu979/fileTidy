@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 基础设施 File 仓储实现 - 文件数据持久化
 # NOTE: file 子系统未完成（设计未定稿），以下为探索/临时实现，勿作为稳定功能依赖；后续可能整体重写或删除。
 
@@ -10,8 +11,9 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy import func
 
 from domain.storage.file.enum import FileState
-from domain.storage.file.repo import file_repository_abc
+from domain.storage.file.repo import FileRepositoryABC
 from domain.storage.file.new_file import NewFile
+from infra.persistence._enum_utils import coerce_enum
 from infra.persistence.database import session_scope
 from infra.persistence.models import FileLocationsModel, FileSourcesModel
 
@@ -34,13 +36,12 @@ def _path_as_text(p: str | Path | None) -> str | None:
         return p.as_posix()
     return p
 
-# REFACTOR(P1): 类名 file_repository 应改为 FileRepository（PascalCase），符合 PEP8 命名规范
-class file_repository(file_repository_abc):
+class FileRepository(FileRepositoryABC):
     """文件仓库实现，提供文件信息的持久化存储和查询操作。"""
 
     def __init__(self, session_factory) -> None:
         """
-        初始化 file_repository。
+        初始化 FileRepository。
 
         Args:
             session_factory: 用于创建 SQLAlchemy 会话的工厂
@@ -75,7 +76,10 @@ class file_repository(file_repository_abc):
             size=new_file.size,
             add_time=new_file.add_time,
             from_path=_path_as_text(new_file.from_path),
-            state=new_file.state if new_file.state is not None else FileState.ONLINE,
+            state=coerce_enum(
+                FileState,
+                new_file.state if new_file.state is not None else FileState.ONLINE,
+            ),
             info=new_file.info if new_file.info is not None else "",
         )
         location_row = FileLocationsModel(
@@ -85,7 +89,10 @@ class file_repository(file_repository_abc):
             add_time=new_file.add_time,
             now_path=_path_as_text(new_file.now_path) or "",
             now_volume=new_file.now_volume,
-            state=new_file.state if new_file.state is not None else FileState.ONLINE,
+            state=coerce_enum(
+                FileState,
+                new_file.state if new_file.state is not None else FileState.ONLINE,
+            ),
             info=new_file.info if new_file.info is not None else "",
         )
         with session_scope(self.session_factory) as session:
@@ -244,4 +251,3 @@ class file_repository(file_repository_abc):
                 state=state, info=info,
             )
             session.add(new_row)
-

@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - CLI 文件命令 - 文件管理命令行接口
 # NOTE: file 子系统未完成（设计未定稿），以下为探索/临时实现，勿作为稳定功能依赖；后续可能整体重写或删除。
 
@@ -144,7 +145,7 @@ class FileCLI(cmd.Cmd):
                 return
 
         try:
-            self.app.file_service.moveFile(
+            self.app.file_service.move_file(
                 src_volume=kwargs["src-vol"],
                 src_root=kwargs["src-root"],
                 src_dir=kwargs["src-dir"],
@@ -216,7 +217,7 @@ class FileCLI(cmd.Cmd):
                 return
 
         try:
-            self.app.file_service.copyFile(
+            self.app.file_service.copy_file(
                 src_volume=kwargs["src-vol"],
                 src_root=kwargs["src-root"],
                 src_dir=kwargs["src-dir"],

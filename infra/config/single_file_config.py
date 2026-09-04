@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: AI生成 - 单文件配置通用类（热更新，共享 ConfigWatcher）
 
 from __future__ import annotations

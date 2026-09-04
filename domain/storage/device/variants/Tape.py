@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: ai生成，待检查 - 领域层 Tape 变体 - 磁带设备实现
 
 import datetime
@@ -5,7 +6,7 @@ import datetime
 from domain.storage.device.base import Device
 from domain.storage.device.enum import LtoGeneration
 
-capacity_datas={
+TAPE_CAPACITY_BYTES = {
     "lto1":1024*1024*1024*1000*0.5, # 0.5TB
     "lto5":1024*1024*1024*1000*1.5, # 1.5TB
     "lto6":1024*1024*1024*1000*2.5  # 2.5TB

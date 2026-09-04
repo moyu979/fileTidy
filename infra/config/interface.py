@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: AI生成 - 配置内容管理纯接口（无数据、无锁、无实现）
 
 from __future__ import annotations

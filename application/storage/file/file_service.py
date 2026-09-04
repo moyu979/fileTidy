@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 应用层 File 服务 - 文件业务用例编排
 # NOTE: file 子系统未完成（设计未定稿），以下为探索/临时实现，勿作为稳定功能依赖；后续可能整体重写或删除。
 
@@ -9,7 +10,7 @@ import pandas as pd
 
 from domain.storage.file.enum import FileState
 from domain.storage.file.events import FileCopied, FileMoved, FileRegistered
-from domain.storage.file.repo import file_repository_abc
+from domain.storage.file.repo import FileRepositoryABC
 from domain.storage.file.new_file import NewFile
 from infra.operation_log.operation_log import log_event
 from infra.system.storage.file.get_file_size import get_file_size
@@ -18,10 +19,8 @@ from infra.common.hash import FileHasher
 logger = logging.getLogger(__name__)
 
 
-# REFACTOR(P1): 类名 file_service 应改为 FileService（PascalCase），符合 PEP8 命名规范
-#               同时需要更新 application/app.py 和 bootstrap.py 中的所有引用
-class file_service:
-    def __init__(self, file_repo: file_repository_abc, hasher: FileHasher) -> None:
+class FileService:
+    def __init__(self, file_repo: FileRepositoryABC, hasher: FileHasher) -> None:
         self.file_repo = file_repo
         self._hasher = hasher
         logger.info("FileService constructed")
@@ -118,9 +117,9 @@ class file_service:
 
         return registered
 
-    # ── moveFile ──────────────────────────────────────────────
+    # ── move_file ──────────────────────────────────────────────
 
-    def moveFile(
+    def move_file(
         self,
         src_volume: str,
         src_root: str,
@@ -189,9 +188,9 @@ class file_service:
                 target_volume=dst_volume, target_path=dst_path,
             ))
 
-    # ── copyFile ──────────────────────────────────────────────
+    # ── copy_file ──────────────────────────────────────────────
 
-    def copyFile(
+    def copy_file(
         self,
         src_volume: str,
         src_root: str,

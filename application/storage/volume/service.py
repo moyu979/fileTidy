@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 应用层 Volume 服务 - 卷业务用例编排
 
 import json
@@ -8,10 +9,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from application.storage.file.file_service import file_service
+from application.storage.file.file_service import FileService
 from domain.storage.file.new_file import NewFile
-from domain.storage.device.repo import device_repository_abc as DeviceRepository
-from domain.storage.super_device.repo import super_device_repository_abc as SuperDeviceRepository
+from domain.storage.device.repo import DeviceRepositoryABC as DeviceRepository
+from domain.storage.super_device.repo import SuperDeviceRepositoryABC as SuperDeviceRepository
 from domain.storage.volume.base import Volume
 from domain.storage.volume.enum import VolumeState
 from domain.storage.volume.events import (
@@ -22,14 +23,14 @@ from domain.storage.volume.events import (
     VolumeRemoved,
     VolumeSerialChanged,
 )
-from domain.storage.volume.repo import volume_repository_abc as VolumeRepository
+from domain.storage.volume.repo import VolumeRepositoryABC as VolumeRepository
 from infra.operation_log.operation_log import log_event
 from infra.system.storage.volume.get_file_system import get_file_system
 from infra.system.storage.volume.get_path import get_path
 from infra.system.storage.volume.get_super_device_id import get_super_device_id
 from infra.system.storage.volume.get_volume_capacity import get_volume_capacity
 from infra.system.storage.volume.get_volume_serial_by_path import get_volume_serial_by_path
-from infra.system.storage.volume.is_mountPoint import is_mount_point
+from infra.system.storage.volume.is_mount_point import is_mount_point
 from infra.system.storage.volume.is_volume import is_volume
 from infra.common.id_generator import generate_id
 from infra.common.time_defaults import LAST_CHECK_TIME_ORIGIN
@@ -48,7 +49,7 @@ class VolumeService:
     def __init__(
         self,
         volume_repository: VolumeRepository,
-        file_svc: file_service,
+        file_svc: FileService,
         device_repository: DeviceRepository,
         super_device_repository: SuperDeviceRepository,
     ) -> None:
@@ -282,6 +283,9 @@ class VolumeService:
             raise ValueError("卷目录结构不完整，需要 datas 和 meta 文件夹")
 
         serial = next((base / "meta").iterdir()).name
+
+        if self.volume_repository.is_exist(serial):
+            raise ValueError(f"卷 {serial} 已存在")
 
         volume = self._build_and_save_volume(
             serial=serial,

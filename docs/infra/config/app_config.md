@@ -1,3 +1,4 @@
+<!-- TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。 -->
 # app_config.py — 应用配置容器
 
 对应代码：`infra/config/app_config.py`

@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 领域层 SuperDevice 领域事件 - 超级设备相关事件定义
 # TODO 思考一下开始操作的时间要不要加
 from __future__ import annotations

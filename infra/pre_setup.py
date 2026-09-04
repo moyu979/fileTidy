@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 前置准备 - bootstrap 前的目录结构、环境检查、静态工具初始化
 
 import argparse

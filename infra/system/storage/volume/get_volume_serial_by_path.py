@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 系统卷序列号获取 - 通过路径读取卷序列号
 
 def get_volume_serial_by_path(path: str) -> str | None:

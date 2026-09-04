@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 领域层 SuperDevice 仓储接口 - 超级设备持久化抽象
 
 from abc import ABC, abstractmethod
@@ -7,7 +8,7 @@ from domain.storage.device.base import Device
 from domain.storage.super_device.base import SuperDevice
 
 
-class super_device_repository_abc(ABC):
+class SuperDeviceRepositoryABC(ABC):
     """超级设备仓储抽象基类。
 
     定义超级设备持久化操作的接口规范，包括子设备的管理（新增、替换、移除）。

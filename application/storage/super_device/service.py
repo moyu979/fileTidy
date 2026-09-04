@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 应用层 SuperDevice 服务 - 超级设备业务用例编排
 
 from datetime import datetime

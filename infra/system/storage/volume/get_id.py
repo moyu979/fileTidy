@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 系统卷 ID 获取 - 读取卷标识符
 
 def get_id(path: str) -> str:

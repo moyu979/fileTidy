@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: ai生成，待检查
 # CHECK: 待检查 - 应用层 Device 服务 - 设备业务用例编排
 
@@ -188,12 +189,12 @@ class DeviceService:
         log_event(DeviceFieldUpdated(serial, "name", old, name))
         return (old, name)
 
-    def set_type(self, serial: str, type: str) -> tuple[str, str]:
+    def set_type(self, serial: str, dtype: str) -> tuple[str, str]:
         """更新设备类型。
 
         Args:
             serial: 设备序列号。
-            type: 新类型。
+            dtype: 新类型。
 
         Returns:
             tuple[str, str]: (旧值, 新值)。
@@ -202,9 +203,9 @@ class DeviceService:
         if device is None:
             raise ValueError(f"device {serial} not found")
         old = device.dtype
-        self.device_repository.update_device(serial, type=type)
-        log_event(DeviceFieldUpdated(serial, "type", old, type))
-        return (old, type)
+        self.device_repository.update_device(serial, type=dtype)
+        log_event(DeviceFieldUpdated(serial, "type", old, dtype))
+        return (old, dtype)
 
     def set_state(self, serial: str, state: DeviceState) -> tuple[DeviceState, DeviceState]:
         """更新设备状态。

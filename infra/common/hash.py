@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 系统文件哈希计算 - 文件完整性校验
 # NOTE: file 子系统未完成（设计未定稿），此工具仅供 file 模块使用，可能随 file 一起调整。
 
@@ -118,6 +119,8 @@ class FileHasher:
         chunk_size = max(1, hash_once // 4)
         q: queue.Queue[bytes | None] = queue.Queue(maxsize=2)
         sentinel = None
+        errors: list[BaseException] = []
+        errors_lock = threading.Lock()
 
         md5 = hashlib.md5()
         sha512 = hashlib.sha512()
@@ -130,6 +133,10 @@ class FileHasher:
                         if not data:
                             break
                         q.put(data)
+            except Exception as exc:
+                # 收集读线程异常（如文件不存在/无权限），避免异常被线程吞掉
+                with errors_lock:
+                    errors.append(exc)
             finally:
                 q.put(sentinel)
 
@@ -149,6 +156,9 @@ class FileHasher:
 
         t_reader.join()
         t_hasher.join()
+
+        if errors:
+            raise errors[0]
 
         return {"sha512": sha512.hexdigest(), "md5": md5.hexdigest()}
 

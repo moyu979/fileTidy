@@ -1,11 +1,15 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: ai生成，待检查 - 基础设施 Device 仓储实现 - 设备数据持久化
 
 import logging
 
+from sqlalchemy.orm import make_transient
+
 from domain.storage.device.base import Device
 from domain.storage.device.enum import DeviceState
 from domain.storage.device.errors import DeviceInUseError
-from domain.storage.device.repo import device_repository_abc
+from domain.storage.device.repo import DeviceRepositoryABC
+from infra.persistence._enum_utils import coerce_enum
 from infra.persistence.database import session_scope
 from infra.persistence.models import (
     DeviceModel,
@@ -18,7 +22,7 @@ from infra.persistence.models import (
 logger = logging.getLogger(__name__)
 
 
-class DeviceRepository(device_repository_abc):
+class DeviceRepository(DeviceRepositoryABC):
     """设备仓库实现，提供设备数据的持久化存储和查询操作。"""
 
     def __init__(self, session_factory) -> None:
@@ -65,7 +69,7 @@ class DeviceRepository(device_repository_abc):
                 last_check_time=device.last_check_time,
                 capacity=device.capacity,
                 info=device.info,
-                state=device.state,
+                state=coerce_enum(DeviceState, device.state),
             )
         with session_scope(self.session_factory) as session:
             session.add(device_model)
@@ -139,6 +143,8 @@ class DeviceRepository(device_repository_abc):
             if device_model is None:
                 raise ValueError(f"device {serial} not found")
             for key, value in fields.items():
+                if key == "state":
+                    value = coerce_enum(DeviceState, value)
                 setattr(device_model, key, value)
             session.commit()
 
@@ -162,9 +168,14 @@ class DeviceRepository(device_repository_abc):
             )
             if row is None:
                 raise ValueError(f"device {old_serial} not found")
+            if old_serial == new_serial:
+                return
             session.delete(row)
             session.flush()
 
+            # delete + flush 后对象处于 deleted 状态，必须先用 make_transient
+            # 把它变回“未保存的新对象”，才能改主键并重新 add
+            make_transient(row)
             row.serial = new_serial
             session.add(row)
             session.flush()

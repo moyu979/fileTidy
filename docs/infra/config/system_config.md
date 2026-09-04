@@ -1,3 +1,4 @@
+<!-- TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。 -->
 # system_config.py — 系统配置读取器（懒调用）
 
 对应代码：`infra/config/system_config.py`

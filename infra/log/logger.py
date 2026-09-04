@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 基础设施日志模块 - 日志记录器配置
 
 from __future__ import annotations

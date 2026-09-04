@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 领域层 Volume 仓储接口 - 卷持久化抽象
 # NOTE: file 子系统未完成（设计未定稿）：remove_volume 中关于 file_locations 的引用检查为临时方案，
 #       待 file 模块重新设计后可能摘除。
@@ -7,7 +8,7 @@ from abc import ABC, abstractmethod
 from domain.storage.volume.base import Volume
 
 
-class volume_repository_abc(ABC):
+class VolumeRepositoryABC(ABC):
     """卷仓储抽象基类。
 
     定义卷持久化操作的接口规范，所有具体卷仓储实现需继承此类。

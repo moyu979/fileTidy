@@ -1,3 +1,4 @@
+<!-- TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。 -->
 <!-- CHECK: 待检查 - 项目说明文档 -->
 
 # fileTidy — 存储设备管理工具
@@ -171,10 +172,10 @@ fileTidy/
 │       │   ├── factory.py      # 工厂
 │       │   ├── repo.py         # 仓储接口
 │       │   └── variants/       # 具体实现
-│       │       ├── HDD.py
-│       │       ├── SSD.py
-│       │       ├── Tape.py
-│       │       └── TfSd.py
+│       │       ├── hdd.py
+│       │       ├── ssd.py
+│       │       ├── tape.py
+│       │       └── tf_sd.py
 │       ├── volume/             # 卷领域
 │       │   ├── base.py
 │       │   ├── enum.py
@@ -234,7 +235,7 @@ fileTidy/
 │   │   ├── hash.py             # 文件哈希（完整性校验）
 │   │   ├── id_generator.py     # ID 生成器（基于时间戳）
 │   │   ├── merge_dir.py        # 目录合并（补缺）
-│   │   ├── runCommand.py       # 命令执行工具
+│   │   ├── run_command.py      # 命令执行工具
 │   │   ├── time_defaults.py    # 时间默认值
 │   │   └── xor.py              # 文件异或（字节运算）
 │   └── system/                 # 系统级操作（平台适配）

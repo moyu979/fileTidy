@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: ai生成，待检查 - 领域共享菜单工具 - 通用菜单基类与选项
 
 from __future__ import annotations

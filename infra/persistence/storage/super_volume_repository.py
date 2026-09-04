@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 基础设施 SuperVolume 仓储实现 - 超级卷数据持久化
 
 import logging
@@ -5,15 +6,16 @@ from typing import Any
 
 from domain.storage.super_volume.base import SuperVolume
 from domain.storage.super_volume.enum import SuperVolumeState
-from domain.storage.super_volume.repo import super_volume_repository_abc
+from domain.storage.super_volume.repo import SuperVolumeRepositoryABC
 from domain.storage.super_volume.structure import SuperVolumeStructure
+from infra.persistence._enum_utils import coerce_enum
 from infra.persistence.database import session_scope
 from infra.persistence.models import RelationState, SuperVolumeModel, SuperVolumeStructureModel
 
 logger = logging.getLogger(__name__)
 
 
-class SuperVolumeRepository(super_volume_repository_abc):
+class SuperVolumeRepository(SuperVolumeRepositoryABC):
     """超级卷仓库实现，提供超级卷数据的持久化存储和查询操作。"""
 
     def __init__(self, session_factory) -> None:
@@ -61,7 +63,7 @@ class SuperVolumeRepository(super_volume_repository_abc):
             method=super_volume.method,
             add_time=super_volume.add_time,
             last_check_time=super_volume.last_check_time,
-            state=super_volume.state,
+            state=coerce_enum(SuperVolumeState, super_volume.state),
             info=super_volume.info,
         )
         structures = []
@@ -212,6 +214,8 @@ class SuperVolumeRepository(super_volume_repository_abc):
             if model is None:
                 raise ValueError(f"super_volume {serial} not found")
             for key, value in fields.items():
+                if key == "state":
+                    value = coerce_enum(SuperVolumeState, value)
                 col = self._field_mapping.get(key, key)
                 setattr(model, col, value)
 

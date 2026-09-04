@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 领域层 LTFS 变体 - LTFS 文件系统卷实现
 
 from datetime import datetime

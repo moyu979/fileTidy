@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: ai生成，待检查 - 领域层 TF/SD 卡变体 - TF/SD 卡设备实现
 
 import datetime

@@ -1,3 +1,4 @@
+<!-- TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。 -->
 # interface.py — 配置内容管理纯接口
 
 对应代码：`infra/config/interface.py`

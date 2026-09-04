@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: ai生成，待检查 - 领域层 HDD 变体 - 机械硬盘设备实现
 
 import datetime

@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 领域层 SuperVolume 仓储接口 - 超级卷持久化抽象
 
 from abc import ABC, abstractmethod
@@ -6,7 +7,7 @@ from domain.storage.super_volume.base import SuperVolume
 from domain.storage.super_volume.structure import SuperVolumeStructure
 
 
-class super_volume_repository_abc(ABC):
+class SuperVolumeRepositoryABC(ABC):
     """超级卷仓储抽象基类。
 
     定义超级卷持久化操作的接口规范。

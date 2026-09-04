@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 基础设施 SuperDevice 仓储实现 - 超级设备数据持久化
 
 import logging
@@ -13,7 +14,8 @@ from domain.storage.super_device.errors import (
     SuperDeviceInUseError,
 )
 from domain.storage.volume.enum import VolumeState
-from domain.storage.super_device.repo import super_device_repository_abc
+from domain.storage.super_device.repo import SuperDeviceRepositoryABC
+from infra.persistence._enum_utils import coerce_enum
 from infra.persistence.database import session_scope
 from infra.persistence.models import (
     DeviceModel,
@@ -111,7 +113,7 @@ def _ensure_sub_available(session, sub_id: str) -> None:
         raise SubDeviceUnavailableError(sub_id, model.state)
 
 
-class SuperDeviceRepository(super_device_repository_abc):
+class SuperDeviceRepository(SuperDeviceRepositoryABC):
     """超级设备仓库实现，提供超级设备数据的持久化存储和查询操作。"""
 
     def __init__(self, session_factory) -> None:
@@ -157,7 +159,7 @@ class SuperDeviceRepository(super_device_repository_abc):
             need_all_devices_online=super_device.need_all_devices_online,
             add_time=super_device.add_time,
             last_check_time=super_device.last_check_time,
-            state=super_device.state,
+            state=coerce_enum(SuperDeviceState, super_device.state),
             capacity=super_device.capacity,
             info=super_device.info,
         )
@@ -274,6 +276,8 @@ class SuperDeviceRepository(super_device_repository_abc):
             if model is None:
                 raise ValueError(f"super_device {serial} not found")
             for key, value in fields.items():
+                if key == "state":
+                    value = coerce_enum(SuperDeviceState, value)
                 col = self._field_mapping.get(key, key)
                 setattr(model, col, value)
             session.commit()

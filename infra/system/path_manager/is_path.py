@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 系统路径判断 - 检查路径是否为指定类型
 
 """
@@ -70,7 +71,7 @@ def _is_path_windows(input_str: str) -> bool:
     """
     判断输入字符串是否为 Windows 平台的有效路径。
 
-    支持驱动器字母（C:\）、UNC 路径（\\server\share）等格式。
+    支持驱动器字母（C:\\）、UNC 路径（形如 \\\\server\\\\share）等格式。
 
     Args:
         input_str: 待判断的字符串

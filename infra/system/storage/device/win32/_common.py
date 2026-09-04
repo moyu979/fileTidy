@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: AI生成 - win32 平台共享工具：wmic/PowerShell 调用
 """win32 平台共享工具 —— wmic / PowerShell 调用。"""
 

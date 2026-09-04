@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: ai生成，待检查 - 领域层 Device 仓储接口 - 设备持久化抽象
 
 from abc import ABC, abstractmethod
@@ -5,7 +6,7 @@ from abc import ABC, abstractmethod
 from domain.storage.device.base import Device
 
 
-class device_repository_abc(ABC):
+class DeviceRepositoryABC(ABC):
     """设备仓储抽象基类。
 
     定义设备持久化操作的接口规范，所有具体设备仓储实现需继承此类。

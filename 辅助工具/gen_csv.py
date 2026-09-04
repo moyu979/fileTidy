@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 临时脚本 - CSV 文件生成器
 
 """

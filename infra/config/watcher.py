@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: AI生成 - 共享配置监听器（方案 A：单 Observer + 单 handler 按路径分发）
 # 说明：
 #   - 由配置系统顶端的 config 手动实例化一个 ConfigWatcher（传入配置根目录），

@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - FastAPI 应用工厂 - 创建和配置 Web 应用实例
 
 import logging

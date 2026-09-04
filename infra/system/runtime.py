@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: AI生成 - system infra 运行时：OS 状态 + 平台分发
 """system infra 运行时 —— OS 状态 + 平台分发。
 

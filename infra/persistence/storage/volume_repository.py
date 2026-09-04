@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 基础设施 Volume 仓储实现 - 卷数据持久化
 # NOTE: file 子系统未完成（设计未定稿）：本仓储对 file_locations 的迁移与占用检查为临时方案，
 #       待 file 模块重新设计后可能整体摘除。
@@ -9,7 +10,8 @@ from domain.storage.super_device.enum import RelationState
 from domain.storage.volume.base import Volume
 from domain.storage.volume.enum import VolumeState
 from domain.storage.volume.errors import VolumeInUseError
-from domain.storage.volume.repo import volume_repository_abc
+from domain.storage.volume.repo import VolumeRepositoryABC
+from infra.persistence._enum_utils import coerce_enum
 from infra.persistence.database import session_scope
 from infra.persistence.models import (
     DeviceModel,
@@ -22,7 +24,7 @@ from infra.persistence.models import (
 logger = logging.getLogger(__name__)
 
 
-class VolumeRepository(volume_repository_abc):
+class VolumeRepository(VolumeRepositoryABC):
     """卷仓库实现，提供卷数据的持久化存储和查询操作。"""
 
     def __init__(self, session_factory) -> None:
@@ -71,7 +73,7 @@ class VolumeRepository(volume_repository_abc):
             name=volume.name,
             add_time=volume.add_time,
             last_check_time=volume.last_check_time,
-            state=volume.state,
+            state=coerce_enum(VolumeState, volume.state),
             capacity=volume.capacity,
             unique_mount_point=volume.unique_mount_point
             if volume.unique_mount_point is not None
@@ -174,6 +176,8 @@ class VolumeRepository(volume_repository_abc):
             if volume_model is None:
                 raise ValueError(f"volume {serial} not found")
             for key, value in fields.items():
+                if key == "state":
+                    value = coerce_enum(VolumeState, value)
                 setattr(volume_model, key, value)
             session.commit()
 
@@ -197,11 +201,25 @@ class VolumeRepository(volume_repository_abc):
             )
             if row is None:
                 raise ValueError(f"volume {old_serial} not found")
-            session.delete(row)
-            session.flush()
+            if old_serial == new_serial:
+                return
 
-            row.serial = new_serial
-            session.add(row)
+            # volumes.serial 被 file_locations / super_volume_structures 外键引用，
+            # 不能“先删旧行再迁移子引用”。改为与 SuperDeviceRepository 一致的
+            # 顺序：先复制新主键行 → 迁移子表引用 → 再删旧行。
+            new_row = VolumeModel(
+                serial=new_serial,
+                device_id=row.device_id,
+                name=row.name,
+                add_time=row.add_time,
+                last_check_time=row.last_check_time,
+                state=row.state,
+                capacity=row.capacity,
+                unique_mount_point=row.unique_mount_point,
+                file_system=row.file_system,
+                info=row.info,
+            )
+            session.add(new_row)
             session.flush()
 
             # NOTE: file 子系统未完成：以下 file_locations 迁移为临时逻辑
@@ -218,6 +236,8 @@ class VolumeRepository(volume_repository_abc):
                 .update({"volume_id": new_serial})
             )
 
+            # 最后删除旧主键行
+            session.delete(row)
             session.commit()
 
     def remove_volume(self, serial: str) -> None:

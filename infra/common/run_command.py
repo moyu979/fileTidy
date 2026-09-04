@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 共享工具 - 系统命令执行器
 
 """
@@ -17,7 +18,7 @@
     - macOS: 支持所有标准 Unix 命令
 
 使用示例：
-    >>> from utils.runCommand import run_command
+    >>> from infra.common.run_command import run_command
     >>> # Linux/macOS 示例
     >>> code, stdout, stderr = run_command(["ls", "-l"])
     >>> # Windows 示例

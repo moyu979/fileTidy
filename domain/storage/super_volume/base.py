@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 领域层 SuperVolume 实体基类 - 超级卷核心数据模型
 
 from __future__ import annotations

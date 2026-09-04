@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # TEST 需要在windows，linux和freebsd系统上进行测试
 # CHECK: AI生成 - SystemConfig 懒调用：方法注册表 + 实时系统调用（实现 ConfigContentManager）
 

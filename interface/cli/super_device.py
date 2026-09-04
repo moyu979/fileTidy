@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - CLI 超级设备命令 - 超级设备管理命令行接口
 
 """
@@ -100,7 +101,9 @@ class SuperDeviceCLI(cmd.Cmd):
             if device_id == "q" or device_id == "":
                 break
             devices.append(device_id)
-        assert len(devices) > 0
+        if not devices:
+            print("错误: 至少需要一个设备。")
+            return
 
         data: dict = {
             "serial": serial,

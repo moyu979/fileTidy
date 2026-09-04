@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 系统挂载点判断 - 检查路径是否为挂载点
 
 def is_mount_point(path:str):

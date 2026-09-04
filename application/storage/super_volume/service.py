@@ -1,3 +1,4 @@
+# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 应用层 SuperVolume 服务 - 超级卷业务用例编排
 
 """
@@ -22,9 +23,9 @@ from domain.storage.super_volume.events import (
     VolumesAddedToSuperVolume,
     VolumesRemovedFromSuperVolume,
 )
-from domain.storage.super_volume.repo import super_volume_repository_abc as SuperVolumeRepository
+from domain.storage.super_volume.repo import SuperVolumeRepositoryABC as SuperVolumeRepository
 from domain.storage.super_volume.structure import SuperVolumeStructure
-from domain.storage.volume.repo import volume_repository_abc as VolumeRepository
+from domain.storage.volume.repo import VolumeRepositoryABC as VolumeRepository
 from infra.common.id_generator import generate_id
 from infra.common.time_defaults import LAST_CHECK_TIME_ORIGIN
 from infra.operation_log.operation_log import log_event
