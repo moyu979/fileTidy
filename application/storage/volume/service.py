@@ -1,4 +1,7 @@
+# CHECK: 待检查 - 应用层 Volume 服务 - 卷业务用例编排
+
 import json
+import logging
 from datetime import datetime
 import shutil
 from pathlib import Path
@@ -6,15 +9,21 @@ from pathlib import Path
 import pandas as pd
 
 from application.storage.file.file_service import file_service
-from application.storage.volume.factory import volume_factory
 from domain.storage.file.new_file import NewFile
 from domain.storage.device.repo import device_repository_abc as DeviceRepository
 from domain.storage.super_device.repo import super_device_repository_abc as SuperDeviceRepository
 from domain.storage.volume.base import Volume
 from domain.storage.volume.enum import VolumeState
-from domain.storage.volume.events import VolumeRegistered
+from domain.storage.volume.events import (
+    VolumeFieldUpdated,
+    VolumeInfoChanged,
+    VolumeInfoSet,
+    VolumeRegistered,
+    VolumeRemoved,
+    VolumeSerialChanged,
+)
 from domain.storage.volume.repo import volume_repository_abc as VolumeRepository
-from infra.operate_log.operate_log import log_event
+from infra.operation_log.operation_log import log_event
 from infra.system.storage.volume.get_file_system import get_file_system
 from infra.system.storage.volume.get_path import get_path
 from infra.system.storage.volume.get_super_device_id import get_super_device_id
@@ -22,11 +31,17 @@ from infra.system.storage.volume.get_volume_capacity import get_volume_capacity
 from infra.system.storage.volume.get_volume_serial_by_path import get_volume_serial_by_path
 from infra.system.storage.volume.is_mountPoint import is_mount_point
 from infra.system.storage.volume.is_volume import is_volume
-from shared.id_generator import generate_id
-from shared.time_defaults import LAST_CHECK_TIME_ORIGIN
+from infra.common.id_generator import generate_id
+from infra.common.time_defaults import LAST_CHECK_TIME_ORIGIN
+
+logger = logging.getLogger(__name__)
 
 
-class volume_service:
+class VolumeService:
+    """卷服务类。
+
+    提供卷的初始化、登记、查询等业务逻辑。
+    """
     def __init__(
         self,
         volume_repository: VolumeRepository,
@@ -34,15 +49,35 @@ class volume_service:
         device_repository: DeviceRepository,
         super_device_repository: SuperDeviceRepository,
     ) -> None:
+        """初始化卷服务。
+
+        Args:
+            volume_repository: 卷仓储实例。
+            file_svc: 文件服务实例。
+            device_repository: 设备仓储实例。
+            super_device_repository: 超级设备仓储实例。
+        """
         self.volume_repository = volume_repository
         self.file_service = file_svc
         self.device_repository = device_repository
         self.super_device_repository = super_device_repository
+        logger.info("VolumeService constructed")
 
     # ── 内部辅助 ──────────────────────────────────────────────
 
     def _resolve_device_id(self, device_id: str, add_time) -> str:
-        """校验 device_id 是有效的 Device 或 SuperDevice，不自动升级。"""
+        """校验 device_id 是有效的 Device 或 SuperDevice。
+
+        Args:
+            device_id: 设备 ID。
+            add_time: 添加时间。
+
+        Returns:
+            验证通过的设备 ID。
+
+        Raises:
+            ValueError: device_id 既不是 Device 也不是 SuperDevice 时抛出。
+        """
         if self.super_device_repository.is_exist(device_id):
             return device_id
 
@@ -56,7 +91,14 @@ class volume_service:
 
     @staticmethod
     def _normalize_info(info: str | dict | None) -> str:
-        """将 info 统一序列化为 JSON 字符串存储。"""
+        """将 info 统一序列化为 JSON 字符串存储。
+
+        Args:
+            info: 信息字典、JSON 字符串或 None。
+
+        Returns:
+            序列化后的 JSON 字符串。
+        """
         if info is None or info == "":
             return ""
         if isinstance(info, dict):
@@ -83,11 +125,19 @@ class volume_service:
         适用于卷已卸载等需要手动指定信息的场景。
 
         Args:
+            serial: 卷序列号。
+            base: 卷的基本路径。
+            name: 卷名称。
+            info: 附加信息。
+            unique_mount_point: 唯一挂载点。
             state: 卷状态，不传则自动检测（默认 HEALTHY）。
             file_system: 文件系统类型，不传则自动检测。
             device_id: 所属设备 ID，不传则自动从路径解析。
             capacity: 卷容量（字节），不传则自动检测。
             add_time: 卷登记时间，不传则使用当前时间。
+
+        Returns:
+            创建的 Volume 实例。
         """
         device_id = device_id or get_super_device_id(str(base))
         add_time = add_time or datetime.now()
@@ -99,7 +149,7 @@ class volume_service:
         # 确保 device_id 指向一个真正的 Device 或 SuperDevice
         device_id = self._resolve_device_id(device_id, add_time)
 
-        volume = volume_factory.new_volume(
+        volume = Volume.create(
             serial=serial,
             device_id=device_id,
             name=name or serial,
@@ -129,6 +179,24 @@ class volume_service:
         state: VolumeState | None = None,
         file_system: str | None = None,
     ) -> Volume:
+        """初始化一个新的卷。
+
+        在指定路径创建卷结构（datas 和 meta 目录），注册卷信息并扫描已有文件。
+
+        Args:
+            path: 卷路径。
+            name: 卷名称。
+            unique_mount_point: 唯一挂载点。
+            info: 附加信息。
+            state: 卷状态。
+            file_system: 文件系统类型。
+
+        Returns:
+            创建的 Volume 实例。
+
+        Raises:
+            ValueError: 路径不是挂载点、路径不是目录或已经是卷时抛出。
+        """
         if not is_mount_point(path):
             raise ValueError("不可以将一个非挂载点设置为卷")
         if is_volume(path):
@@ -170,12 +238,11 @@ class volume_service:
 
         # 注册 datas 下所有文件
         # TODO: 新增 skip_exist 参数，跳过数据库中已存在的文件
-        datas_dir = base / "datas"
-        if datas_dir.is_dir():
+        if volume.datas_path:
             self.file_service.register_folder(
-                folder_path=str(datas_dir),
+                folder_path=volume.datas_path,
                 volume_serial=volume.serial,
-                volume_path=str(datas_dir),
+                volume_path=volume.datas_path,
             )
 
         return volume
@@ -190,27 +257,29 @@ class volume_service:
         info: str | dict | None = None,
         register_files: bool = True,
     ) -> str:
+        """登记一个已有的卷。
+
+        Args:
+            path: 卷路径。
+            name: 卷名称。
+            unique_mount_point: 唯一挂载点。
+            info: 附加信息。
+            register_files: 是否同时注册卷中的文件。
+
+        Returns:
+            卷的 JSON 字符串。
+
+        Raises:
+            ValueError: 路径不是挂载点时抛出。
+        """
         if not is_mount_point(path):
             raise ValueError("路径不是挂载点")
 
         base = Path(path).resolve()
-        datas_dir = base / "datas"
-        meta_dir = base / "meta"
+        if not is_volume(str(base)):
+            raise ValueError("卷目录结构不完整，需要 datas 和 meta 文件夹")
 
-        if not datas_dir.is_dir():
-            raise ValueError("卷目录下缺少 datas 文件夹")
-        if not meta_dir.is_dir():
-            raise ValueError("卷目录下缺少 meta 文件夹")
-
-        actual_dirs = {p.name for p in base.iterdir() if p.is_dir()}
-        expected = {"datas", "meta"}
-        if extra := actual_dirs - expected:
-            raise ValueError(f"卷目录下只能有 datas 和 meta，发现多余项: {extra}")
-
-        meta_files = [f for f in meta_dir.iterdir() if f.is_file()]
-        if len(meta_files) != 1:
-            raise ValueError(f"meta 目录下应当只有一个文件作为序列号，发现 {len(meta_files)} 个")
-        serial = meta_files[0].name
+        serial = next((base / "meta").iterdir()).name
 
         volume = self._build_and_save_volume(
             serial=serial,
@@ -220,16 +289,13 @@ class volume_service:
             unique_mount_point=unique_mount_point,
         )
 
-        if register_files:
-            # 注册 datas 下所有文件
+        if register_files and volume.datas_path:
             # TODO: 新增 skip_exist 参数，跳过数据库中已存在的文件
-            datas_dir = base / "datas"
-            if datas_dir.is_dir():
-                self.file_service.register_folder(
-                    folder_path=str(datas_dir),
-                    volume_serial=volume.serial,
-                    volume_path=str(datas_dir),
-                )
+            self.file_service.register_folder(
+                folder_path=volume.datas_path,
+                volume_serial=volume.serial,
+                volume_path=volume.datas_path,
+            )
 
         return volume.to_json()
 
@@ -260,7 +326,7 @@ class volume_service:
         if state is None:
             state = VolumeState.UNKNOWN
 
-        volume = volume_factory.new_volume(
+        volume = Volume.create(
             serial=serial,
             device_id=device_id,
             name=name or serial,
@@ -271,7 +337,7 @@ class volume_service:
             unique_mount_point=unique_mount_point,
             file_system=file_system,
             info=self._normalize_info(info),
-            volume_path=volume_path,
+            volume_path=volume_path if volume_path is not None else get_path(serial),
         )
 
         if self.volume_repository.is_exist(volume):
@@ -281,6 +347,10 @@ class volume_service:
         return volume.to_json()
 
     # ── 通过 CSV 登记 ────────────────────────────────────────
+    # TODO: 对 datas 相对路径的计算逻辑有点乱，
+    #       register_volume_by_csv 自动加 datas，
+    #       register_volume_by_csv_data 不加，
+    #       后面需要统一梳理一下设计。
 
     def register_volume_by_csv(
         self,
@@ -302,26 +372,12 @@ class volume_service:
         适用于卷已挂载但不想遍历文件系统的场景。
         """
         base = Path(path).resolve()
-        datas_dir = base / "datas"
-        meta_dir = base / "meta"
         add_time = add_time or datetime.now()
+        if not is_volume(str(base)):
+            raise ValueError("卷目录结构不完整，需要 datas 和 meta 文件夹")
 
-        if not datas_dir.is_dir():
-            raise ValueError("卷目录下缺少 datas 文件夹")
-        if not meta_dir.is_dir():
-            raise ValueError("卷目录下缺少 meta 文件夹")
+        serial = next((base / "meta").iterdir()).name
 
-        actual_dirs = {p.name for p in base.iterdir() if p.is_dir()}
-        expected = {"datas", "meta"}
-        if extra := actual_dirs - expected:
-            raise ValueError(f"卷目录下只能有 datas 和 meta，发现多余项: {extra}")
-
-        meta_files = [f for f in meta_dir.iterdir() if f.is_file()]
-        if len(meta_files) != 1:
-            raise ValueError(f"meta 目录下应当只有一个文件作为序列号，发现 {len(meta_files)} 个")
-        serial = meta_files[0].name
-
-        # 只登记卷（不含文件遍历）
         volume = self._build_and_save_volume(
             serial=serial,
             base=base,
@@ -339,7 +395,7 @@ class volume_service:
         self.file_service.register_by_csv(
             df=df,
             volume_serial=volume.serial,
-            volume_path=str(datas_dir),
+            volume_path=volume.datas_path or "",
             add_time=add_time,
         )
 
@@ -365,37 +421,193 @@ class volume_service:
         卷信息全部通过参数手动传入，文件信息由 DataFrame 提供。
         DataFrame 必须包含列: sha256, hash, size, path
         """
-        volume_json = self.register_volume_by_info(
+        volume = self._build_and_save_volume(
             serial=serial,
-            device_id=device_id,
-            name=name,
-            file_system=file_system,
-            capacity=capacity,
-            unique_mount_point=unique_mount_point,
+            base=Path(volume_path) if volume_path else Path(),
+            name=name or serial,
             info=info,
-            volume_path=volume_path,
+            unique_mount_point=unique_mount_point,
+            device_id=device_id,
+            capacity=capacity,
+            file_system=file_system,
             add_time=add_time,
         )
 
         self.file_service.register_by_csv(
             df=df,
-            volume_serial=serial,
-            volume_path=volume_path or "",
+            volume_serial=volume.serial,
+            volume_path=volume.datas_path or "",
             add_time=add_time,
         )
 
-        return volume_json
+        return volume.to_json()
 
     # ── 查询 ────────────────────────────────────────────────
 
     def list_volumes(self) -> list[str]:
         """列出所有卷（返回 JSON 字符串列表）。"""
-        return [v.to_json() for v in self.volume_repository.list_volume()]
+        return [v.to_json() for v in self.volume_repository.list_volumes()]
 
     def get_volume(self, serial: str) -> str | None:
         """按序列号查询卷。"""
         v = self.volume_repository.get_volume(serial)
         return v.to_json() if v else None
+
+    # ── 字段更新 ────────────────────────────────────────────
+
+    def set_name(self, serial: str, name: str) -> tuple[str, str]:
+        """更新卷名称。
+
+        Args:
+            serial: 卷序列号。
+            name: 新名称。
+
+        Returns:
+            tuple[str, str]: (旧值, 新值)。
+        """
+        volume = self.volume_repository.get_volume(serial)
+        if volume is None:
+            raise ValueError(f"volume {serial} not found")
+        old = volume.name
+        self.volume_repository.update_volume(serial, name=name)
+        log_event(VolumeFieldUpdated(serial, "name", old, name))
+        return (old, name)
+
+    def set_device_id(self, serial: str, device_id: str) -> tuple[str, str]:
+        """更新卷所属设备/超级设备。
+
+        校验新的 device_id 必须指向已登记的 Device 或 SuperDevice。
+
+        Args:
+            serial: 卷序列号。
+            device_id: 新所属设备序列号。
+
+        Returns:
+            tuple[str, str]: (旧值, 新值)。
+        """
+        volume = self.volume_repository.get_volume(serial)
+        if volume is None:
+            raise ValueError(f"volume {serial} not found")
+        validated = self._resolve_device_id(device_id, volume.add_time)
+        old = volume.device_id
+        self.volume_repository.update_volume(serial, device_id=validated)
+        log_event(VolumeFieldUpdated(serial, "device_id", old, validated))
+        return (old, validated)
+
+    def set_state(self, serial: str, state: VolumeState) -> tuple[VolumeState, VolumeState]:
+        """更新卷状态。
+
+        Args:
+            serial: 卷序列号。
+            state: 新状态。
+
+        Returns:
+            tuple[VolumeState, VolumeState]: (旧值, 新值)。
+        """
+        volume = self.volume_repository.get_volume(serial)
+        if volume is None:
+            raise ValueError(f"volume {serial} not found")
+        old = volume.state
+        self.volume_repository.update_volume(serial, state=state)
+        log_event(VolumeFieldUpdated(serial, "state", old, state))
+        return (old, state)
+
+    def set_capacity(self, serial: str, capacity: int) -> tuple[int | None, int]:
+        """更新卷容量。
+
+        Args:
+            serial: 卷序列号。
+            capacity: 新容量（字节）。
+
+        Returns:
+            tuple[int | None, int]: (旧值, 新值)。
+        """
+        volume = self.volume_repository.get_volume(serial)
+        if volume is None:
+            raise ValueError(f"volume {serial} not found")
+        old = volume.capacity
+        self.volume_repository.update_volume(serial, capacity=capacity)
+        log_event(VolumeFieldUpdated(serial, "capacity", old, capacity))
+        return (old, capacity)
+
+    # ── info 操作（JSON 文本） ──────────────────────────────
+
+    @staticmethod
+    def _parse_info(info_str: str | None) -> dict:
+        """解析 info JSON 文本为字典，空值返回空字典。"""
+        if not info_str:
+            return {}
+        try:
+            return json.loads(info_str)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    def set_info(self, serial: str, info: dict) -> tuple[dict, dict]:
+        """全量替换 info（JSON 文本）。返回 (旧info, 新info)。"""
+        volume = self.volume_repository.get_volume(serial)
+        if volume is None:
+            raise ValueError(f"volume {serial} not found")
+        old = self._parse_info(volume.info)
+        new_str = json.dumps(info, ensure_ascii=False)
+        self.volume_repository.update_volume(serial, info=new_str)
+        log_event(VolumeInfoSet(serial, old, info))
+        return (old, info)
+
+    def append_info(self, serial: str, data: dict) -> tuple[dict, dict]:
+        """合并键值对到现有 info（JSON 文本）。返回 (旧info, 新info)。
+
+        逐键记录 VolumeInfoChanged：旧有键 → replace；新增键 → add。
+        """
+        volume = self.volume_repository.get_volume(serial)
+        if volume is None:
+            raise ValueError(f"volume {serial} not found")
+        old = self._parse_info(volume.info)
+        new_info = {**old, **data}
+        new_str = json.dumps(new_info, ensure_ascii=False)
+        self.volume_repository.update_volume(serial, info=new_str)
+        for key, new_val in data.items():
+            if key in old:
+                log_event(VolumeInfoChanged(serial, "replace", key, old[key], new_val))
+            else:
+                log_event(VolumeInfoChanged(serial, "add", key, None, new_val))
+        return (old, new_info)
+
+    def delete_info(self, serial: str, key: str) -> tuple[dict, dict]:
+        """从 info 中删除指定键（JSON 文本）。返回 (旧info, 新info)。"""
+        volume = self.volume_repository.get_volume(serial)
+        if volume is None:
+            raise ValueError(f"volume {serial} not found")
+        old = self._parse_info(volume.info)
+        new_info = dict(old)
+        old_val = new_info.pop(key, None)
+        new_str = json.dumps(new_info, ensure_ascii=False)
+        self.volume_repository.update_volume(serial, info=new_str)
+        if key in old:
+            log_event(VolumeInfoChanged(serial, "remove", key, old_val, None))
+        return (old, new_info)
+
+    # ── 序列号与移除 ────────────────────────────────────────
+
+    def set_serial(self, old_serial: str, new_serial: str) -> tuple[str, str]:
+        """重置卷序列号，同步更新关联表。返回 (旧序列号, 新序列号)。"""
+        if not self.volume_repository.is_exist(old_serial):
+            raise ValueError(f"volume {old_serial} not found")
+        self.volume_repository.update_serial(old_serial, new_serial)
+        log_event(VolumeSerialChanged(old_serial=old_serial, new_serial=new_serial))
+        return (old_serial, new_serial)
+
+    def remove_volume(self, serial: str) -> None:
+        """软删除卷（标记 REMOVED）。
+
+        Args:
+            serial: 卷序列号。
+
+        Raises:
+            ValueError: 卷不存在。
+            VolumeInUseError: 卷仍被文件/超级卷引用（透传自仓储层）。
+        """
+        self.volume_repository.remove_volume(serial)
+        log_event(VolumeRemoved(serial))
 
     # ── 卷内文件查询 / 扫描 ────────────────────────────────
 
@@ -437,4 +649,3 @@ class volume_service:
         # TODO: 实现——解析 volume → 获取 volume_path → 遍历文件系统 →
         #        计算哈希 → 查 DB 比对 → 分类返回
         ...
-
