@@ -1,7 +1,6 @@
 .vscode/
 .VSCodeCounter
 __pycache__/
-func_test
 data
 .DS_Store
 .cursor
