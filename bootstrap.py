@@ -8,8 +8,7 @@ from application.app import App
 from application.storage.device.service import DeviceService
 from application.storage.file.file_service import file_service
 from application.storage.super_device.service import SuperDeviceService
-from application.storage.super_volume.factory import super_volume_factory
-from application.storage.super_volume.service import super_volume_service
+from application.storage.super_volume.service import SuperVolumeService
 from application.storage.volume.service import VolumeService
 
 from infra.config.app_config import AppConfig
@@ -21,7 +20,7 @@ from infra.persistence.init_db import init_database
 from infra.persistence.storage.device_repository import DeviceRepository
 from infra.persistence.storage.file_repository import file_repository
 from infra.persistence.storage.super_device_repository import SuperDeviceRepository
-from infra.persistence.storage.super_volume_repo import super_Volume_repository
+from infra.persistence.storage.super_volume_repository import SuperVolumeRepository
 from infra.persistence.storage.volume_repository import VolumeRepository
 # volume 系统操作已改为直接函数调用，不再需要 adapter
 from infra.common.hash import FileHasher
@@ -79,9 +78,8 @@ def bootstrap(args: argparse.Namespace):
     #     super_device_repository_instance,
     # )
 
-    # super_volume_repository_instance = super_Volume_repository(session_factory)
-    # super_volume_factory.set_volume_repository(volume_repository_instance)
-    # super_volume_service_instance = super_volume_service(
+    # super_volume_repository_instance = SuperVolumeRepository(session_factory)
+    # super_volume_service_instance = SuperVolumeService(
     #     super_volume_repository_instance,
     #     volume_repository_instance,
     # )
