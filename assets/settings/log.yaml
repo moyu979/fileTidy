@@ -1,0 +1,8 @@
+# 命令行日志等级
+cli_log_level: INFO
+# 文件日志等级
+file_log_level: INFO
+# 文件日志路径
+service_log_path: "${workspace_path}/logs/service_log"
+# 操作日志路径
+operation_log_path: "${workspace_path}/logs/operation_log"
