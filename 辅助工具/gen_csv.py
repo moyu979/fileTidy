@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
+# CHECK: 待检查 - 临时脚本 - CSV 文件生成器
+
 """
 独立工具 —— 遍历文件夹，生成 fileTidy 所需的 CSV 文件。
 
-输出 CSV 列: sha256, hash, size, path
-  - sha256: SHA-256 十六进制摘要
-  - hash:   MD5 十六进制摘要
+输出 CSV 列: sha512, md5, size, path
+  - sha512: SHA-512 十六进制摘要
+  - md5:    MD5 十六进制摘要
   - size:   文件大小（字节）
   - path:   文件的绝对路径
 
 本脚本仅依赖 Python 标准库，可独立复制到任何地方使用。
 """
+# TODO(P2): 此文件位于 临时工具/ 目录下，应移入 scripts/ 目录并清理中文目录名
 
 import hashlib
 import csv
@@ -26,9 +29,16 @@ except Exception:
     CHUNK_SIZE = DEFAULT_CHUNK
 
 
-def sha256_of(path: str) -> str:
-    """计算文件的 SHA-256 摘要。"""
-    h = hashlib.sha256()
+def sha512_of(path: str) -> str:
+    """计算文件的 SHA-512 摘要。
+
+    Args:
+        path: 文件路径。
+
+    Returns:
+        文件的 SHA-512 十六进制摘要字符串。
+    """
+    h = hashlib.sha512()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(CHUNK_SIZE), b""):
             h.update(chunk)
@@ -36,7 +46,14 @@ def sha256_of(path: str) -> str:
 
 
 def md5_of(path: str) -> str:
-    """计算文件的 MD5 摘要。"""
+    """计算文件的 MD5 摘要。
+
+    Args:
+        path: 文件路径。
+
+    Returns:
+        文件的 MD5 十六进制摘要字符串。
+    """
     h = hashlib.md5()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(CHUNK_SIZE), b""):
@@ -45,7 +62,18 @@ def md5_of(path: str) -> str:
 
 
 def generate_csv(target_dir: str, output_path: str) -> int:
-    """遍历 target_dir，为每个文件计算哈希并写入 CSV。返回处理的文件数。"""
+    """遍历目标目录，为每个文件计算哈希并写入 CSV 文件。
+
+    Args:
+        target_dir: 要扫描的目标目录路径。
+        output_path: 输出 CSV 文件路径。
+
+    Returns:
+        处理的文件总数。
+
+    Raises:
+        SystemExit: 如果目标路径不存在或不是目录则退出。
+    """
     target = Path(target_dir).resolve()
     if not target.is_dir():
         print(f"错误: 路径不存在或不是目录: {target}")
@@ -63,7 +91,7 @@ def generate_csv(target_dir: str, output_path: str) -> int:
     out = Path(output_path).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["sha256", "hash", "size", "path"])
+        writer = csv.DictWriter(f, fieldnames=["sha512", "md5", "size", "path"])
         writer.writeheader()
 
         print(f"正在扫描: {target}")
@@ -90,8 +118,8 @@ def generate_csv(target_dir: str, output_path: str) -> int:
                 print("\x1b[2K" + f"{bar} {prev_percent*100:6.2f}%")
             sys.stdout.flush()
 
-            # 单次读取文件，同时计算 sha256 和 md5（节省 I/O 成本）
-            sha_h = hashlib.sha256()
+            # 单次读取文件，同时计算 sha512 和 md5（节省 I/O 成本）
+            sha_h = hashlib.sha512()
             md5_h = hashlib.md5()
             with open(abs_path, "rb") as fh:
                 for chunk in iter(lambda: fh.read(CHUNK_SIZE), b""):
@@ -101,8 +129,8 @@ def generate_csv(target_dir: str, output_path: str) -> int:
             md5 = md5_h.hexdigest()
 
             writer.writerow({
-                "sha256": sha,
-                "hash": md5,
+                "sha512": sha,
+                "md5": md5,
                 "size": str(size),
                 "path": abs_path,
             })
@@ -125,6 +153,11 @@ def generate_csv(target_dir: str, output_path: str) -> int:
 
 
 def main() -> None:
+    """gen_csv 工具的主入口函数。
+
+    支持命令行参数模式和交互式输入模式，遍历指定目录生成包含
+    sha512、hash、size、path 列的 CSV 文件。
+    """
     if len(sys.argv) == 3:
         target_dir = sys.argv[1].strip()
         memo = sys.argv[2].strip()

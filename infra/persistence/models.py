@@ -26,6 +26,9 @@ from domain.storage.super_volume.enum import SuperVolumeState
 from domain.storage.volume.enum import VolumeState
 Base = declarative_base()
 
+# NOTE: file 子系统未完成（设计未定稿）：file_sources / file_locations 两张表及 FileState
+#       引用为临时设计，后续可能随 file 模块一起重写或删除。
+
 
 class DeviceModel(Base):
     """
@@ -57,7 +60,10 @@ class DeviceModel(Base):
 
 class SuperDeviceStructureModel(Base):
     """
-    超级设备与设备之间的关联关系映射表，记录设备如何组成超级设备。
+    超级设备与子项之间的关联关系映射表，记录子项如何组成超级设备。
+
+    子项（sub_device_id）既可以是物理设备（Device.serial），
+    也可以是另一个超级设备（SuperDevice.serial），支持超级设备层叠。
     """
     __tablename__ = "super_device_structures"
     __table_args__ = (
@@ -65,8 +71,8 @@ class SuperDeviceStructureModel(Base):
     )
     # 超级设备 id
     super_device_id = Column(String, ForeignKey("super_devices.serial"), nullable=False)
-    # 子设备 id（Device 的 serial）
-    sub_device_id = Column(String, ForeignKey("devices.serial"), nullable=False)
+    # 子项 id（Device.serial 或 SuperDevice.serial，支持层叠）
+    sub_device_id = Column(String, nullable=False)
     # 添加时间
     add_time = Column(DateTime, default=datetime.utcnow)
     # 状态，指是否还在使用这个映射关系
@@ -260,5 +266,4 @@ class CacheModel(Base):
     last_modify_time = Column(DateTime, nullable=True)
     # 文件添加时间
     add_time = Column(DateTime, default=datetime.utcnow)
-
 

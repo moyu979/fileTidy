@@ -1,4 +1,5 @@
 # CHECK: AI生成 - 仿照 hash 重构 - 系统文件 XOR 操作（配置注入 / 单双缓冲 / 向量化异或）
+# NOTE: file 子系统未完成（设计未定稿），此工具仅供 file 模块使用，可能随 file 一起调整。
 
 from __future__ import annotations
 

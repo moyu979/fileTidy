@@ -1,3 +1,5 @@
+<!-- CHECK: 待检查 - 项目说明文档 -->
+
 # fileTidy — 存储设备管理工具
 
 ![Python](https://img.shields.io/badge/Python-3.12+-blue)
@@ -85,14 +87,14 @@
 
 | 类型 | 描述 |
 |------|------|
-| `ManualCopy` | 手动复制模式，多个卷内容保持一致 |
-| `Stack` | 堆叠模式，多个卷组合成更大的逻辑存储空间 |
+| `Copy` | 复制模式，多个卷内容保持一致 |
+| `SnapRAID RAID5` | SnapRAID RAID5 校验冗余阵列 |
 
 **核心属性：** 序列号、名称、组合方式（method）、状态（Unknown / Healthy / Danger / Fault / Removed）、子卷列表。
 
 ### 5. File（文件）
 
-系统中管理的文件实体，每个文件包含来源路径和在卷内的位置信息，分别存储在 `FileSources` 和 `FileLocations` 两张表中。
+系统中管理的文件实体，每个文件包含来源路径和在卷内的位置信息，分别存储在 `file_sources` 和 `file_locations` 两张表中。
 
 **核心属性：** SHA-512 哈希、MD5 哈希、大小、来源路径、所在卷、卷内路径。
 
@@ -194,15 +196,15 @@ fileTidy/
 │       │       ├── raidz.py
 │       │       └── single_super_device.py
 │       ├── super_volume/       # 超级卷领域
+│       │   ├── __init__.py     # eager-import 变体，填充类型注册表
 │       │   ├── base.py
 │       │   ├── enum.py
 │       │   ├── events.py
-│       │   ├── factory.py
 │       │   ├── repo.py
 │       │   ├── structure.py    # 超级卷-子卷关联关系
 │       │   └── variants/
-│       │       ├── manual_copy.py
-│       │       └── stack.py
+│       │       ├── copy.py
+│       │       └── snapraid_raid5.py
 │       └── file/
 │           ├── events.py
 │           ├── new_file.py     # 文件实体
@@ -213,19 +215,28 @@ fileTidy/
 │   │   └── config.py           # YAML 配置加载
 │   ├── log/
 │   │   └── logger.py           # 日志系统（按月轮转）
-│   ├── operate_log/
-│   │   └── operate_log.py      # 操作事件日志
+│   ├── operation_log/
+│   │   └── operation_log.py   # 操作事件日志
 │   ├── persistence/            # 数据库持久化
 │   │   ├── database.py         # SQLAlchemy 引擎与会话
 │   │   ├── init_db.py          # 数据库初始化
 │   │   ├── models.py           # ORM 模型定义
-│   │   ├── seed.py             # 种子数据
+│   │   ├── defaults.py         # 默认占位数据
 │   │   └── storage/            # 仓储实现
 │   │       ├── device_repository.py
 │   │       ├── volume_repository.py
 │   │       ├── super_device_repository.py
-│   │       ├── super_volume_repo.py
+│   │       ├── super_volume_repository.py
 │   │       └── file_repository.py
+│   ├── common/                 # infra 内部共享工具（通用算法/工具）
+│   │   ├── barcode_generator.py # 条形码生成（Code128）
+│   │   ├── capacity_converter.py# 容量单位换算
+│   │   ├── hash.py             # 文件哈希（完整性校验）
+│   │   ├── id_generator.py     # ID 生成器（基于时间戳）
+│   │   ├── merge_dir.py        # 目录合并（补缺）
+│   │   ├── runCommand.py       # 命令执行工具
+│   │   ├── time_defaults.py    # 时间默认值
+│   │   └── xor.py              # 文件异或（字节运算）
 │   └── system/                 # 系统级操作（平台适配）
 │       ├── path_manager/
 │       │   └── is_path.py
@@ -249,9 +260,7 @@ fileTidy/
 │           │   ├── get_super_device_id.py
 │           │   └── ...
 │           └── file/
-│               ├── get_file_size.py
-│               ├── hash.py
-│               └── xor.py
+│               └── get_file_size.py
 │
 ├── interface/                  # 接口层
 │   ├── cli/                    # 命令行界面（基于 cmd 模块）
@@ -263,15 +272,9 @@ fileTidy/
 │   └── fastapi/                # REST API
 │       └── service.py          # FastAPI 服务
 │
-├── shared/                     # 共享工具
-│   ├── barcode_generator.py    # 条形码生成（Code128）
-│   ├── id_generator.py         # ID 生成器（基于时间戳）
-│   ├── runCommand.py           # 命令执行工具
-│   └── time_defaults.py        # 时间默认值
-│
 ├── assets/                     # 默认资源（首次运行拷贝至 data 目录）
 │   ├── logs/
-│   │   ├── operate_log/
+│   │   ├── operation_log/
 │   │   └── service_log/
 │   └── settings/
 │       ├── base.yaml           # 基础配置
@@ -362,7 +365,7 @@ path: "sqlite:///${workspace_path}/database.db"   # 数据库连接 URL
 cli_log_level: INFO             # 命令行日志等级
 file_log_level: INFO            # 文件日志等级
 service_log_path: "${workspace_path}/logs/service_log"   # 服务日志路径
-operate_log_path: "${workspace_path}/logs/operate_log"   # 操作日志路径
+operation_log_path: "${workspace_path}/logs/operation_log"   # 操作日志路径
 ```
 
 日志等级可选：`DEBUG` / `INFO` / `WARNING` / `ERROR` / `CRITICAL`。
@@ -373,6 +376,40 @@ operate_log_path: "${workspace_path}/logs/operate_log"   # 操作日志路径
 restapi_port: 5001              # API 端口
 restapi_host: 0.0.0.0          # API 监听地址
 ```
+
+### 配置热重载
+
+`Config` 支持动态重载，有两种方式：
+
+**方式一：手动触发**
+
+```python
+config.reload()  # 重新读取所有 YAML 文件，仅文件变化时执行
+```
+
+**方式二：后台线程自动重载**
+
+```python
+config.start_auto_reload()                # 使用 YAML 中 conf_reload_interval 的值
+config.start_auto_reload(interval=30)     # 或指定间隔（秒）
+# ...
+config.stop_auto_reload()                 # 停止重载线程
+```
+
+**注册变更回调**
+
+```python
+def on_config_changed(changed_keys: list[str]) -> None:
+    print(f"配置节发生变化: {changed_keys}")
+
+config.on_change(on_config_changed)
+```
+
+**行为说明：**
+- `reload()` 先检查文件 mtime，无变化时跳过（返回 `False`）
+- 重载是原子操作——解析成功才替换，失败则保留旧配置并记录错误
+- 后台线程重载间隔可通过 `base.conf_reload_interval` 动态调整
+- `${key}` 占位符按 `AppConfig` 的 `workspace_path` 构造的替换表在每次重载时重新计算
 
 ---
 
@@ -398,6 +435,7 @@ restapi_host: 0.0.0.0          # API 监听地址
 
 - [ ] 完善数据库插入逻辑与兼容性检查
 - [ ] Volume 注册前自动创建单设备 SuperDevice（`single_super_device`），减少用户手动操作
+- [ ] **数据库层完整性约束（暂缓）**：当前所有业务约束在 `infra/persistence` 仓储层用代码实现（如「SuperDevice 独占子项」：同一时刻一个子项只能被一个 SuperDevice 以 `USING` 关联持有）。数据库层除已启用的外键外**未加额外约束**。更优做法是加**部分唯一索引** `(sub_device_id) WHERE state='USING'` 作为并发 / 直连数据库时的最后兜底（SQLAlchemy 需用方言参数如 `sqlite_where`，注意跨库写法）。因当前仅 CLI 串行、无并发写入，且约束复杂，暂缓实施——待引入并发或直连 DB 场景时再补
 - [ ] 补充完整的 REST API 路由与业务接口
 - [ ] 完善跨平台系统调用层（macOS / Linux / Windows）
 - [ ] 补充单元测试与集成测试

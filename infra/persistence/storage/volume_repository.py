@@ -1,4 +1,6 @@
 # CHECK: 待检查 - 基础设施 Volume 仓储实现 - 卷数据持久化
+# NOTE: file 子系统未完成（设计未定稿）：本仓储对 file_locations 的迁移与占用检查为临时方案，
+#       待 file 模块重新设计后可能整体摘除。
 
 import logging
 
@@ -202,7 +204,7 @@ class VolumeRepository(volume_repository_abc):
             session.add(row)
             session.flush()
 
-            # 更新 file_locations 中引用的 now_volume
+            # NOTE: file 子系统未完成：以下 file_locations 迁移为临时逻辑
             (
                 session.query(FileLocationsModel)
                 .filter(FileLocationsModel.now_volume == old_serial)
@@ -243,6 +245,7 @@ class VolumeRepository(volume_repository_abc):
             if volume_model is None:
                 raise ValueError(f"volume {serial} not found")
 
+            # NOTE: file 子系统未完成：以下文件占用检查为临时逻辑
             files = (
                 session.query(FileLocationsModel)
                 .filter(

@@ -34,6 +34,9 @@ from infra.system.storage.volume.is_volume import is_volume
 from infra.common.id_generator import generate_id
 from infra.common.time_defaults import LAST_CHECK_TIME_ORIGIN
 
+# NOTE: file 子系统未完成（设计未定稿）：本服务对 file_service / NewFile 的依赖，
+#       以及初始化/登记时扫描文件、CSV 登记文件等流程均为临时接入，待 file 重新设计后统一调整或摘除。
+
 logger = logging.getLogger(__name__)
 
 
@@ -236,8 +239,7 @@ class VolumeService:
             unique_mount_point=unique_mount_point,
         )
 
-        # 注册 datas 下所有文件
-        # TODO: 新增 skip_exist 参数，跳过数据库中已存在的文件
+        # NOTE: file 子系统未完成（设计未定稿）：注册 datas 下文件为临时行为，待重设计后决定保留/删除
         if volume.datas_path:
             self.file_service.register_folder(
                 folder_path=volume.datas_path,
@@ -290,7 +292,7 @@ class VolumeService:
         )
 
         if register_files and volume.datas_path:
-            # TODO: 新增 skip_exist 参数，跳过数据库中已存在的文件
+            # NOTE: file 子系统未完成（设计未定稿）：注册 datas 下文件为临时行为，待重设计后决定保留/删除
             self.file_service.register_folder(
                 folder_path=volume.datas_path,
                 volume_serial=volume.serial,
@@ -390,8 +392,7 @@ class VolumeService:
             add_time=add_time,
         )
 
-        # 通过 DataFrame 登记文件
-        # TODO: 新增 skip_exist 参数，跳过数据库中已存在的文件
+        # NOTE: file 子系统未完成（设计未定稿）：通过 DataFrame 登记文件为临时行为
         self.file_service.register_by_csv(
             df=df,
             volume_serial=volume.serial,
@@ -433,6 +434,7 @@ class VolumeService:
             add_time=add_time,
         )
 
+        # NOTE: file 子系统未完成（设计未定稿）：通过 DataFrame 登记文件为临时行为
         self.file_service.register_by_csv(
             df=df,
             volume_serial=volume.serial,
@@ -609,7 +611,7 @@ class VolumeService:
         self.volume_repository.remove_volume(serial)
         log_event(VolumeRemoved(serial))
 
-    # ── 卷内文件查询 / 扫描 ────────────────────────────────
+    # ── 卷内文件查询 / 扫描（file 子系统未完成，暂未实现）─────
 
     def list_files(
         self,

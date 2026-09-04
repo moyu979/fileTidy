@@ -1,4 +1,5 @@
 # CHECK: 待检查 - 系统文件哈希计算 - 文件完整性校验
+# NOTE: file 子系统未完成（设计未定稿），此工具仅供 file 模块使用，可能随 file 一起调整。
 
 from __future__ import annotations
 

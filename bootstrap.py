@@ -1,4 +1,5 @@
 # CHECK: AI生成 - 配置热更改造 - 更新 Config 调用方式
+# NOTE: file 子系统未完成（设计未定稿）：以下 file 相关 import/接线均为临时方案
 
 import argparse
 import atexit
@@ -67,6 +68,7 @@ def bootstrap(args: argparse.Namespace):
     # super_device_service_instance = SuperDeviceService(super_device_repository_instance, device_repository_instance)
 
     # file_repository_instance = file_repository(session_factory)
+    # NOTE: file 子系统未完成：file_hasher / file_service 接线为临时方案，待重新设计
     # file_hasher = FileHasher(config["hash"])
     # file_service_instance = file_service(file_repository_instance, file_hasher)
 

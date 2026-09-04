@@ -108,12 +108,12 @@ class EventLogger:
             event: 事件对象
 
         Returns:
-            包含 type、data 和 timestamp 的字典
+            包含 type、timestamp 和 data 的字典
         """
         return {
             "type": event.__class__.__name__,
-            "data": event.__dict__,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
+            "data": event.__dict__
         }
 
 

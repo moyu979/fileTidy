@@ -1,13 +1,16 @@
-import json
-from enum import Enum
+# CHECK: 待检查 - 领域层 File 实体 - 文件核心数据模型
+# NOTE: file 子系统未完成（设计未定稿），以下为探索/临时实现，勿作为稳定功能依赖；后续可能整体重写或删除。
+
 from pathlib import Path
 
+from domain.common.mixins import JsonSerializableMixin
 from domain.storage.file.enum import FileState
 
 
-class NewFile:
+class NewFile(JsonSerializableMixin):
     """
     代表一个正在被注册的新文件。
+
     文件被放入卷时创建，内部同时持有来源视角（绝对路径）和位置视角（卷内相对路径），
     由 repo 在持久化时拆分为 FileSourcesModel 和 FileLocationsModel 两条记录。
     """
@@ -24,6 +27,19 @@ class NewFile:
         state: str | FileState = FileState.ONLINE,
         info: str = "",
     ) -> None:
+        """初始化新文件实例。
+
+        Args:
+            sha512: 文件的 SHA-512 哈希值。
+            md5: 文件的 MD5 哈希值。
+            size: 文件大小（字节）。
+            add_time: 添加时间。
+            path: 文件来源路径（绝对路径）。
+            now_path: 文件当前所在卷内的相对路径。
+            now_volume: 文件当前所在卷的标识。
+            state: 文件状态，默认为 ONLINE。
+            info: 附加信息。
+        """
         self.sha512 = sha512
         self.md5 = md5
         self.size = size
@@ -39,6 +55,11 @@ class NewFile:
         self.now_volume = now_volume
 
     def to_snapshot(self) -> dict:
+        """将新文件转换为快照字典。
+
+        Returns:
+            包含文件所有字段的字典，路径会转换为 POSIX 格式，时间会格式化为 ISO 字符串。
+        """
         from_path = self.from_path
         if isinstance(from_path, Path):
             from_path = from_path.as_posix()
@@ -56,25 +77,3 @@ class NewFile:
             "state": self.state,
             "info": self.info,
         }
-
-    def to_json(self) -> str:
-        return json.dumps(
-            self.to_snapshot(),
-            ensure_ascii=False,
-            default=self._json_default,
-        )
-
-    def __str__(self) -> str:
-        return self.to_json()
-
-    def _json_default(self, o: object) -> object:
-        if isinstance(o, Enum):
-            return o.value
-        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
-
-    def _ts(self, t):
-        if t is None:
-            return None
-        if hasattr(t, "isoformat"):
-            return t.isoformat()
-        return t

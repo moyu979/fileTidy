@@ -1,4 +1,6 @@
 # CHECK: 待检查 - 领域层 Volume 仓储接口 - 卷持久化抽象
+# NOTE: file 子系统未完成（设计未定稿）：remove_volume 中关于 file_locations 的引用检查为临时方案，
+#       待 file 模块重新设计后可能摘除。
 
 from abc import ABC, abstractmethod
 

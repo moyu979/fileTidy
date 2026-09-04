@@ -115,6 +115,10 @@ class DeviceService:
         冲突裁决）规划中，将实现为 reg_device_probed，与本方法共用
         _commit 公共提交段。
 
+        TODO(磁带 serial)：目前 serial 必填（缺→ValueError）。磁带理论上也可
+        「有输入就用、没输入自动生成」——对齐 reg_super_device_manual 的 serial
+        语义；若支持则在 serial 缺失且 dtype 为磁带时自动生成（如 generate_id）。
+
         Args:
             data: 设备字段字典，至少包含 "serial"。可选键：name / type /
                 add_time / last_check_time / capacity / info / state。

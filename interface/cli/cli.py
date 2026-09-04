@@ -1,3 +1,5 @@
+# CHECK: 待检查 - CLI 主入口 - 命令行应用主调度器
+
 """
 主 CLI 入口
 
@@ -11,6 +13,8 @@ import sys
 from typing import TYPE_CHECKING
 
 from interface.cli.device import DeviceCLI
+# NOTE: file 子系统未完成（设计未定稿）：file 子命令为临时接入
+from interface.cli.file import FileCLI
 from interface.cli.super_device import SuperDeviceCLI
 from interface.cli.super_volume import SuperVolumeCLI
 from interface.cli.volume import VolumeCLI
@@ -34,8 +38,14 @@ class FileTidyCLI(cmd.Cmd):
     prompt = "filetidy> "
 
     def __init__(self, app: "App | None" = None) -> None:
+        """初始化 FileTidyCLI 实例。
+
+        Args:
+            app: 应用实例，可为 None。
+        """
         super().__init__()
         self._device_cli = DeviceCLI(app=app)
+        self._file_cli = FileCLI(app=app)
         self._volume_cli = VolumeCLI(app=app)
         self._super_device_cli = SuperDeviceCLI(app=app)
         self._super_volume_cli = SuperVolumeCLI(app=app)
@@ -52,6 +62,21 @@ class FileTidyCLI(cmd.Cmd):
     def do_dev(self, arg: str) -> None:
         """device 的简写"""
         self.do_device(arg)
+
+    def do_file(self, arg: str) -> None:
+        """
+        进入文件操作子命令组（move / copy）
+
+        NOTE: file 子系统未完成，本命令暂不视为可用功能。
+
+        用法: file
+        输入 'help' 查看文件相关命令
+        """
+        self._file_cli.cmdloop()
+
+    def do_f(self, arg: str) -> None:
+        """file 的简写"""
+        self.do_file(arg)
 
     def do_super_device(self, arg: str) -> None:
         """
@@ -79,7 +104,16 @@ class FileTidyCLI(cmd.Cmd):
         """super_volume 的简写"""
         self.do_super_volume(arg)
 
-    def do_volume(self,arg: str) -> None:
+    def do_volume(self, arg: str) -> None:
+        """
+        进入卷管理子命令组
+
+        用法: volume
+        输入 'help' 查看卷相关命令
+
+        Args:
+            arg: 未使用，保留以符合 cmd.Cmd 接口。
+        """
         self._volume_cli.cmdloop()
 
     def do_vol(self, arg: str) -> None:
@@ -114,4 +148,3 @@ def main(app: "App | None" = None) -> None:
     except KeyboardInterrupt:
         print("\n\n程序被中断，再见！")
         sys.exit(0)
-

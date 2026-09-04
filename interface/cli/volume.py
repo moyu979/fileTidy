@@ -189,6 +189,7 @@ class VolumeCLI(cmd.Cmd):
             from pathlib import Path as P
             abs_path = str(P(path).resolve())
 
+            # NOTE: file 子系统未完成（设计未定稿）：登记 datas 下文件为临时交互
             reg_files_input = input("是否同时登记 datas 下的文件（y/N，默认 N）: ").strip().lower()
             register_files = reg_files_input in ("y", "yes")
 
@@ -249,6 +250,8 @@ class VolumeCLI(cmd.Cmd):
     def do_register_volume_by_csv(self, arg: str) -> None:
         """
         通过 CSV 文件登记卷及其文件记录
+
+        NOTE: file 子系统未完成（设计未定稿），本命令与文件登记流程为临时方案。
 
         用法: register_volume_by_csv
         输入卷路径，CSV 须包含列: sha256, hash, size, path

@@ -1,3 +1,5 @@
+# CHECK: 待检查 - 系统路径判断 - 检查路径是否为指定类型
+
 """
 判断给定的字符串是否是一个文件系统路径。
 支持 macOS (Darwin)、Linux、Windows 平台自动检测，
@@ -10,7 +12,15 @@ import sys
 
 
 def _is_path_darwin(input_str: str) -> bool:
-    """macOS 路径判定"""
+    """
+    判断输入字符串是否为 macOS 平台的有效路径。
+
+    Args:
+        input_str: 待判断的字符串
+
+    Returns:
+        是有效路径返回 True，否则返回 False
+    """
     # 空字符串不是路径
     if not input_str:
         return False
@@ -32,7 +42,15 @@ def _is_path_darwin(input_str: str) -> bool:
 
 
 def _is_path_linux(input_str: str) -> bool:
-    """Linux 路径判定（逻辑与 macOS 基本相同）"""
+    """
+    判断输入字符串是否为 Linux 平台的有效路径。
+
+    Args:
+        input_str: 待判断的字符串
+
+    Returns:
+        是有效路径返回 True，否则返回 False
+    """
     if not input_str:
         return False
     if input_str.startswith("~"):
@@ -49,7 +67,17 @@ def _is_path_linux(input_str: str) -> bool:
 
 
 def _is_path_windows(input_str: str) -> bool:
-    """Windows 路径判定"""
+    """
+    判断输入字符串是否为 Windows 平台的有效路径。
+
+    支持驱动器字母（C:\）、UNC 路径（\\server\share）等格式。
+
+    Args:
+        input_str: 待判断的字符串
+
+    Returns:
+        是有效路径返回 True，否则返回 False
+    """
     if not input_str:
         return False
     # 驱动器字母开头: C:\ D:\ 等（不区分大小写）
@@ -73,7 +101,15 @@ def _is_path_windows(input_str: str) -> bool:
 
 
 def _is_path_manual(input_str: str) -> bool:
-    """回退到手动输入"""
+    """
+    回退到手动输入：由用户交互式判断字符串是否为路径。
+
+    Args:
+        input_str: 待判断的字符串
+
+    Returns:
+        用户确认是路径返回 True，否则返回 False
+    """
     data = input(
         f"判定字符串是否是路径的功能还没写，请手动判定「{input_str}」是否是一个路径\n（y/n）"
     )

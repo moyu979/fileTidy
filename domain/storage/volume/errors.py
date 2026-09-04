@@ -1,4 +1,5 @@
 # CHECK: 待检查 - 领域层 Volume 异常定义 - 卷业务异常
+# NOTE: file 子系统未完成（设计未定稿）：files 占用参数为临时方案，后续可能移除。
 
 
 class VolumeInUseError(Exception):
