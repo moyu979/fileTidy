@@ -1,7 +1,3 @@
-# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
-# CHECK: 待检查 - 系统文件哈希计算 - 文件完整性校验
-# NOTE: file 子系统未完成（设计未定稿），此工具仅供 file 模块使用，可能随 file 一起调整。
-
 from __future__ import annotations
 
 import hashlib
@@ -13,12 +9,16 @@ from infra.config.interface import ConfigContentManager
 
 logger = logging.getLogger(__name__)
 
+# hash_once 的最小取值：1 MiB（512M 配置也是该单位的整倍数）
+MIN_HASH_ONCE = 1024 * 1024
+
 
 class FileHasher:
     """
     文件哈希工具类。注入 ``hash`` 子配置（如 ``config["hash"]``），
     以下标方式读取 ``hash_once``（分块字节数）与 ``enable_double_buffer``（双缓冲开关），
-    键缺失时直接抛 ``KeyError``；也可通过 ``from_params`` 直接传入这两个参数。
+    键缺失时直接抛 ``KeyError``，``hash_once`` 小于 1 MiB 时抛 ``ValueError``；
+    也可通过 ``from_params`` 直接传入这两个参数。
     """
 
     def __init__(self, hash_config: ConfigContentManager) -> None:
@@ -30,10 +30,15 @@ class FileHasher:
 
         Raises:
             KeyError: ``hash_once`` / ``enable_double_buffer`` 缺失时（构造期校验）。
+            ValueError: ``hash_once`` 小于 ``MIN_HASH_ONCE``（1 MiB）时。
         """
-        # fail fast：构造时校验键存在，但不保存，使用时现读（支持配置热更新）
+        # fail fast：构造时校验键存在与取值合法，但不保存，使用时现读（支持配置热更新）
         hash_once = int(hash_config["hash_once"])
         double_buffer = bool(hash_config["enable_double_buffer"])
+        if hash_once < MIN_HASH_ONCE:
+            raise ValueError(
+                f"hash_once 不能小于 1 MiB（{MIN_HASH_ONCE} 字节），当前值: {hash_once}"
+            )
         self._hash_config = hash_config
         logger.info(
             "FileHasher constructed: hash_once=%s, double_buffer=%s",
@@ -49,8 +54,11 @@ class FileHasher:
         内部现场构造轻量 conf，走统一主构造路径。
 
         Args:
-            hash_once: 单次读入的分块大小（字节）。
+            hash_once: 单次读入的分块大小（字节），不得小于 ``MIN_HASH_ONCE``（1 MiB）。
             enable_double_buffer: 是否启用双缓冲（双线程）。
+
+        Raises:
+            ValueError: ``hash_once`` 小于 1 MiB 时。
         """
         return cls(_HashConfig(hash_once, enable_double_buffer))
 

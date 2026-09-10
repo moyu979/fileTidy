@@ -16,7 +16,7 @@ import pytest
 
 import application.storage.volume.service as volume_mod
 from application.storage.volume.service import VolumeService
-from infra.common.hash import FileHasher
+from infra.common.hash import FileHasher, MIN_HASH_ONCE
 from infra.operation_log.operation_log import load_events
 from infra.persistence.database import build_session_factory
 from infra.persistence.init_db import init_database
@@ -46,7 +46,7 @@ def real_stack(tmp_path, monkeypatch, event_log_dir):
     monkeypatch.setattr(volume_mod, "generate_id", lambda suffix="": "VOL-0001")
 
     file_repo = FileRepository(session_factory)
-    hasher = FileHasher.from_params(hash_once=1024, enable_double_buffer=False)
+    hasher = FileHasher.from_params(hash_once=MIN_HASH_ONCE, enable_double_buffer=False)
     file_svc = FileService(file_repo=file_repo, hasher=hasher)
     volume_repo = VolumeRepository(session_factory)
     volume_svc = VolumeService(

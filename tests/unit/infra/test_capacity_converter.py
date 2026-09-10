@@ -1,4 +1,3 @@
-# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 """单测：infra/common/capacity_converter —— 容量换算。
 
 目的：验证 parse_capacity（文本→字节）与 format_capacity（字节→文本）

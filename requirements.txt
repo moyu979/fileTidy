@@ -20,3 +20,4 @@ Pillow>=12.1.0
 numpy>=2.0.0
 psutil>=5.9.0                   # 系统内存/进程信息读取（system_config 使用）
 python-barcode>=0.16.1
+zxing-cpp>=2.2.0              # 条码/二维码读回校验（自带 Windows wheel，无需额外原生库）
