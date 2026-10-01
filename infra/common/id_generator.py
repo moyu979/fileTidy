@@ -1,6 +1,3 @@
-# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
-# CHECK: 待检查 - 共享工具 - ID 生成器
-
 """
 ID 生成器，基于时间戳生成唯一ID
 """
@@ -25,7 +22,21 @@ class IDGenerator:
     _lock = threading.Lock()
     _sequence = 0
     _last_timestamp_str = ""
+    # 单个时间戳（秒）内可用的序号上限：000~999
+    _MAX_SEQUENCE = 999
     
+    @classmethod
+    def _wait_for_next_second(cls):
+        """等待真实时钟越过 _last_timestamp_str，并返回新的时间戳。
+
+        仅在当前时间戳上的序号耗尽（一秒内已发出 1000 个 ID）时调用。
+        """
+        while True:
+            time.sleep(1)
+            fresh = cls._get_timestamp()
+            if fresh > cls._last_timestamp_str:
+                return fresh
+
     @staticmethod
     def _get_timestamp():
         """获取当前年月日时分秒格式的时间戳（YYYYMMDDHHmmss）"""
@@ -47,20 +58,19 @@ class IDGenerator:
             
             # 时钟回拨检测：如果时间戳小于上次时间戳，说明时钟回拨了
             if timestamp_str < cls._last_timestamp_str:
-                # 使用最后时间戳，序列号递增，避免ID冲突
+                # 锚定最后时间戳，序列号递增：既不与历史ID重复，时间戳也不回退
+                timestamp_str = cls._last_timestamp_str
                 cls._sequence += 1
+                # 该时间戳上的序号已用满，等真实时钟追上来再重新计数
+                if cls._sequence > cls._MAX_SEQUENCE:
+                    timestamp_str = cls._wait_for_next_second()
+                    cls._sequence = 0
             # 如果时间戳相同（同一秒内），增加序列号
             elif timestamp_str == cls._last_timestamp_str:
                 cls._sequence += 1
-                # 序列号溢出处理：如果超过999，等待下一秒
-                if cls._sequence > 999:
-                    # 等待下一秒
-                    time.sleep(1)
-                    timestamp_str = cls._get_timestamp()
-                    # 如果时间戳还是相同（理论上不应该），继续等待
-                    while timestamp_str <= cls._last_timestamp_str:
-                        time.sleep(1)
-                        timestamp_str = cls._get_timestamp()
+                # 序列号溢出处理：如果超过上限，等待下一秒
+                if cls._sequence > cls._MAX_SEQUENCE:
+                    timestamp_str = cls._wait_for_next_second()
                     cls._sequence = 0
             else:
                 # 时间戳不同（新的秒），重置序列号
