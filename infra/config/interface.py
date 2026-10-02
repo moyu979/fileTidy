@@ -1,6 +1,3 @@
-# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
-# CHECK: AI生成 - 配置内容管理纯接口（无数据、无锁、无实现）
-
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -12,8 +9,6 @@ class ConfigContentManager(ABC):
 
     约束所有介入的配置类（SingleFileConfig / SystemConfig 及未来 conf）实现统一的
     取数/刷新契约，供配置容器（AppConfig）统一调度。
-    热更新（on_change / stop_auto_reload / is_auto_reload_running）是 SingleFileConfig
-    的扩展能力，不属于本接口。
     """
 
     @abstractmethod

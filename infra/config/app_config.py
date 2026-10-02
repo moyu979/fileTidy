@@ -1,6 +1,3 @@
-# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
-# CHECK: AI生成 - 应用配置容器（共享 ConfigWatcher + SingleFileConfig 字典 + SystemConfig section）
-
 from __future__ import annotations
 
 import logging
@@ -185,20 +182,37 @@ class AppConfig:
             return [cfg.reload() for cfg in self._sections.values()]
         return self._sections[section].reload()
 
-    def on_change(self, section: str, callback: Callable[[list[str]], None]) -> None:
-        """注册指定 section 的变更回调。
+    def subscribe(self, section: str, callback: Callable[[list[str]], None]) -> None:
+        """订阅指定 section 的配置变更。
 
         Args:
             section (str): section 名。
-            callback (Callable[[list[str]], None]): 收到变化的键名列表。
+            callback (Callable[[list[str]], None]): 对象方法（见
+                SingleFileConfig.subscribe），收到变化的键名列表。
+
+        Raises:
+            TypeError: 该 section 无热更能力（如 system），或 callback 不是
+                对象方法（由 SingleFileConfig.subscribe 抛出）。
+        """
+        cfg = self._sections[section]
+        if not hasattr(cfg, "subscribe"):
+            raise TypeError(f"section {section!r} 无热更能力（{type(cfg).__name__}）")
+        cfg.subscribe(callback)
+
+    def unsubscribe(self, section: str, callback: Callable[[list[str]], None]) -> None:
+        """取消指定 section 的配置变更订阅（幂等）。
+
+        Args:
+            section (str): section 名。
+            callback (Callable[[list[str]], None]): 要退订的对象方法。
 
         Raises:
             TypeError: 该 section 无热更能力（如 system）。
         """
         cfg = self._sections[section]
-        if not hasattr(cfg, "on_change"):
+        if not hasattr(cfg, "unsubscribe"):
             raise TypeError(f"section {section!r} 无热更能力（{type(cfg).__name__}）")
-        cfg.on_change(callback)
+        cfg.unsubscribe(callback)
 
     def stop_auto_reload(self, section: str | None = None) -> None:
         """注销指定或全部 section 的文件监听（无热更能力的 section 自动跳过）。

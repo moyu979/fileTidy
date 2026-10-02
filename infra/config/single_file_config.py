@@ -1,10 +1,8 @@
-# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
-# CHECK: AI生成 - 单文件配置通用类（热更新，共享 ConfigWatcher）
-
 from __future__ import annotations
 
 import logging
 import threading
+import weakref
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -21,10 +19,15 @@ logger = logging.getLogger(__name__)
 class SingleFileConfig(ConfigContentManager):
     """单个 YAML 配置文件的内容管理实现，支持热更新与 ``${key}`` 占位符替换。
 
-    实现 ``ConfigContentManager`` 纯接口；锁、热更框架（mtime 检测 / on_change /
+    实现 ``ConfigContentManager`` 纯接口；锁、热更框架（mtime 检测 / subscribe /
     watcher 注册）与占位符替换（替换表由 AppConfig 注入）均在本类
     内部。构造即注册热更监听。读取 fail-fast：必填项用 ``config[key]`` /
     ``get_required()``（缺失抛 KeyError），可选项才用 ``get(key, default=None)``。
+
+    订阅（``subscribe`` / ``unsubscribe``）以**弱引用**持有回调，订阅者被释放后
+    自动失效，不会因注册过回调而无法回收。代价是回调必须是 Python 定义的
+    bound method 且其所有者可弱引用——lambda、普通函数与 C 内置方法会被拒绝
+    （见 ``subscribe``）。
     """
 
     def __init__(
@@ -51,7 +54,8 @@ class SingleFileConfig(ConfigContentManager):
         self._lock = threading.RLock()          # 允许信号/监听回调安全重入
         self._data: dict[str, Any] = {}
         self._mtime: float | None = None
-        self._change_callbacks: list[Callable[[list[str]], None]] = []
+        # 弱引用持有：订阅者被回收后自动失效，无需显式 unsubscribe
+        self._change_callbacks: list[weakref.WeakMethod] = []
         self._watcher = watcher
         self.load()
         watcher.register(self.path, self.reload)
@@ -229,23 +233,87 @@ class SingleFileConfig(ConfigContentManager):
         except OSError:
             self._mtime = None
 
-    def on_change(self, callback: Callable[[list[str]], None]) -> None:
-        """注册变更回调。
+    def subscribe(self, callback: Callable[[list[str]], None]) -> None:
+        """订阅配置变更（弱引用持有，订阅者被释放后自动失效）。
+
+        回调必须是 Python 定义的 **bound method**（如 ``obj.handle``），且其所有者
+        可弱引用：以 ``weakref.WeakMethod`` 只弱引用所有者，所有者被回收后引用
+        自动变为空，通知时跳过，无需手动退订。
+
+        校验直接交给 ``weakref.WeakMethod``（EAFP）：lambda 与普通函数没有所有者
+        对象（弱引用会立即失效从而静默不触发）、C 内置方法（如 ``list.append``）
+        不受支持、所有者不可弱引用（如未声明 ``__weakref__`` 的 ``__slots__``
+        实例）——三者都在注册时抛出，具体原因见异常的 ``__cause__``。
 
         Args:
-            callback (Callable[[list[str]], None]): 收到变化的键名列表。
+            callback (Callable[[list[str]], None]): bound method，收到变化的键名列表。
+
+        Raises:
+            TypeError: callback 不是 Python bound method，或其所有者不可弱引用。
         """
-        self._change_callbacks.append(callback)
+        try:
+            weak_callback = weakref.WeakMethod(callback)
+        except TypeError as exc:
+            raise TypeError(
+                f"subscribe 只接受「Python 定义且所有者可弱引用的对象方法」"
+                f"（如 obj.handle），当前回调不满足：{type(callback).__name__}"
+            ) from exc
+        with self._lock:
+            # 顺手回收已释放订阅者的空引用，避免列表随订阅者更迭而累积
+            self._change_callbacks = [
+                ref for ref in self._change_callbacks if ref() is not None
+            ]
+            self._change_callbacks.append(weak_callback)
+        # 只记录名字，不传 callback 本体：LogRecord 会持有 args，
+        # 若被 handler 长期保留，就成了隐式强引用，弱引用随即失效。
+        logger.debug(
+            "订阅配置变更: %s.%s",
+            type(callback.__self__).__name__,
+            callback.__name__,
+        )
+
+    def unsubscribe(self, callback: Callable[[list[str]], None]) -> None:
+        """取消订阅（幂等；未订阅过时什么也不做）。
+
+        传入与 ``subscribe`` 相同的对象方法即可：bound method 按
+        ``(所有者, 函数)`` 比较相等，因此重新求值的表达式也能命中。
+
+        Args:
+            callback (Callable[[list[str]], None]): 要退订的对象方法。
+        """
+        with self._lock:
+            kept: list[weakref.WeakMethod] = []
+            removed = False
+            for ref in self._change_callbacks:
+                target = ref()
+                if target is None:
+                    continue                       # 已释放，顺手丢弃
+                if not removed and target == callback:
+                    removed = True
+                    continue                       # 命中目标，丢弃
+                kept.append(ref)
+            self._change_callbacks = kept
+        if removed:
+            logger.debug(
+                "取消订阅配置变更: %s.%s",
+                type(callback.__self__).__name__,
+                callback.__name__,
+            )
 
     def _notify_change(self, changed_keys: list[str]) -> None:
-        """通知变更回调（在锁外调用）。
+        """通知已订阅的回调（在锁外调用；自动跳过已释放的订阅者）。
 
         Args:
             changed_keys (list[str]): 变化的键名列表。
         """
-        for cb in self._change_callbacks:
+        with self._lock:
+            refs = list(self._change_callbacks)    # 快照，避免遍历期间被改
+        for ref in refs:
+            callback = ref()
+            if callback is None:
+                continue                           # 订阅者已释放，跳过
             try:
-                cb(changed_keys)
+                callback(changed_keys)
             except Exception as exc:
                 logger.exception("配置变更回调执行失败: %s", exc)
 

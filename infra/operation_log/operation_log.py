@@ -1,16 +1,9 @@
-# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
-# CHECK: 待检查 - 基础设施操作日志模块 - 操作日志记录
-
 from __future__ import annotations
 
 import json
 import os
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from infra.config.app_config import AppConfig
 
 _logger = None   # ⭐ 全局单例
 
@@ -40,15 +33,14 @@ def _json_default(obj):
 class EventLogger:
     """事件日志记录器，将事件序列化为 JSON 并按月份写入日志文件。"""
 
-    def __init__(self, config: "AppConfig"):
+    def __init__(self, log_cfg):
         """
         初始化 EventLogger。
 
         Args:
-            config: AppConfig 容器实例，从中读取 operation_log_path
+            log_cfg: log 配置段（AppConfig 的 log section），读取 operation_log_path
         """
-        log_config = config["log"]
-        self.base_path = log_config.get("operation_log_path", "./logs")
+        self.base_path = log_cfg.get("operation_log_path", "./logs")
 
         os.makedirs(self.base_path, exist_ok=True)
 
@@ -120,15 +112,15 @@ class EventLogger:
 
 # ---------- 对外 API ----------
 
-def setup_event_logger(config: "AppConfig"):
+def setup_event_logger(log_cfg):
     """
     初始化全局事件日志器。
 
     Args:
-        config: AppConfig 配置容器实例
+        log_cfg: log 配置段（AppConfig 的 log section）
     """
     global _logger
-    _logger = EventLogger(config)
+    _logger = EventLogger(log_cfg)
 
 
 def log_event(event):

@@ -1,15 +1,8 @@
-# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
-# CHECK: 待检查 - 基础设施日志模块 - 日志记录器配置
-
 from __future__ import annotations
 
 import logging
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from infra.config.app_config import AppConfig
 
 
 LOG_LEVEL_MAP = {
@@ -24,15 +17,16 @@ LOG_LEVEL_MAP = {
 class MonthlyFileHandler(logging.Handler):
     """按月滚动的文件日志处理器，每月生成一个独立的日志文件。"""
 
-    def __init__(self, log_dir, level=logging.INFO):
+    def __init__(self, log_dir):
         """
         初始化 MonthlyFileHandler。
 
+        日志级别由调用方通过 setLevel() 指定，与 logging 标准库 handler 保持一致。
+
         Args:
             log_dir: 日志文件存放目录
-            level: 日志级别，默认为 INFO
         """
-        super().__init__(level)
+        super().__init__()
         self.log_dir = log_dir
         os.makedirs(log_dir, exist_ok=True)
         self.current_file = None
@@ -83,18 +77,15 @@ class MonthlyFileHandler(logging.Handler):
             super().close()
 
 
-def setup_logging(config: "AppConfig"):
+def setup_logging(log_cfg):
     """
-    根据配置初始化全局日志系统。
+    根据 log 配置段初始化全局日志系统。
 
-    配置从 AppConfig 的 log section 读取，支持 cli_log_level、
-    file_log_level 和 service_log_path 等参数。
+    支持 cli_log_level、file_log_level 和 service_log_path 等参数。
 
     Args:
-        config: AppConfig 配置容器实例
+        log_cfg: log 配置段（AppConfig 的 log section）
     """
-    log_cfg = config["log"]
-
     cli_level = LOG_LEVEL_MAP.get(
         str(log_cfg.get("cli_log_level", "INFO")).upper(), logging.INFO
     )
@@ -115,7 +106,8 @@ def setup_logging(config: "AppConfig"):
         handler.close()
     root_logger.handlers.clear()
 
-    file_handler = MonthlyFileHandler(log_path, level=file_level)
+    file_handler = MonthlyFileHandler(log_path)
+    file_handler.setLevel(file_level)
     file_handler.setFormatter(formatter)
     root_logger.addHandler(file_handler)
 
