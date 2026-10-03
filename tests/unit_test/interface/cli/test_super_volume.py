@@ -2,8 +2,9 @@
 """单测：interface/cli/super_volume —— SuperVolumeCLI 超级卷子命令。
 
 目的：验证超级卷子命令的交互流程（`do_reg` 的名称/类型/info/子卷采集、
-`do_add_volume` 与 `do_remove_volumes` 的子卷列表采集）、查询、字段更新、
-info 操作与移除，确认对 `super_volume_service` 的调用契约与输出文本。
+`do_add_volume`/`do_replace_volume` 的参数采集）、查询、字段更新、info 操作与移除，
+确认对 `super_volume_service` 的调用契约与输出文本。
+``do_remove_volumes`` 随「摘子卷」功能暂缓（TODO P1）一并停用。
 
 输入：`builtins.input` 应答序列、命令行参数字符串、仅含 `super_volume_service`
 的 app 替身。
@@ -188,20 +189,23 @@ def test_do_reg_accepts_q_terminator(monkeypatch):
 
 
 def test_do_add_volume_calls_service(monkeypatch, capsys):
-    """输入目标序列号与两个子卷 → add_volumes 收到序列号与子卷列表。"""
-    service = _FakeService(add_volumes="SV1")
-    _patch_input(monkeypatch, ["SV1", "V9", "V8", ""])
+    """输入目标序列号与一个子卷 → add_volume 收到序列号与子卷 ID。"""
+    service = _FakeService(add_volume="SV1")
+    _patch_input(monkeypatch, ["SV1", "V9"])
 
     _cli(service).do_add_volume("")
 
     assert "添加成功: SV1" in capsys.readouterr().out
-    assert service.calls == [
-        (
-            "add_volumes",
-            (),
-            {"super_volume_serial": "SV1", "volume_ids": ["V9", "V8"]},
-        )
-    ]
+    assert service.calls == [("add_volume", ("SV1", "V9"), {})]
+
+
+def test_do_add_volume_uses_positional_args(capsys):
+    """位置参数齐全 → 直接用参，不再交互采集。"""
+    service = _FakeService(add_volume="SV1")
+
+    _cli(service).do_add_volume("SV1 V9")
+
+    assert service.calls == [("add_volume", ("SV1", "V9"), {})]
 
 
 def test_do_add_volume_requires_serial(monkeypatch, capsys):
@@ -211,31 +215,53 @@ def test_do_add_volume_requires_serial(monkeypatch, capsys):
 
     _cli(service).do_add_volume("")
 
-    assert "错误: 超级卷序列号不能为空。" in capsys.readouterr().out
-    assert service.calls == []
-
-
-def test_do_add_volume_requires_volume_ids(monkeypatch, capsys):
-    """子卷列表为空 → 输出“至少需要提供一个子卷 ID”，不调用服务。"""
-    service = _FakeService()
-    _patch_input(monkeypatch, ["SV1", ""])
-
-    _cli(service).do_add_volume("")
-
-    assert "错误: 至少需要提供一个子卷 ID。" in capsys.readouterr().out
+    assert "序列号不能为空。" in capsys.readouterr().out
     assert service.calls == []
 
 
 def test_do_add_volume_prints_error_on_exception(monkeypatch, capsys):
     """添加时服务抛异常 → 输出 '错误: ...'。"""
-    service = _FakeService(add_volumes=RuntimeError("卷已占用"))
-    _patch_input(monkeypatch, ["SV1", "V9", ""])
+    service = _FakeService(add_volume=RuntimeError("卷已占用"))
+    _patch_input(monkeypatch, ["SV1", "V9"])
 
     _cli(service).do_add_volume("")
 
     assert "错误: 卷已占用" in capsys.readouterr().out
 
 
+def test_do_replace_volume_calls_service(capsys):
+    """输入超级卷/旧卷/新卷 → replace_volume 收到三者。"""
+    service = _FakeService(replace_volume="SV1")
+
+    _cli(service).do_replace_volume("SV1 V1 V2")
+
+    assert "替换成功: SV1" in capsys.readouterr().out
+    assert service.calls == [
+        (
+            "replace_volume",
+            (),
+            {"super_volume_serial": "SV1", "old_volume_id": "V1", "new_volume_id": "V2"},
+        )
+    ]
+
+
+def test_do_replace_volume_prompts_when_args_missing(monkeypatch, capsys):
+    """无位置参数 → 走交互采集三个序列号。"""
+    service = _FakeService(replace_volume="SV1")
+    _patch_input(monkeypatch, ["SV1", "V1", "V2"])
+
+    _cli(service).do_replace_volume("")
+
+    assert service.calls == [
+        (
+            "replace_volume",
+            (),
+            {"super_volume_serial": "SV1", "old_volume_id": "V1", "new_volume_id": "V2"},
+        )
+    ]
+
+
+@pytest.mark.skip(reason="摘子卷功能暂缓（TODO P1：do_remove_volumes 已随仓储/ABC/service 停用）")
 def test_do_remove_volumes_calls_service(monkeypatch, capsys):
     """输入目标序列号与一个子卷 → remove_volumes 收到序列号与子卷列表。"""
     service = _FakeService(remove_volumes="SV1")
@@ -253,6 +279,7 @@ def test_do_remove_volumes_calls_service(monkeypatch, capsys):
     ]
 
 
+@pytest.mark.skip(reason="摘子卷功能暂缓（TODO P1：do_remove_volumes 已随仓储/ABC/service 停用）")
 def test_do_remove_volumes_requires_volume_ids(monkeypatch, capsys):
     """子卷列表为空 → 输出错误，不调用服务。"""
     service = _FakeService()

@@ -2,9 +2,11 @@
 # CHECK: 待检查 - 领域层 SuperVolume 仓储接口 - 超级卷持久化抽象
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from domain.storage.super_volume.base import SuperVolume
-from domain.storage.super_volume.structure import SuperVolumeStructure
+# TODO(P1): 批量 add_volumes 停用中 —— SuperVolumeStructure 仅其使用，恢复时一并取消注释
+# from domain.storage.super_volume.structure import SuperVolumeStructure
 
 
 class SuperVolumeRepositoryABC(ABC):
@@ -73,19 +75,60 @@ class SuperVolumeRepositoryABC(ABC):
         pass
 
     @abstractmethod
-    def add_volumes(
-        self,
-        structures: list[SuperVolumeStructure],
-    ) -> None:
-        """向已存在的超级卷添加一批子卷关联。
+    def add_volume(self, super_volume_serial: str, volume_id: str, add_time: datetime) -> None:
+        """向超级卷新增一个子卷。
 
-        Note:
-            当前实现会拒绝「曾属于任何超级卷的卷」再次编入（包括关系已退役为
-            UNUSED 的），这是 `super_volume_structures.volume_id` 硬唯一约束造成的
-            妥协，已知语义过强，见 models.py 该列的 TODO(P2)。
+        挂载前校验子卷独占（未被其它超级卷 USING 占用）与实体可用性，
+        违反时抛出领域错误（SubVolumeInUseError / SubVolumeUnavailableError / SubVolumeNotFoundError）。
 
         Args:
-            structures: 超级卷-子卷关联关系对象列表。
+            super_volume_serial: 超级卷序列号。
+            volume_id: 待新增的子卷序列号。
+            add_time: 添加时间。
+        """
+        pass
+
+    # TODO(P1): 批量 add_volumes 与 device 侧 add_device 不对称（device 只逐个新增），
+    #   已停用；改由单个 add_volume 与 add_device 对齐。恢复批量能力时取消下面注释。
+    #
+    # @abstractmethod
+    # def add_volumes(
+    #     self,
+    #     structures: list[SuperVolumeStructure],
+    # ) -> None:
+    #     """向已存在的超级卷添加一批子卷关联。
+    #
+    #     Note:
+    #         当前实现会拒绝「曾属于任何超级卷的卷」再次编入（包括关系已退役为
+    #         REPLACED 的），这是 `super_volume_structures.volume_id` 硬唯一约束造成的
+    #         妥协，已知语义过强，见 models.py 该列的 TODO(P2)。
+    #
+    #     Args:
+    #         structures: 超级卷-子卷关联关系对象列表。
+    #     """
+    #     pass
+
+    @abstractmethod
+    def replace_volume(
+        self, super_volume_serial: str, old_volume_id: str,
+        new_volume_id: str, add_time: datetime,
+    ) -> None:
+        """替换超级卷中的一个子卷。
+
+        旧卷关联标记 REPLACED（退役，不随复活恢复）+ 记录 replaced_by，新卷新增 USING。
+        新卷挂载前同样校验独占与实体可用性。
+
+        Args:
+            super_volume_serial: 超级卷序列号。
+            old_volume_id: 被替换的旧子卷序列号。
+            new_volume_id: 替换后的新子卷序列号。
+            add_time: 替换时间。
+
+        Raises:
+            ValueError: 旧子卷不在该超级卷的 USING 成员中。
+            SubVolumeInUseError: 新子卷已被其它超级卷以 USING 占用。
+            SubVolumeNotFoundError: 新子卷不是已登记的 volume。
+            SubVolumeUnavailableError: 新子卷处于 REMOVED/FAULT 不可用状态。
         """
         pass
 
@@ -119,27 +162,32 @@ class SuperVolumeRepositoryABC(ABC):
         """
         pass
 
-    @abstractmethod
-    def remove_volumes(
-        self,
-        super_volume_serial: str,
-        volume_ids: list[str],
-    ) -> None:
-        """从超级卷移除一批子卷（将关联标记为 UNUSED）。
-
-        Args:
-            super_volume_serial: 超级卷序列号。
-            volume_ids: 待移除的子卷序列号列表。
-        """
-        pass
+    # TODO(P1): 「摘子卷」功能暂缓（与 device 侧同口径停用）—— 当前没有配套的数据迁移，
+    #   直接摘除会破坏阵列编成（copy / snapraid_raid5 的成员数不变量、换盘重建均未实现）；
+    #   且 `super_volume_structures.volume_id` 上的硬唯一约束会让被摘子卷无法再编入任何超级卷。
+    #   恢复时取消下面注释（ABC 必须与 infra 实现同步启用/停用）。
+    #
+    # @abstractmethod
+    # def remove_volumes(
+    #     self,
+    #     super_volume_serial: str,
+    #     volume_ids: list[str],
+    # ) -> None:
+    #     """从超级卷移除一批子卷（将关联标记为 REPLACED）。
+    #
+    #     Args:
+    #         super_volume_serial: 超级卷序列号。
+    #         volume_ids: 待移除的子卷序列号列表。
+    #     """
+    #     pass
 
     @abstractmethod
     def remove_super_volume(self, serial: str) -> None:
         """将超级卷标记为 REMOVED（软删除），并释放其 USING 子卷关联。
 
         移除成功时，会把本超级卷名下的子卷关联行（state == USING）一并置为
-        SUPER_VOLUME_REMOVED，释放这些子卷；该状态区别于「成员被移除」的 UNUSED，
-        使 `revive_super_volume` 能精确恢复本方法释放的关联。
+        SUPER_VOLUME_REMOVED，释放这些子卷；该状态区别于成员侧退役的 REPLACED
+        （`replace_volume`），使 `revive_super_volume` 能精确恢复本方法释放的关联。
 
         Args:
             serial: 超级卷序列号。
@@ -159,7 +207,7 @@ class SuperVolumeRepositoryABC(ABC):
 
         拓扑一并恢复：把 `remove_super_volume` 释放掉的那批子卷关联行
         （state == SUPER_VOLUME_REMOVED）重新置回 USING；
-        `remove_volumes` 摘除的成员（state == UNUSED）**不**恢复。
+        `replace_volume` 换下的旧卷（state == REPLACED）**不**恢复。
 
         前置校验（任一失败均抛异常，事务整体回滚）：
         - 目标存在、且正处于 REMOVED；

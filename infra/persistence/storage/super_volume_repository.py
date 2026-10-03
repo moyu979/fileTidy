@@ -1,6 +1,8 @@
+import json
 import logging
 from typing import Any
 
+from domain.common.json_utils import parse_json_object
 from domain.storage.super_volume.base import SuperVolume
 from domain.storage.super_volume.enum import (
     SuperVolumeRelationState,
@@ -16,7 +18,8 @@ from domain.storage.super_volume.errors import (
     SuperVolumeNotRemovedError,
 )
 from domain.storage.super_volume.repo import SuperVolumeRepositoryABC
-from domain.storage.super_volume.structure import SuperVolumeStructure
+# TODO(P1): 批量 add_volumes 停用中 —— SuperVolumeStructure 仅其使用，恢复时一并取消注释
+# from domain.storage.super_volume.structure import SuperVolumeStructure
 from domain.storage.volume.enum import UNAVAILABLE_VOLUME_STATES
 from infra.persistence._enum_utils import coerce_enum
 from infra.persistence._model_utils import updatable_fields
@@ -33,6 +36,13 @@ logger = logging.getLogger(__name__)
 def _ensure_sub_volume_available(session, volume_id: str) -> None:
     """
     校验子卷可挂载：独占（未被其它超级卷以 USING 占用）+ 实体可用（非 REMOVED/FAULT）。
+
+    Note:
+        此处**刻意只认单层**：子项只能是已登记的 volume，不支持嵌套 super_volume ——
+        与 `super_device_repository._ensure_sub_available`（经 `_resolve_sub` 支持层叠）不对称。
+        该口径同时由库表兜住：`SuperVolumeStructureModel.volume_id` 是指向 `volumes.serial`
+        的 FK，即便放开本校验，写入 super_volume 的 serial 也会撞 FK 抛裸 IntegrityError。
+        若要支持层叠，需一并改校验、去 FK（及该列过强的唯一约束）并补祖先环检测。
 
     Args:
         session: SQLAlchemy 会话
@@ -239,50 +249,137 @@ class SuperVolumeRepository(SuperVolumeRepositoryABC):
                 result.append(SuperVolume.from_dict(data))
             return result
 
-    def add_volumes(
-        self,
-        structures: list[SuperVolumeStructure],
+    def add_volume(self, super_volume_serial: str, volume_id: str, add_time) -> None:
+        """
+        向超级卷新增一个子卷。
+
+        Args:
+            super_volume_serial: 超级卷序列号
+            volume_id: 子卷序列号
+            add_time: 添加时间
+        """
+        # TODO(P2): 复用「已退役」子卷会撞复合主键（裸 IntegrityError）—— 暂缓，当前无用例触发。
+        #   现象：在**同一个父级**下使用一个曾退役的子卷序列号时，INSERT (super_volume_id, volume_id)
+        #   撞 (父,子) 复合主键；且 volume_id 上还有硬唯一约束（见 models.py TODO(P2)），退役行永久占位。
+        #   例：SV1 先 replace V1→V3（(SV1,V1) 转 REPLACED 但行保留），之后 add_volume(SV1, V1) 就会失败。
+        #   根因：_ensure_sub_volume_available 判「占用」只看 state == USING，而写入是直接 INSERT 新行；
+        #   但「替换 / 父行软删」都只改 state、不删行（REPLACED / SUPER_VOLUME_REMOVED），
+        #   旧行永久占着这对主键 —— 校验口径与写入口径不一致。
+        #   修复方向：改 upsert —— 同一 (父,子) 已有历史行则重激活为 USING（刷新 add_time/info），
+        #   否则才新建；若确定「退役子卷不得回到同一父级」，则退化为先预检并抛明确领域异常。
+        with session_scope(self.session_factory) as session:
+            _ensure_sub_volume_available(session, volume_id)
+            row = SuperVolumeStructureModel(
+                super_volume_id=super_volume_serial,
+                volume_id=volume_id,
+                add_time=add_time,
+                state=SuperVolumeRelationState.USING,
+                info="",
+            )
+            session.add(row)
+            session.commit()
+
+    # TODO(P1): 批量 add_volumes 与 device 侧 add_device 不对称（device 只逐个新增），已停用；
+    #   改由单个 add_volume 与 add_device 对齐。恢复批量能力时取消下面注释。
+    #
+    # def add_volumes(
+    #     self,
+    #     structures: list[SuperVolumeStructure],
+    # ) -> None:
+    #     """
+    #     批量添加卷到超级卷的关联结构中。
+    #
+    #     添加前校验超级卷存在，且子卷尚未被任何超级卷关联（含 REPLACED，
+    #     因为 super_volume_structures.volume_id 上有唯一约束）。
+    #     TODO(P2): 「含 REPLACED 也算被占用」是 volume_id 硬唯一约束下的妥协
+    #     （见 models.py 该列的 TODO）。若将来改成部分唯一索引（仅 USING 唯一），
+    #     此处校验应放宽为「只拒绝仍处于 USING 的子卷」，让退役（REPLACED）的卷
+    #     能被重新编入别的超级卷。
+    #     Args:
+    #         structures: 超级卷结构对象列表
+    #
+    #     Raises:
+    #         SuperVolumeNotFoundError: 超级卷不存在。
+    #         ValueError: 子卷已被其他超级卷关联时抛出。
+    #     """
+    #     models = []
+    #     with session_scope(self.session_factory) as session:
+    #         for st in structures:
+    #             parent = session.query(SuperVolumeModel).filter(
+    #                 SuperVolumeModel.serial == st.super_volume_serial
+    #             ).first()
+    #             if parent is None:
+    #                 raise SuperVolumeNotFoundError(st.super_volume_serial)
+    #             existing = session.query(SuperVolumeStructureModel).filter(
+    #                 SuperVolumeStructureModel.volume_id == st.volume_id
+    #             ).first()
+    #             if existing is not None:
+    #                 raise ValueError(
+    #                     f"卷 {st.volume_id} 已属于超级卷 {existing.super_volume_id}，无法重复添加"
+    #                 )
+    #             model = SuperVolumeStructureModel(
+    #                 super_volume_id=st.super_volume_serial,
+    #                 volume_id=st.volume_id,
+    #                 add_time=st.add_time,
+    #                 state=st.state,
+    #                 info=st.info,
+    #             )
+    #             models.append(model)
+    #         session.add_all(models)
+
+    def replace_volume(
+        self, super_volume_serial: str, old_volume_id: str,
+        new_volume_id: str, add_time,
     ) -> None:
         """
-        批量添加卷到超级卷的关联结构中。
+        替换超级卷中的一个子卷（将旧卷标记为 REPLACED，添加新卷映射）。
 
-        添加前校验超级卷存在，且子卷尚未被任何超级卷关联（含 UNUSED，
-        因为 super_volume_structures.volume_id 上有唯一约束）。
-        TODO(P2): 「含 UNUSED 也算被占用」是 volume_id 硬唯一约束下的妥协
-        （见 models.py 该列的 TODO）。若将来改成部分唯一索引（仅 USING 唯一），
-        此处校验应放宽为「只拒绝仍处于 USING 的子卷」，让退役（UNUSED）的卷
-        能被重新编入别的超级卷。
         Args:
-            structures: 超级卷结构对象列表
+            super_volume_serial: 超级卷序列号
+            old_volume_id: 被替换的子卷序列号
+            new_volume_id: 新子卷序列号
+            add_time: 添加时间
 
         Raises:
-            SuperVolumeNotFoundError: 超级卷不存在。
-            ValueError: 子卷已被其他超级卷关联时抛出。
+            ValueError: 旧卷未在超级卷中找到
         """
-        models = []
         with session_scope(self.session_factory) as session:
-            for st in structures:
-                parent = session.query(SuperVolumeModel).filter(
-                    SuperVolumeModel.serial == st.super_volume_serial
-                ).first()
-                if parent is None:
-                    raise SuperVolumeNotFoundError(st.super_volume_serial)
-                existing = session.query(SuperVolumeStructureModel).filter(
-                    SuperVolumeStructureModel.volume_id == st.volume_id
-                ).first()
-                if existing is not None:
-                    raise ValueError(
-                        f"卷 {st.volume_id} 已属于超级卷 {existing.super_volume_id}，无法重复添加"
-                    )
-                model = SuperVolumeStructureModel(
-                    super_volume_id=st.super_volume_serial,
-                    volume_id=st.volume_id,
-                    add_time=st.add_time,
-                    state=st.state,
-                    info=st.info,
+            # 0. 校验新子卷可挂载（独占 + 实体可用），fail-fast
+            _ensure_sub_volume_available(session, new_volume_id)
+            # 1. 查找旧映射，标记 REPLACED（退役；不可随复活恢复）
+            old_row = (
+                session.query(SuperVolumeStructureModel)
+                .filter(
+                    SuperVolumeStructureModel.super_volume_id == super_volume_serial,
+                    SuperVolumeStructureModel.volume_id == old_volume_id,
+                    SuperVolumeStructureModel.state == SuperVolumeRelationState.USING,
                 )
-                models.append(model)
-            session.add_all(models)
+                .first()
+            )
+            if old_row is None:
+                raise ValueError(
+                    f"volume {old_volume_id} not found in super_volume {super_volume_serial}"
+                )
+            old_row.state = SuperVolumeRelationState.REPLACED
+
+            # 2. 旧映射的 info 中记录 replaced_by
+            old_info = parse_json_object(old_row.info)
+            old_info["replaced_by"] = new_volume_id
+            old_row.info = json.dumps(old_info, ensure_ascii=False)
+
+            # 3. 新增新卷映射
+            #    TODO(P2): 若 (本父, new_volume_id) 已存在退役行，此处 INSERT 会撞
+            #    (super_volume_id, volume_id) 复合主键抛裸 IntegrityError —— 与 device 侧
+            #    add_device/replace_device 同源（旧行只改 state、不删），暂缓处理。
+            new_row = SuperVolumeStructureModel(
+                super_volume_id=super_volume_serial,
+                volume_id=new_volume_id,
+                add_time=add_time,
+                state=SuperVolumeRelationState.USING,
+                info="",
+            )
+            session.add(new_row)
+            session.commit()
 
     def update_super_volume(self, serial: str, /, **fields) -> None:
         """
@@ -406,47 +503,53 @@ class SuperVolumeRepository(SuperVolumeRepositoryABC):
             session.delete(row)
             session.commit()
 
-    def remove_volumes(
-        self,
-        super_volume_serial: str,
-        volume_ids: list[str],
-    ) -> None:
-        """
-        从超级卷移除一批子卷（将 USING 关联标记为 UNUSED）。
-
-        Args:
-            super_volume_serial: 超级卷序列号
-            volume_ids: 待移除的子卷序列号列表
-
-        Raises:
-            SuperVolumeNotFoundError: 超级卷不存在。
-            ValueError: 存在非 USING 成员卷时抛出（不部分更新）。
-        """
-        with session_scope(self.session_factory) as session:
-            parent = session.query(SuperVolumeModel).filter(
-                SuperVolumeModel.serial == super_volume_serial
-            ).first()
-            if parent is None:
-                raise SuperVolumeNotFoundError(super_volume_serial)
-
-            rows = []
-            missing = []
-            for volume_id in volume_ids:
-                row = session.query(SuperVolumeStructureModel).filter(
-                    SuperVolumeStructureModel.super_volume_id == super_volume_serial,
-                    SuperVolumeStructureModel.volume_id == volume_id,
-                    SuperVolumeStructureModel.state == SuperVolumeRelationState.USING,
-                ).first()
-                if row is None:
-                    missing.append(volume_id)
-                else:
-                    rows.append(row)
-            if missing:
-                raise ValueError(
-                    f"卷 {'、'.join(missing)} 不是超级卷 {super_volume_serial} 的 USING 成员，无法移除"
-                )
-            for row in rows:
-                row.state = SuperVolumeRelationState.UNUSED
+    # TODO(P1): 「摘子卷」功能暂缓 —— **致命问题**：当前没有配套的迁移逻辑，忽略本功能
+    #   直接摘除子卷会导致阵列崩坏（换盘 / 降级重建等数据迁移尚未实现）；
+    #   且 `super_volume_structures.volume_id` 的硬唯一约束会让被摘子卷再也无法编入任何超级卷。
+    #   在安全迁移方案落地前，不得启用本方法。
+    #   恢复时：取消下面注释（ABC 必须与 infra 实现同步启用/停用）。
+    #
+    # def remove_volumes(
+    #     self,
+    #     super_volume_serial: str,
+    #     volume_ids: list[str],
+    # ) -> None:
+    #     """
+    #     从超级卷移除一批子卷（将 USING 关联标记为 REPLACED）。
+    #
+    #     Args:
+    #         super_volume_serial: 超级卷序列号
+    #         volume_ids: 待移除的子卷序列号列表
+    #
+    #     Raises:
+    #         SuperVolumeNotFoundError: 超级卷不存在。
+    #         ValueError: 存在非 USING 成员卷时抛出（不部分更新）。
+    #     """
+    #     with session_scope(self.session_factory) as session:
+    #         parent = session.query(SuperVolumeModel).filter(
+    #             SuperVolumeModel.serial == super_volume_serial
+    #         ).first()
+    #         if parent is None:
+    #             raise SuperVolumeNotFoundError(super_volume_serial)
+    #
+    #         rows = []
+    #         missing = []
+    #         for volume_id in volume_ids:
+    #             row = session.query(SuperVolumeStructureModel).filter(
+    #                 SuperVolumeStructureModel.super_volume_id == super_volume_serial,
+    #                 SuperVolumeStructureModel.volume_id == volume_id,
+    #                 SuperVolumeStructureModel.state == SuperVolumeRelationState.USING,
+    #             ).first()
+    #             if row is None:
+    #                 missing.append(volume_id)
+    #             else:
+    #                 rows.append(row)
+    #         if missing:
+    #             raise ValueError(
+    #                 f"卷 {'、'.join(missing)} 不是超级卷 {super_volume_serial} 的 USING 成员，无法移除"
+    #             )
+    #         for row in rows:
+    #             row.state = SuperVolumeRelationState.REPLACED
 
     def remove_super_volume(self, serial: str) -> None:
         """
@@ -455,8 +558,8 @@ class SuperVolumeRepository(SuperVolumeRepositoryABC):
         移除成功时，会把本超级卷名下的子卷关联行（super_volume_id == serial 且
         state == USING）一并置为 SUPER_VOLUME_REMOVED，释放这些子卷；否则父行软删后，
         子卷会因仍处于 USING 而被 `_ensure_sub_volume_available` 视为占用。
-        用独立状态（而非 UNUSED）是为了与「成员移除」区分：只有本方法释放的关联行
-        会被 `revive_super_volume` 恢复，不会把 `remove_volumes` 摘除的成员挂回来。
+        用独立状态（而非成员侧退役的 REPLACED）是为了区分退役原因：只有本方法释放的关联行
+        会被 `revive_super_volume` 恢复，不会把 `replace_volume` 换下的旧卷挂回来。
 
         Note:
             置为 REMOVED 只能走本方法，不要用 `update_super_volume(state=REMOVED)` ——
@@ -497,7 +600,7 @@ class SuperVolumeRepository(SuperVolumeRepositoryABC):
 
         拓扑一并恢复：把 `remove_super_volume` 释放掉的那批子卷关联行
         （state == SUPER_VOLUME_REMOVED）重新置回 USING；
-        `remove_volumes` 摘除的成员（state == UNUSED）**不**恢复。
+        `replace_volume` 换下的旧卷（state == REPLACED）**不**恢复。
 
         前置校验（任一失败均抛异常，事务整体回滚）：
         - 目标存在、且正处于 REMOVED；

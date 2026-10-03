@@ -43,19 +43,23 @@ class SuperVolumeStateMenu(_Menu):
 
 
 # ═══════════════════════════════════════════
-#  超级卷-子卷 关联状态
+#  关联状态
 # ═══════════════════════════════════════════
 
 class SuperVolumeRelationState(enum.Enum):
     """超级卷-子卷 关联状态枚举（`super_volume_structures.state` 专用）。
 
     按「退役原因」区分，避免复活时误恢复：
-    - UNUSED：因「成员被移除」退役，**不**随父行复活而恢复；
+    - REPLACED：因「成员被移除」退役，**不**随父行复活而恢复；
     - SUPER_VOLUME_REMOVED：因「父行软删」退役，可随 `revive_super_volume` 恢复。
+
+    注：super_device_structures 用自己的一套（`domain/storage/super_device/enum.py`
+    的 SuperDeviceRelationState），两者不再共用枚举；成员侧退役态两边同名 `REPLACED`，
+    但成因不同 —— device 侧是「换盘」，volume 侧是 `replace_volume` 换下成员。
     """
-    USING = "using"                              # 正在使用
-    UNUSED = "unused"                            # 因成员被移除退役
-    SUPER_VOLUME_REMOVED = "super_volume_removed"  # 因父行软删退役（可随复活恢复）
+    USING = "using"                                  # 正在使用
+    REPLACED = "replaced"                            # 因成员被移除退役
+    SUPER_VOLUME_REMOVED = "super_volume_removed"    # 因父行软删退役（可随复活恢复）
 
 
 # ═══════════════════════════════════════════

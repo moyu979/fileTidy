@@ -174,9 +174,9 @@ class SuperVolumeStructureModel(Base):
     super_volume_id = Column(String, ForeignKey("super_volumes.serial"), nullable=False)
     # 卷 id
     # TODO(P2): `unique=True` 是**不分状态**的硬约束，语义过强：卷只要进过任何超级卷，
-    #   哪怕关联已变 UNUSED（替换/移除后），该行仍占着唯一的 volume_id 位，于是这个卷
+    #   哪怕关联已变 REPLACED（替换/移除后），该行仍占着唯一的 volume_id 位，于是这个卷
     #   永远不能再编入别的超级卷（见 super_volume_repository.add_volumes 的校验，
-    #   以及 test_add_volumes_rejects_existing_unused_membership 的如实断言）。
+    #   以及 test_add_volumes_rejects_existing_replaced_membership 的如实断言）。
     #   正解是「部分唯一索引」——只对 state == USING 的行唯一：
     #     Index("uq_sv_structure_volume_using", "volume_id",
     #           unique=True, sqlite_where=text("state = 'USING'"))
@@ -250,7 +250,7 @@ class FileSourcesModel(Base):
     # 文件添加时间（只由 DDL 的 DEFAULT 提供，见顶部 NOTE）
     add_time = Column(DateTime, server_default=func.now())
     # 文件原始路径（绝对路径）
-    from_path = Column(Text)
+    from_path = Column(Text, nullable=False)
     # 文件状态，如健康、故障，密码丢失等，
     state = Column(
         Enum(FileState),

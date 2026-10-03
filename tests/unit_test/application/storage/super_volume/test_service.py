@@ -2,7 +2,7 @@
 """单测：application/storage/super_volume/service —— SuperVolumeService。
 
 目的：验证超级卷登记（serial/name 自动生成、子卷存在性、类型分派）、
-子卷增删、字段/info 更新与软删除。仓储为内存替身。
+子卷新增/复活、字段/info 更新与软删除。仓储为内存替身。
 
 输入：svtype / volumes / 字段值。
 期望输出：JSON 结果、仓储状态与事件类型符合文档。
@@ -22,8 +22,11 @@ from domain.storage.super_volume.events import (
     SuperVolumeFieldUpdated,
     SuperVolumeInfoChanged,
     SuperVolumeRegistered,
+    SuperVolumeRevived,
     VolumesAddedToSuperVolume,
-    VolumesRemovedFromSuperVolume,
+    VolumesReplacedInSuperVolume,
+    # TODO(P1): 摘子卷停用中 —— VolumesRemovedFromSuperVolume 随 remove_volumes 一并恢复
+    # VolumesRemovedFromSuperVolume,
 )
 from domain.storage.super_volume.variants.copy import CopySuperVolume
 from domain.storage.volume import Volume
@@ -105,30 +108,65 @@ def test_get_and_list(service):
     assert len(svc.list_super_volumes()) == 1
 
 
-def test_add_and_remove_volumes(service):
-    """加卷/移除卷 → 状态更新与事件。"""
+def test_add_volume(service):
+    """加卷 → 状态更新与事件。"""
     svc, repo, events = service
     svc.reg_super_volume(serial="SV1", svtype="copy", volumes=["V1"])
 
-    result = svc.add_volumes(super_volume_serial="SV1", volume_ids=["V2"])
+    result = svc.add_volume("SV1", "V2")
     assert json.loads(result)["volumes"] == ["V1", "V2"]
     assert isinstance(events[-1], VolumesAddedToSuperVolume)
 
-    result = svc.remove_volumes(super_volume_serial="SV1", volume_ids=["V1"])
+
+def test_replace_volume(service):
+    """替换子卷 → 旧卷退役、新卷接上，并发 VolumesReplacedInSuperVolume。"""
+    svc, repo, events = service
+    svc.reg_super_volume(serial="SV1", svtype="copy", volumes=["V1"])
+
+    result = svc.replace_volume(
+        super_volume_serial="SV1", old_volume_id="V1", new_volume_id="V2"
+    )
+
     assert json.loads(result)["volumes"] == ["V2"]
-    assert isinstance(events[-1], VolumesRemovedFromSuperVolume)
+    assert isinstance(events[-1], VolumesReplacedInSuperVolume)
+    assert events[-1].old_volume_id == "V1"
+    assert events[-1].new_volume_id == "V2"
 
 
-def test_add_volumes_validation(service):
+def test_replace_volume_unknown_new_raises(service):
+    """新子卷不存在 → VolumeNotFoundError。"""
+    svc, _, _ = service
+    svc.reg_super_volume(serial="SV1", svtype="copy", volumes=["V1"])
+
+    with pytest.raises(VolumeNotFoundError):
+        svc.replace_volume(
+            super_volume_serial="SV1", old_volume_id="V1", new_volume_id="NOPE"
+        )
+
+
+# TODO(P1): 「摘子卷」功能暂缓（service.remove_volumes 已停用）。
+#   恢复时取消下面注释，并同步恢复 CLI do_remove_volumes 与仓储层。
+#
+# def test_remove_volumes(service):
+#     """移除卷 → 状态更新与事件。"""
+#     svc, repo, events = service
+#     svc.reg_super_volume(serial="SV1", svtype="copy", volumes=["V1", "V2"])
+#
+#     result = svc.remove_volumes(super_volume_serial="SV1", volume_ids=["V1"])
+#     assert json.loads(result)["volumes"] == ["V2"]
+#     assert isinstance(events[-1], VolumesRemovedFromSuperVolume)
+
+
+def test_add_volume_validation(service):
     """空参数 / 超级卷不存在 / 子卷不存在 → ValueError / SuperVolumeNotFoundError / VolumeNotFoundError。"""
     svc, _, _ = service
     svc.reg_super_volume(serial="SV1", svtype="copy", volumes=["V1"])
     with pytest.raises(ValueError):
-        svc.add_volumes(super_volume_serial="", volume_ids=["V2"])
+        svc.add_volume("", "V2")
     with pytest.raises(SuperVolumeNotFoundError):
-        svc.add_volumes(super_volume_serial="SVX", volume_ids=["V2"])
+        svc.add_volume("SVX", "V2")
     with pytest.raises(VolumeNotFoundError):
-        svc.add_volumes(super_volume_serial="SV1", volume_ids=["VX"])
+        svc.add_volume("SV1", "VX")
 
 
 @pytest.mark.parametrize(
@@ -159,3 +197,18 @@ def test_info_ops(service):
     svc.delete_info("SV1", "k")
     ops = [e.op for e in events if isinstance(e, SuperVolumeInfoChanged)]
     assert ops == ["replace", "add", "remove"]
+
+
+def test_revive_super_volume_emits_event_and_restores_topology(service):
+    """revive → 回到 UNKNOWN、子卷挂回，并发 SuperVolumeRevived。"""
+    svc, repo, events = service
+    svc.reg_super_volume(serial="SV1", svtype="copy", volumes=["V1", "V2"])
+    svc.remove_super_volume("SV1")
+
+    svc.revive_super_volume("SV1")
+
+    assert isinstance(events[-1], SuperVolumeRevived)
+    assert events[-1].serial == "SV1"
+    sv = repo.get_super_volume("SV1")
+    assert sv.state is SuperVolumeState.UNKNOWN
+    assert sv.volumes == ["V1", "V2"]

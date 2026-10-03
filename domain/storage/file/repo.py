@@ -10,7 +10,6 @@ from typing import Any
 from domain.storage.file.new_file import NewFile
 
 
-# TODO(P1): is_exist() 缺少文件参数，待设计确定后补充
 class FileRepositoryABC(ABC):
     """文件仓储抽象基类。
 
@@ -21,11 +20,15 @@ class FileRepositoryABC(ABC):
         pass
 
     @abstractmethod
-    def is_exist(self) -> bool:
-        """检查文件是否已存在于仓储中。
+    def is_exist(self, sha512: str, md5: str) -> bool:
+        """检查同时匹配 sha512 与 md5 的文件记录是否已存在于仓储中。
+
+        Args:
+            sha512: 文件的 SHA-512 值。
+            md5: 文件的 MD5 值。
 
         Returns:
-            True 表示文件已存在，False 表示不存在。
+            True 表示两个哈希同时命中的文件记录已存在，False 表示不存在。
         """
         pass
 
@@ -35,6 +38,7 @@ class FileRepositoryABC(ABC):
 
         以 sha512 标识文件内容，回答「这个文件是什么、从哪来」。
         一份内容一条来源，与位置记录是一对多关系。
+        同一来源（from_path + sha512 + md5 全部相同）重复登记时跳过写入。
 
         Args:
             new_file: 待登记的文件实例。

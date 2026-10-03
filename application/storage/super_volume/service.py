@@ -21,12 +21,16 @@ from domain.storage.super_volume.events import (
     SuperVolumeInfoSet,
     SuperVolumeRegistered,
     SuperVolumeRemoved,
+    SuperVolumeRevived,
     SuperVolumeSerialChanged,
     VolumesAddedToSuperVolume,
-    VolumesRemovedFromSuperVolume,
+    VolumesReplacedInSuperVolume,
+    # TODO(P1): 摘子卷停用中 —— VolumesRemovedFromSuperVolume 随 remove_volumes 一并恢复
+    # VolumesRemovedFromSuperVolume,
 )
 from domain.storage.super_volume.repo import SuperVolumeRepositoryABC as SuperVolumeRepository
-from domain.storage.super_volume.structure import SuperVolumeStructure
+# TODO(P1): 批量 add_volumes 停用中 —— SuperVolumeStructure 仅其使用，恢复时一并取消注释
+# from domain.storage.super_volume.structure import SuperVolumeStructure
 from domain.storage.volume.errors import VolumeNotFoundError
 from domain.storage.volume.repo import VolumeRepositoryABC as VolumeRepository
 from infra.common.id_generator import generate_id
@@ -168,17 +172,12 @@ class SuperVolumeService:
 
     # ── 子卷管理 ────────────────────────────────────────────
 
-    def add_volumes(
-        self,
-        *,
-        super_volume_serial: str,
-        volume_ids: list[str],
-    ) -> str:
-        """向已存在的超级卷添加一批子卷。
+    def add_volume(self, super_volume_serial: str, volume_id: str) -> str:
+        """向已存在的超级卷新增一个子卷。
 
         Args:
             super_volume_serial: 目标超级卷序列号。
-            volume_ids: 要添加的子卷 ID 列表。
+            volume_id: 要添加的子卷 ID。
 
         Returns:
             更新后的超级卷 JSON 字符串。
@@ -189,77 +188,110 @@ class SuperVolumeService:
         """
         if not super_volume_serial:
             raise ValueError("super_volume_serial 不能为空")
-        if not volume_ids:
-            raise ValueError("至少需要提供一个子卷 ID")
+        if not volume_id:
+            raise ValueError("volume_id 不能为空")
 
-        # 校验超级卷存在
         sv = self.super_volume_repository.get_super_volume(super_volume_serial)
         if sv is None:
             raise SuperVolumeNotFoundError(super_volume_serial)
+        if self.volume_repository.get_volume(volume_id) is None:
+            raise VolumeNotFoundError(volume_id)
 
-        # 校验每个子卷存在
-        for vol_id in volume_ids:
-            vol = self.volume_repository.get_volume(vol_id)
-            if vol is None:
-                raise VolumeNotFoundError(vol_id)
-
-        # 构建领域结构对象
-        now = datetime.now()
-        structures = [
-            SuperVolumeStructure(
-                super_volume_serial=super_volume_serial,
-                volume_id=vol_id,
-                add_time=now,
-            )
-            for vol_id in volume_ids
-        ]
-
-        # 持久化 structure 关联
-        self.super_volume_repository.add_volumes(structures)
-        log_event(VolumesAddedToSuperVolume(super_volume_serial, volume_ids))
+        self.super_volume_repository.add_volume(super_volume_serial, volume_id, datetime.now())
+        log_event(VolumesAddedToSuperVolume(super_volume_serial, [volume_id]))
 
         logger.info(
-            "超级卷已添加子卷: super_volume=%s volumes=%s",
-            super_volume_serial, volume_ids,
+            "超级卷已添加子卷: super_volume=%s volume=%s",
+            super_volume_serial, volume_id,
         )
         return self._fresh_json(super_volume_serial)
 
-    def remove_volumes(
+    def replace_volume(
         self,
         *,
         super_volume_serial: str,
-        volume_ids: list[str],
+        old_volume_id: str,
+        new_volume_id: str,
     ) -> str:
-        """从超级卷移除一批子卷（关联标记为 UNUSED）。
+        """用新卷替换超级卷中的一个子卷（旧卷转 REPLACED，新卷转 USING）。
 
         Args:
             super_volume_serial: 目标超级卷序列号。
-            volume_ids: 要移除的子卷 ID 列表。
+            old_volume_id: 被替换的旧子卷序列号。
+            new_volume_id: 替换后的新子卷序列号。
 
         Returns:
             更新后的超级卷 JSON 字符串。
 
         Raises:
             SuperVolumeNotFoundError: 超级卷不存在。
-            ValueError: 存在非 USING 成员卷时抛出。
+            VolumeNotFoundError: 新子卷不存在。
+            ValueError: 旧子卷不在该超级卷的 USING 成员中。
         """
         if not super_volume_serial:
             raise ValueError("super_volume_serial 不能为空")
-        if not volume_ids:
-            raise ValueError("至少需要提供一个子卷 ID")
+        if not old_volume_id or not new_volume_id:
+            raise ValueError("old_volume_id 和 new_volume_id 不能为空")
 
         sv = self.super_volume_repository.get_super_volume(super_volume_serial)
         if sv is None:
             raise SuperVolumeNotFoundError(super_volume_serial)
 
-        self.super_volume_repository.remove_volumes(super_volume_serial, volume_ids)
-        log_event(VolumesRemovedFromSuperVolume(super_volume_serial, volume_ids))
+        if self.volume_repository.get_volume(new_volume_id) is None:
+            raise VolumeNotFoundError(new_volume_id)
+
+        self.super_volume_repository.replace_volume(
+            super_volume_serial, old_volume_id, new_volume_id, datetime.now(),
+        )
+        log_event(
+            VolumesReplacedInSuperVolume(super_volume_serial, old_volume_id, new_volume_id)
+        )
 
         logger.info(
-            "超级卷已移除子卷: super_volume=%s volumes=%s",
-            super_volume_serial, volume_ids,
+            "超级卷已替换子卷: super_volume=%s %s → %s",
+            super_volume_serial, old_volume_id, new_volume_id,
         )
         return self._fresh_json(super_volume_serial)
+
+    # TODO(P1): 「摘子卷」功能暂缓（与仓储/ABC 同口径停用）。
+    #   恢复时取消下面注释，并同步恢复 CLI do_remove_volumes 与相关测试。
+    #
+    # def remove_volumes(
+    #     self,
+    #     *,
+    #     super_volume_serial: str,
+    #     volume_ids: list[str],
+    # ) -> str:
+    #     """从超级卷移除一批子卷（关联标记为 REPLACED）。
+    #
+    #     Args:
+    #         super_volume_serial: 目标超级卷序列号。
+    #         volume_ids: 要移除的子卷 ID 列表。
+    #
+    #     Returns:
+    #         更新后的超级卷 JSON 字符串。
+    #
+    #     Raises:
+    #         SuperVolumeNotFoundError: 超级卷不存在。
+    #         ValueError: 存在非 USING 成员卷时抛出。
+    #     """
+    #     if not super_volume_serial:
+    #         raise ValueError("super_volume_serial 不能为空")
+    #     if not volume_ids:
+    #         raise ValueError("至少需要提供一个子卷 ID")
+    #
+    #     sv = self.super_volume_repository.get_super_volume(super_volume_serial)
+    #     if sv is None:
+    #         raise SuperVolumeNotFoundError(super_volume_serial)
+    #
+    #     self.super_volume_repository.remove_volumes(super_volume_serial, volume_ids)
+    #     log_event(VolumesRemovedFromSuperVolume(super_volume_serial, volume_ids))
+    #
+    #     logger.info(
+    #         "超级卷已移除子卷: super_volume=%s volumes=%s",
+    #         super_volume_serial, volume_ids,
+    #     )
+    #     return self._fresh_json(super_volume_serial)
 
     def _fresh_json(self, super_volume_serial: str) -> str:
         """重新查询超级卷并返回 JSON，供变更类操作统一收尾。"""
@@ -407,8 +439,8 @@ class SuperVolumeService:
     def remove_super_volume(self, serial: str) -> None:
         """软删除超级卷（标记 REMOVED），并释放其 USING 子卷关联（转 SUPER_VOLUME_REMOVED）。
 
-        释放的关联可用 `revive_super_volume`（仓储层）恢复；被 `remove_volumes` 摘除的
-        成员（UNUSED）不会随复活恢复。
+        释放的关联可用 `revive_super_volume`（仓储层）恢复；被 `replace_volume` 换下的
+        旧卷（REPLACED）不会随复活恢复。
 
         Args:
             serial: 超级卷序列号。
@@ -418,3 +450,22 @@ class SuperVolumeService:
         """
         self.super_volume_repository.remove_super_volume(serial)
         log_event(SuperVolumeRemoved(serial))
+
+    def revive_super_volume(self, serial: str) -> None:
+        """复活已移除（REMOVED）的超级卷（state 置回 UNKNOWN，拓扑一并恢复）。
+
+        删除时释放的子卷会被重新挂回；若某个子卷已被其它超级卷占用，则整个复活流程回滚
+        （透传仓储层的领域异常）。
+
+        Args:
+            serial: 超级卷序列号。
+
+        Raises:
+            SuperVolumeNotFoundError: 超级卷不存在（透传自仓储层）。
+            SuperVolumeNotRemovedError: 超级卷未处于 REMOVED（无需复活，透传自仓储层）。
+            SubVolumeInUseError: 待恢复的子卷已被其它超级卷占用（透传自仓储层）。
+            SubVolumeUnavailableError: 待恢复的子卷已 REMOVED / FAULT（透传自仓储层）。
+            SubVolumeNotFoundError: 待恢复的子卷不存在（透传自仓储层）。
+        """
+        self.super_volume_repository.revive_super_volume(serial)
+        log_event(SuperVolumeRevived(serial))

@@ -6,9 +6,8 @@
 - `reg_super_volume` 的主行 + 关联行同事务写入，未知/不可用/被占用的子卷抛领域异常并整体回滚；
   改成已存在 / 已移除的 serial → 抛领域异常（AlreadyRegistered / AlreadyRemoved）；
   name 无唯一约束 → 同名（含与 REMOVED 行同名）可正常登记；
-- `add_volumes`：父不存在、子卷已属于其它超级卷（含 UNUSED 行，因唯一约束）→ ValueError；
-  传入 UNUSED 结构的成员不会出现在 USING 视图里；
-- `remove_volumes`：全部校验通过才更新（部分失败不产生半更新）；
+- `add_volume`：子卷已属于其它超级卷 → SubVolumeInUseError；已有退役行（REPLACED）→ 撞唯一约束；
+- `replace_volume`：旧卷转 REPLACED 并记 replaced_by，新卷转 USING；新卷不可挂载时 fail-fast；
 - `remove_super_volume`：自身 REMOVED 且 USING 关联转 SUPER_VOLUME_REMOVED；
 - `revive_super_volume`：REMOVED → UNKNOWN，恢复 SUPER_VOLUME_REMOVED 拓扑，校验子卷可用；
 - `update_super_volume` 的 svtype→type 映射、state 归一化、None 保持原值、拒绝未知字段 / 改 serial / 置 REMOVED；
@@ -23,7 +22,10 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from domain.storage.super_volume.enum import SuperVolumeRelationState
 from domain.storage.super_volume.base import SuperVolume
@@ -38,7 +40,8 @@ from domain.storage.super_volume.errors import (
     SuperVolumeNotRemovedError,
 )
 from domain.storage.super_volume.repo import SuperVolumeRepositoryABC
-from domain.storage.super_volume.structure import SuperVolumeStructure
+# TODO(P1): 批量 add_volumes 停用中 —— SuperVolumeStructure 仅其使用，恢复时一并取消注释
+# from domain.storage.super_volume.structure import SuperVolumeStructure
 from infra.persistence.models import SuperVolumeModel, SuperVolumeStructureModel
 from infra.persistence.storage.super_volume_repository import SuperVolumeRepository
 from tests.unit_test.infra.persistence import _helpers as H
@@ -310,77 +313,92 @@ def test_update_super_volume_rejects_serial_change(db, repo, volumes):
     assert repo.is_exist("SV1-X") is False
 
 
-# ── add_volumes ───────────────────────────────────────────────────
+# ── add_volume ────────────────────────────────────────────────────
 
 
-def test_add_volumes_appends_members(db, repo, volumes):
-    """输入 批量追加子卷 → 期望输出 volumes 增加且关联行 state=USING。"""
+def test_add_volume_appends_member(db, repo, volumes):
+    """输入 单个追加子卷 → 期望输出 volumes 增加且关联行 state=USING。"""
     repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
 
-    repo.add_volumes(
-        [
-            SuperVolumeStructure("SV1", "V2", state=SuperVolumeRelationState.USING, info="x"),
-            SuperVolumeStructure("SV1", "V3", state=SuperVolumeRelationState.USING, info="y"),
-        ]
-    )
+    repo.add_volume("SV1", "V2", datetime.now())
 
-    assert repo.get_super_volume("SV1").volumes == ["V1", "V2", "V3"]
-    assert {r.state for r in _structure_rows(db)} == {SuperVolumeRelationState.USING}
+    assert repo.get_super_volume("SV1").volumes == ["V1", "V2"]
+    row = next(r for r in _structure_rows(db) if r.volume_id == "V2")
+    assert row.state is SuperVolumeRelationState.USING
 
 
-def test_add_volumes_missing_parent_raises(db, repo, volumes):
-    """输入 父超级卷不存在 → 期望输出 SuperVolumeNotFoundError 且无关联行写入。"""
-    with pytest.raises(SuperVolumeNotFoundError):
-        repo.add_volumes([SuperVolumeStructure("GHOST", "V1")])
-
-    assert _structure_rows(db) == []
-
-
-def test_add_volumes_rejects_volume_owned_by_another_super_volume(db, repo, volumes):
-    """输入 子卷已属于其它超级卷 → 期望输出 ValueError 且不新增行。"""
+def test_add_volume_rejects_volume_owned_by_another_super_volume(db, repo, volumes):
+    """输入 子卷已属于其它超级卷 → 期望输出 SubVolumeInUseError 且不新增行。"""
     repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
     repo.reg_super_volume(H.make_super_volume("SV2", volumes=["V2"]))
 
-    with pytest.raises(ValueError, match="已属于"):
-        repo.add_volumes([SuperVolumeStructure("SV1", "V2")])
+    with pytest.raises(SubVolumeInUseError):
+        repo.add_volume("SV1", "V2", datetime.now())
 
     assert H.count(db, SuperVolumeStructureModel) == 2
 
 
-def test_add_volumes_rejects_existing_unused_membership(db, repo, volumes):
-    """输入 子卷在关联表中已有 UNUSED 行 → 期望输出 ValueError（唯一约束使重复插入不可行）。"""
+def test_add_volume_rejects_existing_replaced_membership(db, repo, volumes):
+    """输入 子卷在关联表中已有 REPLACED 行 → 期望输出 IntegrityError（volume_id 唯一约束）。"""
     repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
-    repo.remove_volumes("SV1", ["V1"])
+    repo.replace_volume("SV1", "V1", "V3", datetime.now())
 
-    with pytest.raises(ValueError, match="已属于"):
-        repo.add_volumes([SuperVolumeStructure("SV1", "V1")])
+    with pytest.raises(IntegrityError):
+        repo.add_volume("SV1", "V1", datetime.now())
 
 
-def test_add_volumes_with_unused_state_is_not_visible_as_member(db, repo, volumes):
-    """输入 以 UNUSED 状态追加子卷 → 期望输出 关联行落库但不计入 USING 成员视图。"""
+# ── replace_volume ────────────────────────────────────────────────
+
+
+def test_replace_volume_marks_replaced_and_records_replaced_by(db, repo, volumes):
+    """输入 存在的 USING 成员 → 期望输出 旧卷转 REPLACED 并记 replaced_by，新卷转 USING。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1", "V2"]))
+
+    repo.replace_volume("SV1", "V1", "V3", datetime.now())
+
+    assert repo.get_super_volume("SV1").volumes == ["V2", "V3"]
+    old = next(r for r in _structure_rows(db) if r.volume_id == "V1")
+    assert old.state is SuperVolumeRelationState.REPLACED
+    assert "replaced_by" in old.info and "V3" in old.info
+    new = next(r for r in _structure_rows(db) if r.volume_id == "V3")
+    assert new.state is SuperVolumeRelationState.USING
+
+
+def test_replace_volume_missing_old_raises(db, repo, volumes):
+    """输入 旧卷不是该超级卷的 USING 成员 → 期望输出 ValueError 且不改动。"""
     repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
 
-    repo.add_volumes([SuperVolumeStructure("SV1", "V2", state=SuperVolumeRelationState.UNUSED)])
+    with pytest.raises(ValueError, match="not found in super_volume"):
+        repo.replace_volume("SV1", "V2", "V3", datetime.now())
 
     assert repo.get_super_volume("SV1").volumes == ["V1"]
-    row = next(r for r in _structure_rows(db) if r.volume_id == "V2")
-    assert row.state is SuperVolumeRelationState.UNUSED
 
 
-# ── remove_volumes ────────────────────────────────────────────────
+def test_replace_volume_rejects_unavailable_new(db, repo, volumes):
+    """输入 新卷已被其它超级卷 USING 占用 → 期望输出 SubVolumeInUseError（fail-fast）。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
+    repo.reg_super_volume(H.make_super_volume("SV2", volumes=["V2"]))
+
+    with pytest.raises(SubVolumeInUseError):
+        repo.replace_volume("SV1", "V1", "V2", datetime.now())
 
 
+# ── remove_volumes（摘子卷功能暂缓） ───────────────────────────────
+
+
+@pytest.mark.skip(reason="摘子卷功能暂缓（TODO P1：阵列迁移未实现，且 volume_id 硬唯一约束阻塞复用）")
 def test_remove_volumes_releases_members(db, repo, volumes):
-    """输入 移除 USING 成员 → 期望输出 关联行转 UNUSED 且不再计入成员视图。"""
+    """输入 移除 USING 成员 → 期望输出 关联行转 REPLACED 且不再计入成员视图。"""
     repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1", "V2"]))
 
     repo.remove_volumes("SV1", ["V1"])
 
     assert repo.get_super_volume("SV1").volumes == ["V2"]
     row = next(r for r in _structure_rows(db) if r.volume_id == "V1")
-    assert row.state is SuperVolumeRelationState.UNUSED
+    assert row.state is SuperVolumeRelationState.REPLACED
 
 
+@pytest.mark.skip(reason="摘子卷功能暂缓（TODO P1：阵列迁移未实现，且 volume_id 硬唯一约束阻塞复用）")
 def test_remove_volumes_partial_failure_does_not_update_anything(db, repo, volumes):
     """输入 待移除列表含非 USING 成员 → 期望输出 ValueError 且其余成员保持 USING（不半更新）。"""
     repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1", "V2"]))
@@ -391,13 +409,15 @@ def test_remove_volumes_partial_failure_does_not_update_anything(db, repo, volum
     assert repo.get_super_volume("SV1").volumes == ["V1", "V2"]
 
 
+@pytest.mark.skip(reason="摘子卷功能暂缓（TODO P1：阵列迁移未实现，且 volume_id 硬唯一约束阻塞复用）")
 def test_remove_volumes_missing_parent_raises(db, repo, volumes):
     """输入 父超级卷不存在 → 期望输出 SuperVolumeNotFoundError。"""
     with pytest.raises(SuperVolumeNotFoundError):
         repo.remove_volumes("GHOST", ["V1"])
 
 
-def test_remove_volumes_ignores_already_unused_member(db, repo, volumes):
+@pytest.mark.skip(reason="摘子卷功能暂缓（TODO P1：阵列迁移未实现，且 volume_id 硬唯一约束阻塞复用）")
+def test_remove_volumes_rejects_already_replaced_member(db, repo, volumes):
     """输入 重复移除同一成员 → 期望输出 第二次 ValueError（已非 USING）。"""
     repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
     repo.remove_volumes("SV1", ["V1"])
@@ -478,17 +498,17 @@ def test_revive_super_volume_not_removed_raises(db, repo, volumes):
     assert repo.get_super_volume("SV1").state is SuperVolumeState.HEALTHY
 
 
-def test_revive_super_volume_does_not_restore_removed_members(db, repo, volumes):
-    """输入 先摘除一个成员、再软删并复活 → 期望输出 被摘成员保持 UNUSED（不随复活恢复）。"""
+def test_revive_super_volume_does_not_restore_replaced_member(db, repo, volumes):
+    """输入 先用 replace 换下一个成员、再软删并复活 → 期望输出 被换下的旧卷保持 REPLACED（不随复活恢复）。"""
     repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1", "V2"]))
-    repo.remove_volumes("SV1", ["V1"])
+    repo.replace_volume("SV1", "V1", "V3", datetime.now())
     repo.remove_super_volume("SV1")
 
     repo.revive_super_volume("SV1")
 
-    assert repo.get_super_volume("SV1").volumes == ["V2"]
+    assert repo.get_super_volume("SV1").volumes == ["V2", "V3"]
     row = next(r for r in _structure_rows(db) if r.volume_id == "V1")
-    assert row.state is SuperVolumeRelationState.UNUSED
+    assert row.state is SuperVolumeRelationState.REPLACED
 
 
 def test_revive_super_volume_rejects_removed_child(db, repo, volumes):

@@ -28,7 +28,12 @@ from domain.storage.super_device.errors import (
     SuperDeviceNotRemovedError,
 )
 from domain.storage.super_volume.base import SuperVolume
-from domain.storage.super_volume.errors import SuperVolumeNotFoundError
+from domain.storage.super_volume.enum import SuperVolumeState
+from domain.storage.super_volume.errors import (
+    SuperVolumeAlreadyRemovedError,
+    SuperVolumeNotFoundError,
+    SuperVolumeNotRemovedError,
+)
 from domain.storage.volume.base import Volume
 from domain.storage.volume.enum import VolumeState
 from domain.storage.volume.errors import VolumeNotFoundError
@@ -298,6 +303,7 @@ class FakeSuperVolumeRepository:
 
     def __init__(self, initial: list[SuperVolume] | None = None) -> None:
         self._store: dict[str, SuperVolume] = {}
+        self._released: dict[str, list[str]] = {}  # 软删时释放的子卷，供复活时恢复拓扑
         for sv in initial or []:
             self.reg_super_volume(sv)
 
@@ -315,11 +321,23 @@ class FakeSuperVolumeRepository:
     def list_super_volume(self) -> list[SuperVolume]:
         return [copy.deepcopy(sv) for sv in self._store.values()]
 
-    def add_volumes(self, structures) -> None:
-        for st in structures:
-            if st.super_volume_serial not in self._store:
-                raise SuperVolumeNotFoundError(st.super_volume_serial)
-            self._store[st.super_volume_serial].volumes.append(st.volume_id)
+    def add_volume(self, super_volume_serial: str, volume_id: str, add_time=None) -> None:
+        if super_volume_serial not in self._store:
+            raise SuperVolumeNotFoundError(super_volume_serial)
+        self._store[super_volume_serial].volumes.append(volume_id)
+
+    def replace_volume(
+        self, super_volume_serial: str, old_volume_id: str,
+        new_volume_id: str, add_time=None,
+    ) -> None:
+        sv = self._store.get(super_volume_serial)
+        if sv is None:
+            raise SuperVolumeNotFoundError(super_volume_serial)
+        if old_volume_id not in sv.volumes:
+            raise ValueError(
+                f"volume {old_volume_id} not found in super_volume {super_volume_serial}"
+            )
+        sv.volumes[sv.volumes.index(old_volume_id)] = new_volume_id
 
     def update_super_volume(self, serial: str, **fields) -> None:
         if serial not in self._store:
@@ -336,23 +354,41 @@ class FakeSuperVolumeRepository:
         sv.serial = new_serial
         self._store[new_serial] = sv
 
-    def remove_volumes(self, super_volume_serial: str, volume_ids: list[str]) -> None:
-        if super_volume_serial not in self._store:
-            raise SuperVolumeNotFoundError(super_volume_serial)
-        sv = self._store[super_volume_serial]
-        for volume_id in volume_ids:
-            if volume_id not in sv.volumes:
-                raise ValueError(
-                    f"卷 {volume_id} 不是超级卷 {super_volume_serial} 的 USING 成员，无法移除"
-                )
-            sv.volumes.remove(volume_id)
+    # TODO(P1): 「摘子卷」功能暂缓，与真实仓储/ABC 同步停用。恢复时取消注释。
+    #
+    # def remove_volumes(self, super_volume_serial: str, volume_ids: list[str]) -> None:
+    #     if super_volume_serial not in self._store:
+    #         raise SuperVolumeNotFoundError(super_volume_serial)
+    #     sv = self._store[super_volume_serial]
+    #     for volume_id in volume_ids:
+    #         if volume_id not in sv.volumes:
+    #             raise ValueError(
+    #                 f"卷 {volume_id} 不是超级卷 {super_volume_serial} 的 USING 成员，无法移除"
+    #             )
+    #         sv.volumes.remove(volume_id)
 
     def remove_super_volume(self, serial: str) -> None:
         if serial not in self._store:
             raise SuperVolumeNotFoundError(serial)
-        from domain.storage.super_volume.enum import SuperVolumeState
+        sv = self._store[serial]
+        if _state_value(sv.state) == SuperVolumeState.REMOVED.value:
+            raise SuperVolumeAlreadyRemovedError(serial)
+        self._released[serial] = list(sv.volumes)  # 记住被释放的子卷，供复活恢复拓扑
+        sv.volumes = []  # 释放子卷关联行（对应结构行 USING → SUPER_VOLUME_REMOVED）
+        sv.state = SuperVolumeState.REMOVED
 
-        self._store[serial].state = SuperVolumeState.REMOVED
+    def revive_super_volume(self, serial: str) -> None:
+        """复活超级卷（state → UNKNOWN），并挂回软删时释放的子卷（恢复拓扑）。
+
+        替身不做子卷占用校验（无跨仓储占用关系）；真仓储会逐个校验并整体回滚。
+        """
+        if serial not in self._store:
+            raise SuperVolumeNotFoundError(serial)
+        sv = self._store[serial]
+        if _state_value(sv.state) != SuperVolumeState.REMOVED.value:
+            raise SuperVolumeNotRemovedError(serial, sv.state)
+        sv.volumes = self._released.pop(serial, [])
+        sv.state = SuperVolumeState.UNKNOWN
 
 
 class FakeFileRepository:
@@ -368,8 +404,11 @@ class FakeFileRepository:
         self.calls: list[tuple[str, object]] = []
         self.session_sentinel = object()
 
-    def is_exist(self) -> bool:
-        return False
+    def is_exist(self, sha512: str, md5: str) -> bool:
+        return any(
+            row["sha512"] == sha512 and row["md5"] == md5
+            for row in self.rows.values()
+        )
 
     @contextmanager
     def transaction(self):
@@ -378,7 +417,7 @@ class FakeFileRepository:
 
     def reg_source(self, new_file: NewFile, session=None) -> None:
         self.calls.append(("reg_source", session))
-        self.sources.append({
+        row = {
             "sha512": new_file.sha512,
             "md5": new_file.md5,
             "size": new_file.size,
@@ -386,7 +425,15 @@ class FakeFileRepository:
             "from_path": str(new_file.from_path),
             "state": new_file.state,
             "info": new_file.info,
-        })
+        }
+        if any(
+            existing["sha512"] == row["sha512"]
+            and existing["md5"] == row["md5"]
+            and existing["from_path"] == row["from_path"]
+            for existing in self.sources
+        ):
+            return
+        self.sources.append(row)
 
     def reg_location(self, new_file: NewFile, session=None) -> None:
         self.calls.append(("reg_location", session))

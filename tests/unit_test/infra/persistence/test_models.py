@@ -188,9 +188,10 @@ def test_file_tables_columns_and_constraints():
     assert sources.columns["id"].primary_key is True
     assert sources.columns["sha512"].nullable is False
     assert sources.columns["md5"].nullable is False
+    assert sources.columns["from_path"].nullable is False
     assert isinstance(sources.columns["size"].type, Integer)
     assert set(sources.foreign_keys) == set()
-    # 无唯一约束：同一文件可重复登记（源码 TODO 已说明）
+    # 无唯一约束：去重由 reg_source 在应用层完成（见 FileRepository.reg_source）
     assert not any(col.unique for col in sources.columns)
 
     locations = FileLocationsModel.__table__
@@ -254,7 +255,7 @@ def test_enum_defaults_applied_when_unset_or_none(db_env):
         session.add(DeviceModel(serial="A"))
         session.add(DeviceModel(serial="B", state=None))
         session.add(
-            FileSourcesModel(sha512="s", md5="m", size=1, state=None)
+            FileSourcesModel(sha512="s", md5="m", size=1, from_path="p", state=None)
         )
 
     with factory() as session:
@@ -350,7 +351,7 @@ def test_server_defaults_apply_to_raw_sql_insert(db_env):
     with engine.begin() as connection:
         connection.exec_driver_sql("insert into devices (serial) values ('RAW')")
         connection.exec_driver_sql(
-            "insert into file_sources (sha512, md5) values ('s', 'm')"
+            "insert into file_sources (sha512, md5, from_path) values ('s', 'm', 'p')"
         )
 
     with factory() as session:

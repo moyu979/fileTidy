@@ -19,6 +19,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import pytest
 
 from domain.storage.device.enum import DeviceState
@@ -482,8 +484,9 @@ def test_remove_volume_blocked_by_files_then_allowed(db, repo, device):
 
 
 def test_remove_volume_blocked_by_super_volume_then_allowed(db, repo, device):
-    """输入 卷仍是超级卷 USING 成员 → 期望输出 VolumeInUseError(super_volumes=1)；释放后可删。"""
+    """输入 卷仍是超级卷 USING 成员 → 期望输出 VolumeInUseError(super_volumes=1)；换下后可删。"""
     repo.reg_volume(H.make_volume("V1", device_id="D1"))
+    repo.reg_volume(H.make_volume("V3", device_id="D1"))
     sv_repo = db.repos["super_volume"]
     sv_repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
 
@@ -496,7 +499,7 @@ def test_remove_volume_blocked_by_super_volume_then_allowed(db, repo, device):
         row = session.query(SuperVolumeStructureModel).one()
         assert row.state is SuperVolumeRelationState.USING
 
-    sv_repo.remove_volumes("SV1", ["V1"])
+    sv_repo.replace_volume("SV1", "V1", "V3", datetime.now())
     repo.remove_volume("V1")
 
     assert repo.get_volume("V1", exclude_removed=False).state is VolumeState.REMOVED

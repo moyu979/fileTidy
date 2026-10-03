@@ -118,6 +118,35 @@ class VolumesAddedToSuperVolume:
         }
 
 
+class VolumesReplacedInSuperVolume:
+    """卷在超级卷中被替换时触发的事件（旧卷退役、新卷接上）。"""
+
+    def __init__(
+        self, super_volume_serial: str, old_volume_id: str, new_volume_id: str
+    ) -> None:
+        """
+        Args:
+            super_volume_serial: 目标超级卷序列号。
+            old_volume_id: 被替换的旧子卷序列号。
+            new_volume_id: 替换后的新子卷序列号。
+        """
+        self.super_volume_serial = super_volume_serial
+        self.old_volume_id = old_volume_id
+        self.new_volume_id = new_volume_id
+
+    def to_snapshot(self) -> dict:
+        """将事件转换为快照字典。
+
+        Returns:
+            包含超级卷序列号与新旧子卷序列号的字典。
+        """
+        return {
+            "super_volume_serial": self.super_volume_serial,
+            "old_volume_id": self.old_volume_id,
+            "new_volume_id": self.new_volume_id,
+        }
+
+
 class VolumesRemovedFromSuperVolume:
     """卷从超级卷移除时触发的事件。"""
 
@@ -148,5 +177,15 @@ class SuperVolumeRemoved:
         """
         Args:
             serial: 被移除（标记 REMOVED）超级卷的序列号。
+        """
+        self.serial = serial
+
+
+class SuperVolumeRevived:
+    """超级卷复活（REMOVED → UNKNOWN）事件。"""
+    def __init__(self, serial: str):
+        """
+        Args:
+            serial: 被复活超级卷的序列号。
         """
         self.serial = serial

@@ -4,11 +4,11 @@
 目的（测什么）：
 - 模块私有工具 `_path_as_text`（None / str / Path 归一）与实例工具 `_make_location_row` 的默认值；
 - `reg_source` / `reg_location`：分别写 file_sources、file_locations，Path 转 POSIX、
-  state 为空时落 ONLINE、重复登记时「来源表新增一行、位置表静默覆盖」（源码注释已声明的临时行为）；
+  state 为空时落 ONLINE；重复登记时来源表跳过相同 (from_path, sha512, md5)、位置表静默覆盖；
 - `transaction`：把两侧写入组合成同一事务，任一失败整体回滚；
 - `list_by_volume_dir` 的前缀语义（同一目录、兄弟目录、空前缀、以文件路径当目录）；
 - `move_file` / `copy_file` 的行迁移、源缺失 LookupError、目标非法时的 FK/唯一约束 IntegrityError；
-- `is_exist()` 为未实现占位（返回 None）。
+- `is_exist()`：位置表中同时命中 sha512 与 md5 才判为存在。
 
 输入：`tmp_path` 下每个用例独占的临时 SQLite 库 + `_helpers` 构造的领域对象。
 
@@ -60,9 +60,24 @@ def test_repository_is_abc_implementation(db, repo):
     assert repo.session_factory is db.factory
 
 
-def test_is_exist_is_unimplemented_placeholder(repo):
-    """输入 is_exist()（占位实现）→ 期望输出 None（不抛异常、不返回布尔值）。"""
-    assert repo.is_exist() is None
+def test_is_exist_returns_false_when_no_location_matches(repo, volumes):
+    """输入 位置表为空 → 期望输出 False。"""
+    assert repo.is_exist("s1", "m1") is False
+
+
+def test_is_exist_returns_true_when_both_hashes_match(db, repo, volumes):
+    """输入 已登记文件的 sha512 + md5 → 期望输出 True。"""
+    H.register_file(repo, H.make_new_file(now_path="dir/a.txt", now_volume="V1"))
+
+    assert repo.is_exist("s1", "m1") is True
+
+
+def test_is_exist_requires_both_hashes_to_match(db, repo, volumes):
+    """输入 仅 sha512 或仅 md5 命中 → 期望输出 False（须同时命中）。"""
+    H.register_file(repo, H.make_new_file(now_path="dir/a.txt", now_volume="V1"))
+
+    assert repo.is_exist("s1", "m-other") is False
+    assert repo.is_exist("s-other", "m1") is False
 
 
 def test_path_as_text_normalizes_none_str_and_path():
@@ -166,15 +181,33 @@ def test_registration_defaults_state_to_online_when_none(db, repo, volumes):
         assert session.query(FileLocationsModel).one().state is FileState.ONLINE
 
 
-def test_duplicate_registration_adds_source_row_but_overwrites_location(db, repo, volumes):
-    """输入 同一文件登记两次 → 期望输出 file_sources 2 行、file_locations 仍 1 行（临时行为）。"""
+def test_duplicate_registration_skips_source_and_overwrites_location(db, repo, volumes):
+    """输入 同一来源（from_path + 哈希）登记两次 → 期望输出 file_sources 仍 1 行、file_locations 覆盖为 1 行。"""
     H.register_file(repo, H.make_new_file(now_path="dir/a.txt", now_volume="V1", info="first"))
     H.register_file(repo, H.make_new_file(now_path="dir/a.txt", now_volume="V1", info="second"))
 
     with db.factory() as session:
-        assert session.query(FileSourcesModel).count() == 2
+        assert session.query(FileSourcesModel).count() == 1
         assert session.query(FileLocationsModel).count() == 1
         assert session.query(FileLocationsModel).one().info == "second"
+
+
+def test_source_dedup_requires_path_and_hash_to_match(db, repo, volumes):
+    """输入 仅路径相同或仅哈希相同 → 期望输出 各自新增 file_sources 行（须三者全同才跳过）。"""
+    H.register_file(repo, H.make_new_file(
+        sha512="s1", md5="m1", path="/outside/a.txt",
+        now_path="dir/a.txt", now_volume="V1",
+    ))
+    H.register_file(repo, H.make_new_file(
+        sha512="s1", md5="m1", path="/outside/b.txt",
+        now_path="dir/b.txt", now_volume="V1",
+    ))
+    H.register_file(repo, H.make_new_file(
+        sha512="s2", md5="m2", path="/outside/a.txt",
+        now_path="dir/c.txt", now_volume="V1",
+    ))
+
+    assert H.count(db, FileSourcesModel) == 3
 
 
 def test_same_path_on_different_volumes_creates_two_locations(db, repo, volumes):

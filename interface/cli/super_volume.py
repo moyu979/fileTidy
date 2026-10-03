@@ -104,37 +104,45 @@ class SuperVolumeCLI(cmd.Cmd):
             print(f"\n错误: {e}")
 
     def do_add_volume(self, arg: str) -> None:
-        """
-        向已有超级卷添加子卷
-
-        用法: add_volume
-        将提示输入超级卷序列号和子卷 ID 列表
-        """
+        """向已有超级卷添加子卷。用法: add_volume <超级卷序列号> <子卷ID>"""
         if self._missing_service():
             return
-
-        super_volume_serial = input("请输入目标超级卷序列号: ").strip()
-        if not super_volume_serial:
-            print("错误: 超级卷序列号不能为空。")
-            return
-
-        volumes = []
-        while True:
-            vol_id = input("请输入要添加的子卷 ID（输入 q 或回车结束）: ").strip()
-            if vol_id == "q" or vol_id == "":
-                break
-            volumes.append(vol_id)
-
-        if not volumes:
-            print("错误: 至少需要提供一个子卷 ID。")
-            return
-
+        parts = arg.strip().split()
+        if len(parts) == 2:
+            sv_serial, vol_id = parts
+        else:
+            sv_serial = input("超级卷序列号: ").strip()
+            vol_id = input("子卷 ID: ").strip()
+            if not sv_serial or not vol_id:
+                print("序列号不能为空。")
+                return
         try:
-            result = self.app.super_volume_service.add_volumes(
-                super_volume_serial=super_volume_serial,
-                volume_ids=volumes,
-            )
+            result = self.app.super_volume_service.add_volume(sv_serial, vol_id)
             print(f"\n添加成功: {result}")
+        except Exception as e:
+            print(f"\n错误: {e}")
+
+    def do_replace_volume(self, arg: str) -> None:
+        """用新卷替换超级卷中的子卷。用法: replace_volume <超级卷序列号> <旧子卷ID> <新子卷ID>"""
+        if self._missing_service():
+            return
+        parts = arg.strip().split()
+        if len(parts) == 3:
+            sv_serial, old_id, new_id = parts
+        else:
+            sv_serial = input("超级卷序列号: ").strip()
+            old_id = input("旧子卷 ID: ").strip()
+            new_id = input("新子卷 ID: ").strip()
+            if not sv_serial or not old_id or not new_id:
+                print("所有参数不能为空。")
+                return
+        try:
+            result = self.app.super_volume_service.replace_volume(
+                super_volume_serial=sv_serial,
+                old_volume_id=old_id,
+                new_volume_id=new_id,
+            )
+            print(f"\n替换成功: {result}")
         except Exception as e:
             print(f"\n错误: {e}")
 
@@ -367,40 +375,43 @@ class SuperVolumeCLI(cmd.Cmd):
         old, new = self.app.super_volume_service.set_serial(old_serial, new_serial)
         print(f"序列号: {old} → {new}")
 
-    def do_remove_volumes(self, arg: str) -> None:
-        """
-        从超级卷移除子卷
-
-        用法: remove_volumes
-        将提示输入超级卷序列号和子卷 ID 列表
-        """
-        if self._missing_service():
-            return
-
-        super_volume_serial = input("请输入目标超级卷序列号: ").strip()
-        if not super_volume_serial:
-            print("错误: 超级卷序列号不能为空。")
-            return
-
-        volumes = []
-        while True:
-            vol_id = input("请输入要移除的子卷 ID（输入 q 或回车结束）: ").strip()
-            if vol_id == "q" or vol_id == "":
-                break
-            volumes.append(vol_id)
-
-        if not volumes:
-            print("错误: 至少需要提供一个子卷 ID。")
-            return
-
-        try:
-            result = self.app.super_volume_service.remove_volumes(
-                super_volume_serial=super_volume_serial,
-                volume_ids=volumes,
-            )
-            print(f"\n移除成功: {result}")
-        except Exception as e:
-            print(f"\n错误: {e}")
+    # TODO(P1): 「摘子卷」功能暂缓（与仓储/ABC/service 同口径停用）。
+    #   恢复时取消下面注释，并同步恢复 service.remove_volumes 与相关测试。
+    #
+    # def do_remove_volumes(self, arg: str) -> None:
+    #     """
+    #     从超级卷移除子卷
+    #
+    #     用法: remove_volumes
+    #     将提示输入超级卷序列号和子卷 ID 列表
+    #     """
+    #     if self._missing_service():
+    #         return
+    #
+    #     super_volume_serial = input("请输入目标超级卷序列号: ").strip()
+    #     if not super_volume_serial:
+    #         print("错误: 超级卷序列号不能为空。")
+    #         return
+    #
+    #     volumes = []
+    #     while True:
+    #         vol_id = input("请输入要移除的子卷 ID（输入 q 或回车结束）: ").strip()
+    #         if vol_id == "q" or vol_id == "":
+    #             break
+    #         volumes.append(vol_id)
+    #
+    #     if not volumes:
+    #         print("错误: 至少需要提供一个子卷 ID。")
+    #         return
+    #
+    #     try:
+    #         result = self.app.super_volume_service.remove_volumes(
+    #             super_volume_serial=super_volume_serial,
+    #             volume_ids=volumes,
+    #         )
+    #         print(f"\n移除成功: {result}")
+    #     except Exception as e:
+    #         print(f"\n错误: {e}")
 
     def do_remove(self, arg: str) -> None:
         """软删除超级卷（标记 REMOVED）。用法: remove <序列号>"""

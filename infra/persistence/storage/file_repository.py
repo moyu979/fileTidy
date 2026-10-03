@@ -51,39 +51,54 @@ class FileRepository(FileRepositoryABC):
         super().__init__()
         logger.info("FileRepository constructed")
 
-    def is_exist(self) -> bool:
-        """判断文件记录是否存在（暂未实现）。"""
-        pass
+    def is_exist(self, sha512: str, md5: str) -> bool:
+        """判断位置表是否存在同时匹配 sha512 与 md5 的文件记录。
+
+        Args:
+            sha512: 文件的 SHA-512 值
+            md5: 文件的 MD5 值
+
+        Returns:
+            存在同时命中两个哈希的位置记录返回 True，否则返回 False
+        """
+        with session_scope(self.session_factory) as session:
+            return session.query(FileLocationsModel).filter(
+                FileLocationsModel.sha512 == sha512,
+                FileLocationsModel.md5 == md5,
+            ).first() is not None
 
     def reg_source(self, new_file: NewFile, session=None) -> None:
         """登记文件来源（内容身份），写入 file_sources。
 
+        当已有记录的 (sha512, md5, from_path) 与新文件全部相同时视为重复登记，
+        直接跳过、不再写入，避免冗余来源行。
+
         Args:
             new_file: 要登记的文件对象
             session: 外部事务会话；为空时自建事务并提交，非空时复用且不提交
-
-        Note:
-            当前实现存在重复登记问题，详见 TODO 注释。
         """
-        # TODO: 重复登记同一文件时：
-        #   1. session.add(source_row) → FileSourcesModel 无唯一约束，
-        #      会产生冗余记录。
-        #   2. session.merge(location_row) → FileLocationsModel 的
-        #      (now_volume, now_path) 主键已存在时静默覆盖，无任何通知。
-        #   应统一处理重复策略（报错 / 跳过 / 覆盖并记录日志）。
-        # source_row 走纯 session.add（INSERT）：None 交给列默认（state → ONLINE，
+        # 来源行走纯 session.add（INSERT）：None 交给列默认（state → ONLINE，
         # info → ""），不需要内联兜底。
-        source_row = FileSourcesModel(
-            sha512=new_file.sha512,
-            md5=new_file.md5,
-            size=new_file.size,
-            add_time=new_file.add_time,
-            from_path=_path_as_text(new_file.from_path),
-            state=coerce_enum(FileState, new_file.state),
-            info=new_file.info,
-        )
+        from_path = _path_as_text(new_file.from_path)
         with self._session_scope(session) as s:
-            s.add(source_row)
+            exists = s.query(FileSourcesModel).filter(
+                FileSourcesModel.sha512 == new_file.sha512,
+                FileSourcesModel.md5 == new_file.md5,
+                FileSourcesModel.from_path == from_path,
+            ).first() is not None
+            if exists:
+                return
+            s.add(
+                FileSourcesModel(
+                    sha512=new_file.sha512,
+                    md5=new_file.md5,
+                    size=new_file.size,
+                    add_time=new_file.add_time,
+                    from_path=from_path,
+                    state=coerce_enum(FileState, new_file.state),
+                    info=new_file.info,
+                )
+            )
 
     def reg_location(self, new_file: NewFile, session=None) -> None:
         """登记文件位置，写入 file_locations。

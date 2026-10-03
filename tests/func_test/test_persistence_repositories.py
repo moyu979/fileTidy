@@ -30,6 +30,7 @@ from domain.storage.super_device.errors import (
     SuperDeviceInUseError,
 )
 from domain.storage.super_volume.enum import SuperVolumeState
+from domain.storage.super_volume.errors import SubVolumeInUseError
 from domain.storage.volume.enum import VolumeState
 from domain.storage.volume.errors import VolumeInUseError, VolumeNotFoundError
 from infra.persistence.models import (
@@ -215,6 +216,7 @@ def test_volume_remove_blocked_by_files_and_super_volume(repos, session_factory)
     repos["device"].reg_device(make_device("D1"))
     volume_repo.reg_volume(make_volume("V1", device_id="D1"))
     volume_repo.reg_volume(make_volume("V2", device_id="D1"))
+    volume_repo.reg_volume(make_volume("V3", device_id="D1"))
 
     register_file(file_repo, NewFile(
         sha512="s", md5="m", size=1, add_time=datetime(2026, 1, 1),
@@ -239,7 +241,7 @@ def test_volume_remove_blocked_by_files_and_super_volume(repos, session_factory)
         volume_repo.remove_volume("V2")
     assert exc.value.super_volumes == 1
 
-    sv_repo.remove_volumes("SV1", ["V2"])
+    sv_repo.replace_volume("SV1", "V2", "V3", datetime(2026, 1, 1))
     volume_repo.remove_volume("V2")
     assert volume_repo.get_volume("V2", exclude_removed=False).state == VolumeState.REMOVED
 
@@ -398,27 +400,22 @@ def test_super_volume_repository_crud(repos):
     assert sv_repo.get_super_volume("SV1").name == "copies"
 
 
-def test_super_volume_add_and_remove_volumes(repos):
-    """add_volumes 独占校验；remove_volumes 释放成员。"""
-    _seed_volumes(repos, ("V1", "V2", "V3"))
+def test_super_volume_add_and_replace_volumes(repos):
+    """add_volume 独占校验；replace_volume 换下旧成员（REPLACED）。"""
+    _seed_volumes(repos, ("V1", "V2", "V3", "V4"))
     sv_repo = repos["super_volume"]
     sv_repo.reg_super_volume(make_super_volume("SV1", volumes=["V1"]))
     sv_repo.reg_super_volume(make_super_volume("SV2", volumes=["V2"]))
 
     # 卷已属于 SV2（USING）→ 拒绝
-    from domain.storage.super_volume.structure import SuperVolumeStructure
+    with pytest.raises(SubVolumeInUseError):
+        sv_repo.add_volume("SV1", "V2", datetime(2026, 1, 1))
 
-    with pytest.raises(ValueError, match="已属于"):
-        sv_repo.add_volumes([SuperVolumeStructure("SV1", "V2")])
-
-    sv_repo.add_volumes([SuperVolumeStructure("SV1", "V3")])
+    sv_repo.add_volume("SV1", "V3", datetime(2026, 1, 1))
     assert sv_repo.get_super_volume("SV1").volumes == ["V1", "V3"]
 
-    with pytest.raises(ValueError, match="不是"):
-        sv_repo.remove_volumes("SV1", ["V2"])
-
-    sv_repo.remove_volumes("SV1", ["V1"])
-    assert sv_repo.get_super_volume("SV1").volumes == ["V3"]
+    sv_repo.replace_volume("SV1", "V1", "V4", datetime(2026, 1, 1))
+    assert sv_repo.get_super_volume("SV1").volumes == ["V3", "V4"]
 
 
 def test_super_volume_remove_releases_structures(repos):
