@@ -82,7 +82,7 @@ def test_raidz_snapshot_type_and_devices():
     """输入 raidz 实例 → 快照 type 为 "raidz"、devices 顺序不变，state 保留枚举实例。"""
     sd = _raidz(["D2", "D1"])
     snapshot = sd.to_snapshot()
-    assert snapshot["type"] == "raidz"
+    assert snapshot["sdtype"] == "raidz"
     assert snapshot["devices"] == ["D2", "D1"]
     assert snapshot["state"] is SuperDeviceState.HEALTHY
     assert json.loads(sd.to_json())["state"] == "healthy"

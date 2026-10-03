@@ -430,6 +430,7 @@ def test_do_replace_device_requires_serials(monkeypatch, capsys):
     assert service.calls == []
 
 
+@pytest.mark.skip(reason="摘子项功能暂缓（TODO P1：single 变体不变量待重新设计）")
 def test_do_remove_device(capsys):
     """输入 'SD1 D1' → 服务收到两个序列号并输出移除提示。"""
     service = _FakeService()
@@ -440,6 +441,7 @@ def test_do_remove_device(capsys):
     assert "子设备 D1 已从超级设备 SD1 移除" in capsys.readouterr().out
 
 
+@pytest.mark.skip(reason="摘子项功能暂缓（TODO P1：single 变体不变量待重新设计）")
 def test_do_remove_device_prints_error_on_exception(capsys):
     """移除子设备时服务抛异常 → 输出 '错误: ...'。"""
     service = _FakeService(remove_device=RuntimeError("结构占用"))

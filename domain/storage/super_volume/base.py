@@ -3,10 +3,10 @@
 
 from __future__ import annotations
 
-import json
 from abc import ABC
 from datetime import datetime
 
+from domain.common.json_utils import parse_json_object
 from domain.common.mixins import JsonSerializableMixin
 from domain.storage.super_volume.enum import SuperVolumeState
 
@@ -114,7 +114,7 @@ class SuperVolume(ABC, JsonSerializableMixin):
         return cls.create(
             serial=data.get("serial", ""),
             name=data.get("name", ""),
-            svtype=data.get("type"),
+            svtype=data.get("svtype"),
             method=data.get("method", ""),
             add_time=data.get("add_time"),
             last_check_time=data.get("last_check_time"),
@@ -159,18 +159,12 @@ class SuperVolume(ABC, JsonSerializableMixin):
         self.volumes = volumes
 
     def _parse_info(self) -> dict:
-        """解析 info（JSON 文本）为字典。
+        """解析 info（JSON 文本）为字典（薄封装，逻辑见 parse_json_object）。
 
         Returns:
-            解析后的 dict；info 为空或非法 JSON 时返回空字典 {}。
+            解析后的 dict；info 为空 / 非法 JSON / 非对象 JSON 时返回空字典 {}。
         """
-        if not self.info:
-            return {}
-        try:
-            data = json.loads(self.info)
-        except (json.JSONDecodeError, TypeError):
-            return {}
-        return data if isinstance(data, dict) else {}
+        return parse_json_object(self.info)
 
     def to_snapshot(self) -> dict:
         """将超级卷转换为快照字典。
@@ -181,7 +175,7 @@ class SuperVolume(ABC, JsonSerializableMixin):
         return {
             "serial": self.serial,
             "name": self.name,
-            "type": self.svtype,
+            "svtype": self.svtype,
             "method": self.method,
             "add_time": self._ts(self.add_time),
             "last_check_time": self._ts(self.last_check_time),

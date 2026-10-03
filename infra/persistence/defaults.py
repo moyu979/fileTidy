@@ -1,8 +1,3 @@
-# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
-# CHECK: 待检查 - 基础设施默认数据 - 幂等确保默认占位记录存在
-
-# infrastructure/persistence/defaults.py
-
 from datetime import datetime
 from domain.storage.volume.enum import VolumeState
 from sqlalchemy.orm import Session
@@ -16,8 +11,8 @@ from .models import (
     SuperVolumeStructureModel,
 )
 from domain.storage.device.enum import DeviceState
-from domain.storage.super_device.enum import RelationState, SuperDeviceState
-from domain.storage.super_volume.enum import SuperVolumeState
+from domain.storage.super_device.enum import SuperDeviceRelationState, SuperDeviceState
+from domain.storage.super_volume.enum import SuperVolumeRelationState, SuperVolumeState
 
 def ensure_defaults(session: Session):
     """
@@ -54,7 +49,7 @@ def _ensure_device(session: Session, now: datetime):
             DeviceModel(
                 serial="EXTERNAL_DEVICE",
                 name="EXTERNAL_DEVICE",
-                type="any",
+                dtype="any",
                 add_time=now,
                 last_check_time=now,
                 state=DeviceState.HEALTHY,
@@ -77,7 +72,7 @@ def _ensure_super_device(session: Session, now: datetime):
             SuperDeviceModel(
                 serial="EXTERNAL_SUPER_DEVICE",
                 name="EXTERNAL_SUPER_DEVICE",
-                type="single",
+                sdtype="single",
                 add_time=now,
                 last_check_time=now,
                 state=SuperDeviceState.HEALTHY,
@@ -105,7 +100,7 @@ def _ensure_super_device_structure(session: Session, now: datetime):
                 super_device_id="EXTERNAL_SUPER_DEVICE",
                 sub_device_id="EXTERNAL_DEVICE",
                 add_time=now,
-                state=RelationState.USING,
+                state=SuperDeviceRelationState.USING,
                 info="默认关联：EXTERNAL_SUPER_DEVICE -> EXTERNAL_DEVICE",
             )
         )
@@ -148,7 +143,7 @@ def _ensure_supervolume(session: Session, now: datetime):
             SuperVolumeModel(
                 serial="EXTERNAL_SUPERVOLUME",
                 name="EXTERNAL_SUPERVOLUME",
-                type="single",
+                svtype="single",
                 add_time=now,
                 last_check_time=now,
                 state=SuperVolumeState.HEALTHY,
@@ -175,7 +170,7 @@ def _ensure_super_volume_structure(session: Session, now: datetime):
                 super_volume_id="EXTERNAL_SUPERVOLUME",
                 volume_id="EXTERNAL_VOLUME",
                 add_time=now,
-                state=RelationState.USING,
+                state=SuperVolumeRelationState.USING,
                 info="默认关联：EXTERNAL_SUPERVOLUME -> EXTERNAL_VOLUME",
             )
         )

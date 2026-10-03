@@ -35,7 +35,7 @@ from domain.storage.device.variants.tape import TapeDevice
 from domain.storage.device.variants.tf_sd import TfSdCardDevice
 
 SNAPSHOT_KEYS = {
-    "serial", "name", "type", "add_time", "last_check_time",
+    "serial", "name", "dtype", "add_time", "last_check_time",
     "capacity", "info", "state", "device_path",
 }
 
@@ -45,7 +45,7 @@ def _snapshot_ok(device: Device) -> dict:
     data = {
         "serial": "SN-001",
         "name": "测试盘",
-        "type": "hdd",
+        "dtype": "hdd",
         "add_time": datetime(2026, 1, 1, 8, 0, 0),
         "last_check_time": datetime(2026, 1, 2, 9, 30, 0),
         "capacity": 1_000_000_000_000,
@@ -134,7 +134,7 @@ def test_from_dict_roundtrip_keeps_all_fields():
     data = {
         "serial": "SN-002",
         "name": "盘",
-        "type": "ssd",
+        "dtype": "ssd",
         "add_time": "2026-01-01T08:00:00",
         "last_check_time": "2026-01-02T09:30:00",
         "capacity": 512_000_000_000,
@@ -145,7 +145,7 @@ def test_from_dict_roundtrip_keeps_all_fields():
     device = Device.from_dict(data)
     snapshot = device.to_snapshot()
     assert snapshot["serial"] == "SN-002"
-    assert snapshot["type"] == "ssd"
+    assert snapshot["dtype"] == "ssd"
     assert snapshot["capacity"] == 512_000_000_000
     assert snapshot["device_path"] == "/mnt/sd0"
     assert isinstance(device, SsdDevice)
@@ -177,7 +177,7 @@ def test_to_snapshot_fields_and_json():
     text = Device.from_dict({
         "serial": "SN-001",
         "name": "测试盘",
-        "type": "hdd",
+        "dtype": "hdd",
         "add_time": datetime(2026, 1, 1, 8, 0, 0),
         "last_check_time": None,
         "capacity": 1,

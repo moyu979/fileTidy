@@ -10,11 +10,13 @@ from pathlib import Path
 import pandas as pd
 
 from application.storage.file.file_service import FileService
+from domain.common.json_utils import parse_json_object
 from domain.storage.file.new_file import NewFile
 from domain.storage.device.repo import DeviceRepositoryABC as DeviceRepository
 from domain.storage.super_device.repo import SuperDeviceRepositoryABC as SuperDeviceRepository
 from domain.storage.volume.base import Volume
 from domain.storage.volume.enum import VolumeState
+from domain.storage.volume.errors import VolumeNotFoundError
 from domain.storage.volume.events import (
     VolumeFieldUpdated,
     VolumeInfoChanged,
@@ -450,9 +452,18 @@ class VolumeService:
 
     # ── 查询 ────────────────────────────────────────────────
 
-    def list_volumes(self) -> list[str]:
-        """列出所有卷（返回 JSON 字符串列表）。"""
-        return [v.to_json() for v in self.volume_repository.list_volumes()]
+    def list_volumes(self, exclude_removed: bool = True) -> list[str]:
+        """列出所有卷（返回 JSON 字符串列表）。
+
+        Args:
+            exclude_removed: 为 True（默认）时排除已移除（REMOVED）的卷。
+        """
+        return [
+            v.to_json()
+            for v in self.volume_repository.list_volumes(
+                exclude_removed=exclude_removed
+            )
+        ]
 
     def get_volume(self, serial: str) -> str | None:
         """按序列号查询卷。"""
@@ -473,7 +484,7 @@ class VolumeService:
         """
         volume = self.volume_repository.get_volume(serial)
         if volume is None:
-            raise ValueError(f"volume {serial} not found")
+            raise VolumeNotFoundError(serial)
         old = volume.name
         self.volume_repository.update_volume(serial, name=name)
         log_event(VolumeFieldUpdated(serial, "name", old, name))
@@ -493,15 +504,25 @@ class VolumeService:
         """
         volume = self.volume_repository.get_volume(serial)
         if volume is None:
-            raise ValueError(f"volume {serial} not found")
+            raise VolumeNotFoundError(serial)
         validated = self._resolve_device_id(device_id, volume.add_time)
         old = volume.device_id
         self.volume_repository.update_volume(serial, device_id=validated)
         log_event(VolumeFieldUpdated(serial, "device_id", old, validated))
         return (old, validated)
 
+    # TODO(P1): set_state 目前能直接把卷改成 REMOVED，**绕过 remove_volume 的引用校验**
+    #   （remove_volume 要求：无 USING 的超级卷成员关系、无未移除的文件位置）。
+    #   后果：一个正被超级卷使用 / 仍有文件的卷可以被静默标成 REMOVED，破坏引用不变式。
+    #   收口方向（未定稿）：① set_state 拒绝 REMOVED，强制改走 remove_volume；
+    #   ② 或在 set_state 内部复用 remove_volume 的那套校验。
+    #   注意：仓储层已禁止 update_volume 写入 REMOVED，因此 set_state(REMOVED) 会直接报错；
+    #   卷的复活路径（revive_volume）已在仓储层就绪，但本层尚未接入（用户口径「还没整理到」）。
     def set_state(self, serial: str, state: VolumeState) -> tuple[VolumeState, VolumeState]:
         """更新卷状态。
+
+        注意：本方法不校验卷是否被引用，因此**不应**用它把卷置为 REMOVED；
+        软删除请走 `remove_volume`（带着引用校验）。详见上方 TODO。
 
         Args:
             serial: 卷序列号。
@@ -512,7 +533,7 @@ class VolumeService:
         """
         volume = self.volume_repository.get_volume(serial)
         if volume is None:
-            raise ValueError(f"volume {serial} not found")
+            raise VolumeNotFoundError(serial)
         old = volume.state
         self.volume_repository.update_volume(serial, state=state)
         log_event(VolumeFieldUpdated(serial, "state", old, state))
@@ -530,7 +551,7 @@ class VolumeService:
         """
         volume = self.volume_repository.get_volume(serial)
         if volume is None:
-            raise ValueError(f"volume {serial} not found")
+            raise VolumeNotFoundError(serial)
         old = volume.capacity
         self.volume_repository.update_volume(serial, capacity=capacity)
         log_event(VolumeFieldUpdated(serial, "capacity", old, capacity))
@@ -540,19 +561,14 @@ class VolumeService:
 
     @staticmethod
     def _parse_info(info_str: str | None) -> dict:
-        """解析 info JSON 文本为字典，空值返回空字典。"""
-        if not info_str:
-            return {}
-        try:
-            return json.loads(info_str)
-        except (json.JSONDecodeError, TypeError):
-            return {}
+        """解析 info JSON 文本为字典（薄封装，逻辑见 parse_json_object）。"""
+        return parse_json_object(info_str)
 
     def set_info(self, serial: str, info: dict) -> tuple[dict, dict]:
         """全量替换 info（JSON 文本）。返回 (旧info, 新info)。"""
         volume = self.volume_repository.get_volume(serial)
         if volume is None:
-            raise ValueError(f"volume {serial} not found")
+            raise VolumeNotFoundError(serial)
         old = self._parse_info(volume.info)
         new_str = json.dumps(info, ensure_ascii=False)
         self.volume_repository.update_volume(serial, info=new_str)
@@ -566,7 +582,7 @@ class VolumeService:
         """
         volume = self.volume_repository.get_volume(serial)
         if volume is None:
-            raise ValueError(f"volume {serial} not found")
+            raise VolumeNotFoundError(serial)
         old = self._parse_info(volume.info)
         new_info = {**old, **data}
         new_str = json.dumps(new_info, ensure_ascii=False)
@@ -582,7 +598,7 @@ class VolumeService:
         """从 info 中删除指定键（JSON 文本）。返回 (旧info, 新info)。"""
         volume = self.volume_repository.get_volume(serial)
         if volume is None:
-            raise ValueError(f"volume {serial} not found")
+            raise VolumeNotFoundError(serial)
         old = self._parse_info(volume.info)
         new_info = dict(old)
         old_val = new_info.pop(key, None)
@@ -597,7 +613,7 @@ class VolumeService:
     def set_serial(self, old_serial: str, new_serial: str) -> tuple[str, str]:
         """重置卷序列号，同步更新关联表。返回 (旧序列号, 新序列号)。"""
         if not self.volume_repository.is_exist(old_serial):
-            raise ValueError(f"volume {old_serial} not found")
+            raise VolumeNotFoundError(old_serial)
         self.volume_repository.update_serial(old_serial, new_serial)
         log_event(VolumeSerialChanged(old_serial=old_serial, new_serial=new_serial))
         return (old_serial, new_serial)
@@ -609,7 +625,7 @@ class VolumeService:
             serial: 卷序列号。
 
         Raises:
-            ValueError: 卷不存在。
+            VolumeNotFoundError: 卷不存在。
             VolumeInUseError: 卷仍被文件/超级卷引用（透传自仓储层）。
         """
         self.volume_repository.remove_volume(serial)

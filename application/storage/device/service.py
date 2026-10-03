@@ -12,14 +12,21 @@ import logging
 import os
 from datetime import datetime
 
+from domain.common.json_utils import parse_json_object
 from domain.storage.device.base import Device
 from domain.storage.device.enum import DeviceState
+from domain.storage.device.errors import (
+    DeviceAlreadyRegisteredError,
+    DeviceAlreadyRemovedError,
+    DeviceNotFoundError,
+)
 from domain.storage.device.events import (
     DeviceFieldUpdated,
     DeviceInfoChanged,
     DeviceInfoSet,
     DeviceRegistered,
     DeviceRemoved,
+    DeviceRevived,
     DeviceSerialChanged,
 )
 from infra.common.time_defaults import LAST_CHECK_TIME_ORIGIN
@@ -93,13 +100,21 @@ class DeviceService:
         # TODO: 按指定字段查询
         raise NotImplementedError(f"按字段 {field} 查询尚未实现")
 
-    def list_devices(self) -> list[str]:
-        """列出所有已注册设备的 JSON 字符串列表。
+    def list_devices(self, exclude_removed: bool = True) -> list[str]:
+        """列出设备的 JSON 字符串列表。
+
+        Args:
+            exclude_removed: 为 True（默认）时排除已移除（REMOVED）的设备。
 
         Returns:
             设备 JSON 字符串列表。
         """
-        return [device.to_json() for device in self.device_repository.list_devices()]
+        return [
+            device.to_json()
+            for device in self.device_repository.list_devices(
+                exclude_removed=exclude_removed
+            )
+        ]
 
     # ── 登记（增） ────────────────────────────────────────────────
 
@@ -139,7 +154,7 @@ class DeviceService:
         device = Device.create(
             serial=serial,
             name=data.get("name") or serial[:8],
-            dtype=data.get("type"),
+            dtype=data.get("dtype"),
             add_time=data.get("add_time") or datetime.now(),
             last_check_time=data.get("last_check_time") or LAST_CHECK_TIME_ORIGIN,
             capacity=data.get("capacity"),
@@ -161,11 +176,21 @@ class DeviceService:
             登记成功的设备序列号。
 
         Raises:
-            ValueError: 设备已存在。
+            ValueError: 设备已存在；或已存在但处于 REMOVED
+                （需先调用 revive_device 复活，而不是重新登记）。
         """
-        if self.device_repository.is_exist(device.serial):
-            raise ValueError(f"device {device.serial} already exists")
-        self.device_repository.reg_device(device)
+        # 判定与分类都已下沉到仓储：撞 REMOVED 行抛 DeviceAlreadyRemovedError，
+        # 撞活跃行抛 DeviceAlreadyRegisteredError。本层只负责把事实翻译成给用户的措辞
+        # —— 提示里点名 revive_device 属应用层编排，不应由仓储说出口。
+        try:
+            self.device_repository.reg_device(device)
+        except DeviceAlreadyRemovedError as e:
+            raise ValueError(
+                f"device {e.serial} 已被移除（REMOVED），"
+                f"如要重新启用请先调用 revive_device"
+            ) from None
+        except DeviceAlreadyRegisteredError as e:
+            raise ValueError(f"device {e.serial} already exists") from None
         log_event(DeviceRegistered(device))
         return device.serial
 
@@ -183,7 +208,7 @@ class DeviceService:
         """
         device = self.device_repository.get_device(serial)
         if device is None:
-            raise ValueError(f"device {serial} not found")
+            raise DeviceNotFoundError(serial)
         old = device.name
         self.device_repository.update_device(serial, name=name)
         log_event(DeviceFieldUpdated(serial, "name", old, name))
@@ -201,14 +226,25 @@ class DeviceService:
         """
         device = self.device_repository.get_device(serial)
         if device is None:
-            raise ValueError(f"device {serial} not found")
+            raise DeviceNotFoundError(serial)
         old = device.dtype
-        self.device_repository.update_device(serial, type=dtype)
-        log_event(DeviceFieldUpdated(serial, "type", old, dtype))
+        self.device_repository.update_device(serial, dtype=dtype)
+        log_event(DeviceFieldUpdated(serial, "dtype", old, dtype))
         return (old, dtype)
 
+    # TODO(P1): set_state 目前能直接把设备改成 REMOVED，**绕过 remove_device 的引用校验**
+    #   （remove_device 要求：无 USING 的超级设备子项关联、无未移除的卷）。
+    #   后果：一台正被超级设备使用的设备可以被静默标成 REMOVED，破坏引用不变式。
+    #   收口方向（未定稿）：① set_state 拒绝 REMOVED，强制改走 remove_device；
+    #   ② 或在 set_state 内部复用 remove_device 的那套校验。
+    #   注意：仓储层已禁止 update_device 写入 REMOVED，因此 set_state(REMOVED)
+    #   现在会直接报错（相当于先行收口了路径 ①）；软删除走 remove_device，
+    #   复活走 revive_device。本方法自身的收口整理仍待办。
     def set_state(self, serial: str, state: DeviceState) -> tuple[DeviceState, DeviceState]:
         """更新设备状态。
+
+        注意：本方法不校验设备是否被引用，因此**不应**用它把设备置为 REMOVED；
+        软删除请走 `remove_device`（带着引用校验）。详见上方 TODO。
 
         Args:
             serial: 设备序列号。
@@ -219,7 +255,7 @@ class DeviceService:
         """
         device = self.device_repository.get_device(serial)
         if device is None:
-            raise ValueError(f"device {serial} not found")
+            raise DeviceNotFoundError(serial)
         old = device.state
         self.device_repository.update_device(serial, state=state)
         log_event(DeviceFieldUpdated(serial, "state", old, state))
@@ -237,7 +273,7 @@ class DeviceService:
         """
         device = self.device_repository.get_device(serial)
         if device is None:
-            raise ValueError(f"device {serial} not found")
+            raise DeviceNotFoundError(serial)
         old = device.capacity
         self.device_repository.update_device(serial, capacity=capacity)
         log_event(DeviceFieldUpdated(serial, "capacity", old, capacity))
@@ -247,19 +283,14 @@ class DeviceService:
 
     @staticmethod
     def _parse_info(info_str: str | None) -> dict:
-        """解析 info JSON 文本为字典，空值返回空字典。"""
-        if not info_str:
-            return {}
-        try:
-            return json.loads(info_str)
-        except (json.JSONDecodeError, TypeError):
-            return {}
+        """解析 info JSON 文本为字典（薄封装，逻辑见 parse_json_object）。"""
+        return parse_json_object(info_str)
 
     def set_info(self, serial: str, info: dict) -> tuple[dict, dict]:
         """全量替换 info（JSON 文本）。返回 (旧info, 新info)。"""
         device = self.device_repository.get_device(serial)
         if device is None:
-            raise ValueError(f"device {serial} not found")
+            raise DeviceNotFoundError(serial)
         old = self._parse_info(device.info)
         new_str = json.dumps(info, ensure_ascii=False)
         self.device_repository.update_device(serial, info=new_str)
@@ -273,7 +304,7 @@ class DeviceService:
         """
         device = self.device_repository.get_device(serial)
         if device is None:
-            raise ValueError(f"device {serial} not found")
+            raise DeviceNotFoundError(serial)
         old = self._parse_info(device.info)
         new_info = {**old, **data}
         new_str = json.dumps(new_info, ensure_ascii=False)
@@ -289,7 +320,7 @@ class DeviceService:
         """从 info 中删除指定键（JSON 文本）。返回 (旧info, 新info)。"""
         device = self.device_repository.get_device(serial)
         if device is None:
-            raise ValueError(f"device {serial} not found")
+            raise DeviceNotFoundError(serial)
         old = self._parse_info(device.info)
         new_info = dict(old)
         old_val = new_info.pop(key, None)
@@ -302,7 +333,7 @@ class DeviceService:
     def set_serial(self, old_serial: str, new_serial: str) -> tuple[str, str]:
         """重置设备序列号，同步更新关联表。返回 (旧序列号, 新序列号)。"""
         if not self.device_repository.is_exist(old_serial):
-            raise ValueError(f"device {old_serial} not found")
+            raise DeviceNotFoundError(old_serial)
         self.device_repository.update_serial(old_serial, new_serial)
         log_event(DeviceSerialChanged(old_serial=old_serial, new_serial=new_serial))
         return (old_serial, new_serial)
@@ -310,12 +341,32 @@ class DeviceService:
     def remove_device(self, serial: str) -> None:
         """软删除设备（标记 REMOVED）。
 
+        事件携"删除前"快照，故先读一次原始实体（exclude_removed=False）再落库删除；
+        不存在时由仓储的 remove_device 兜底报错。
+
         Args:
             serial: 设备序列号。
 
         Raises:
-            ValueError: 设备不存在。
+            DeviceNotFoundError: 设备不存在。
+            DeviceAlreadyRemovedError: 设备已处于 REMOVED（不可重复移除，透传自仓储层）。
             DeviceInUseError: 设备仍被超级设备/卷引用（透传自仓储层）。
         """
+        device = self.device_repository.get_device(serial, exclude_removed=False)
+        if device is None:
+            raise DeviceNotFoundError(serial)
         self.device_repository.remove_device(serial)
-        log_event(DeviceRemoved(serial))
+        log_event(DeviceRemoved(device))
+
+    def revive_device(self, serial: str) -> None:
+        """复活已移除（REMOVED）的设备（state 置回 UNKNOWN）。
+
+        Args:
+            serial: 设备序列号。
+
+        Raises:
+            DeviceNotFoundError: 设备不存在（透传自仓储层）。
+            DeviceNotRemovedError: 设备未处于 REMOVED（无需复活，透传自仓储层）。
+        """
+        self.device_repository.revive_device(serial)
+        log_event(DeviceRevived(serial))

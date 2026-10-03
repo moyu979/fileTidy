@@ -18,7 +18,7 @@ class SuperDeviceRegistered:
         """
         snapshot = super_device.to_snapshot()
         self.serial = snapshot["serial"]  # 顶层冗余身份字段，便于按 serial 筛日志
-        self.device = snapshot            # 完整快照（聚合）
+        self.super_device = snapshot      # 完整快照（聚合）
 
 
 class SuperDeviceFieldUpdated:
@@ -117,10 +117,26 @@ class SuperDeviceDeviceChanged:
 
 
 class SuperDeviceRemoved:
-    """超级设备移除（软删除）事件。"""
+    """超级设备移除（软删除）事件。
+
+    携带**删除前**的完整快照（pre-image）：快照里的 state 仍是删除前的状态
+    （如 HEALTHY），**不是** REMOVED；判断「已移除」请看事件类型，不要看 snapshot 的 state。
+    """
+    def __init__(self, super_device: SuperDevice):
+        """
+        Args:
+            super_device: 被移除的超级设备实例（尚未置为 REMOVED 的删除前形态）。
+        """
+        snapshot = super_device.to_snapshot()
+        self.serial = snapshot["serial"]  # 顶层冗余身份字段，便于按 serial 筛日志
+        self.super_device = snapshot      # 完整快照（删除前）
+
+
+class SuperDeviceRevived:
+    """超级设备复活（REMOVED → UNKNOWN）事件。"""
     def __init__(self, serial: str):
         """
         Args:
-            serial: 被移除（标记 REMOVED）超级设备的序列号。
+            serial: 被复活超级设备的序列号。
         """
         self.serial = serial

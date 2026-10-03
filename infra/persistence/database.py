@@ -1,8 +1,3 @@
-# TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
-# CHECK: 待检查 - 基础设施数据库模块 - 数据库连接与会话管理
-
-# infrastructure/persistence/database.py
-
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker

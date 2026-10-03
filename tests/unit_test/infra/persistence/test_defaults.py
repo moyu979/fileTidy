@@ -32,8 +32,8 @@ from infra.persistence.models import (
     VolumeModel,
 )
 from domain.storage.device.enum import DeviceState
-from domain.storage.super_device.enum import RelationState, SuperDeviceState
-from domain.storage.super_volume.enum import SuperVolumeState
+from domain.storage.super_device.enum import SuperDeviceRelationState, SuperDeviceState
+from domain.storage.super_volume.enum import SuperVolumeRelationState, SuperVolumeState
 from domain.storage.volume.enum import VolumeState
 
 EXPECTED_COUNTS = {
@@ -109,7 +109,7 @@ def test_ensure_defaults_device_placeholder_values(factory):
     with factory() as session:
         device = session.get(DeviceModel, "EXTERNAL_DEVICE")
         assert device.name == "EXTERNAL_DEVICE"
-        assert device.type == "any"
+        assert device.dtype == "any"
         assert device.state is DeviceState.HEALTHY
         assert device.capacity == 0
         assert device.info == "用于默认和缺省的类"
@@ -122,7 +122,7 @@ def test_ensure_defaults_super_device_and_volume_values(factory):
 
     with factory() as session:
         super_device = session.get(SuperDeviceModel, "EXTERNAL_SUPER_DEVICE")
-        assert super_device.type == "single"
+        assert super_device.sdtype == "single"
         assert super_device.state is SuperDeviceState.HEALTHY
         assert super_device.capacity == 0
 
@@ -135,7 +135,7 @@ def test_ensure_defaults_super_device_and_volume_values(factory):
         assert volume.unique_mount_point == "/unknown"
 
         super_volume = session.get(SuperVolumeModel, "EXTERNAL_SUPERVOLUME")
-        assert super_volume.type == "single"
+        assert super_volume.svtype == "single"
         assert super_volume.state is SuperVolumeState.HEALTHY
 
 
@@ -147,13 +147,13 @@ def test_ensure_defaults_structure_rows_are_using(factory):
         sd_row = session.query(SuperDeviceStructureModel).one()
         assert sd_row.super_device_id == "EXTERNAL_SUPER_DEVICE"
         assert sd_row.sub_device_id == "EXTERNAL_DEVICE"
-        assert sd_row.state is RelationState.USING
+        assert sd_row.state is SuperDeviceRelationState.USING
         assert "EXTERNAL_SUPER_DEVICE -> EXTERNAL_DEVICE" in sd_row.info
 
         sv_row = session.query(SuperVolumeStructureModel).one()
         assert sv_row.super_volume_id == "EXTERNAL_SUPERVOLUME"
         assert sv_row.volume_id == "EXTERNAL_VOLUME"
-        assert sv_row.state is RelationState.USING
+        assert sv_row.state is SuperVolumeRelationState.USING
         assert "EXTERNAL_SUPERVOLUME -> EXTERNAL_VOLUME" in sv_row.info
 
 

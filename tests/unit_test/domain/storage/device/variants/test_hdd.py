@@ -69,8 +69,8 @@ def test_hdd_check_and_set_are_placeholder_noops():
 
 
 def test_hdd_snapshot_keeps_type_and_serial():
-    """输入 serial + info → 快照保留 serial 与 type="hdd"。"""
+    """输入 serial + info → 快照保留 serial 与 dtype="hdd"。"""
     snapshot = _hdd(serial="HDD-9", info='{"interface": "sas"}').to_snapshot()
     assert snapshot["serial"] == "HDD-9"
-    assert snapshot["type"] == "hdd"
+    assert snapshot["dtype"] == "hdd"
     assert snapshot["info"] == '{"interface": "sas"}'

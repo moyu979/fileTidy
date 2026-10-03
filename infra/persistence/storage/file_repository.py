@@ -3,6 +3,7 @@
 # NOTE: file 子系统未完成（设计未定稿），以下为探索/临时实现，勿作为稳定功能依赖；后续可能整体重写或删除。
 
 import logging
+from contextlib import nullcontext
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -54,12 +55,12 @@ class FileRepository(FileRepositoryABC):
         """判断文件记录是否存在（暂未实现）。"""
         pass
 
-    def reg_file(self, new_file: NewFile) -> None:
-        """
-        注册一个新文件记录，包含文件源信息和位置信息。
+    def reg_source(self, new_file: NewFile, session=None) -> None:
+        """登记文件来源（内容身份），写入 file_sources。
 
         Args:
-            new_file: 要注册的文件对象
+            new_file: 要登记的文件对象
+            session: 外部事务会话；为空时自建事务并提交，非空时复用且不提交
 
         Note:
             当前实现存在重复登记问题，详见 TODO 注释。
@@ -70,18 +71,31 @@ class FileRepository(FileRepositoryABC):
         #   2. session.merge(location_row) → FileLocationsModel 的
         #      (now_volume, now_path) 主键已存在时静默覆盖，无任何通知。
         #   应统一处理重复策略（报错 / 跳过 / 覆盖并记录日志）。
+        # source_row 走纯 session.add（INSERT）：None 交给列默认（state → ONLINE，
+        # info → ""），不需要内联兜底。
         source_row = FileSourcesModel(
             sha512=new_file.sha512,
             md5=new_file.md5,
             size=new_file.size,
             add_time=new_file.add_time,
             from_path=_path_as_text(new_file.from_path),
-            state=coerce_enum(
-                FileState,
-                new_file.state if new_file.state is not None else FileState.ONLINE,
-            ),
-            info=new_file.info if new_file.info is not None else "",
+            state=coerce_enum(FileState, new_file.state),
+            info=new_file.info,
         )
+        with self._session_scope(session) as s:
+            s.add(source_row)
+
+    def reg_location(self, new_file: NewFile, session=None) -> None:
+        """登记文件位置，写入 file_locations。
+
+        Args:
+            new_file: 要登记的文件对象
+            session: 外部事务会话；为空时自建事务并提交，非空时复用且不提交
+        """
+        # location_row 走 session.merge：命中已有行时是 UPDATE 语义，
+        # 客户端列默认不生效、None 会直接写 NULL 并覆盖旧值 —— 下面的 state/info
+        # 内联兜底必须保留。now_path 的 or "" 是另一回事：该列 nullable=False
+        # 且没有 default，兜底在防 NOT NULL 违约。
         location_row = FileLocationsModel(
             sha512=new_file.sha512,
             md5=new_file.md5,
@@ -95,9 +109,28 @@ class FileRepository(FileRepositoryABC):
             ),
             info=new_file.info if new_file.info is not None else "",
         )
-        with session_scope(self.session_factory) as session:
-            session.add(source_row)
-            session.merge(location_row)
+        with self._session_scope(session) as s:
+            s.merge(location_row)
+
+    def _session_scope(self, session: Any = None):
+        """返回会话上下文：session 为空时自建事务，否则复用外部会话（提交交由外层）。"""
+        if session is not None:
+            return nullcontext(session)
+        return session_scope(self.session_factory)
+
+    def transaction(self):
+        """返回事务上下文，供调用方把多个写操作组合成同一事务。
+
+        用法::
+
+            with repo.transaction() as session:
+                repo.reg_source(new_file, session)
+                repo.reg_location(new_file, session)
+
+        Returns:
+            session_scope 上下文管理器，yield 出会话对象。
+        """
+        return session_scope(self.session_factory)
 
     def list_by_volume_dir(
         self, volume: str, dir_path: str,

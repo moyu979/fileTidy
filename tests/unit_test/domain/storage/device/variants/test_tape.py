@@ -82,7 +82,7 @@ def test_tape_capacity_table_covers_declared_generations():
 
 
 def test_tape_snapshot_keeps_type_and_serial():
-    """输入 serial + dtype="tape" → 快照保留 serial 与 type="tape"。"""
+    """输入 serial + dtype="tape" → 快照保留 serial 与 dtype="tape"。"""
     snapshot = _tape(serial="T-9").to_snapshot()
     assert snapshot["serial"] == "T-9"
-    assert snapshot["type"] == "tape"
+    assert snapshot["dtype"] == "tape"

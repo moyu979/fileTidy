@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from domain.storage.super_device.enum import RelationState
+from domain.storage.super_volume.enum import SuperVolumeRelationState
 
 
 class SuperVolumeStructure:
@@ -20,7 +20,7 @@ class SuperVolumeStructure:
         super_volume_serial: str,
         volume_id: str,
         add_time: datetime | None = None,
-        state: RelationState = RelationState.USING,
+        state: SuperVolumeRelationState = SuperVolumeRelationState.USING,
         info: str = "",
     ) -> None:
         """初始化超级卷-子卷关联关系。

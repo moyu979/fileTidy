@@ -79,11 +79,13 @@ def test_reload_all_returns_list(tmp_path, monkeypatch):
 
 
 def test_system_section_has_no_hot_reload(tmp_path, monkeypatch):
-    """对 system 注册 on_change / reload → TypeError。"""
+    """对 system 订阅 / 退订 / reload → TypeError。"""
     monkeypatch.setattr(app_config_mod, "ConfigWatcher", _FakeWatcher)
     cfg = AppConfig(_make_settings(tmp_path), workspace_path=tmp_path)
     with pytest.raises(TypeError):
-        cfg.on_change("system", lambda keys: None)
+        cfg.subscribe("system", lambda keys: None)
+    with pytest.raises(TypeError):
+        cfg.unsubscribe("system", lambda keys: None)
     assert cfg.reload("system") is False
 
 

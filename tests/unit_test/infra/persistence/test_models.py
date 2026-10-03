@@ -5,7 +5,8 @@
 - `Base.metadata` 中登记的表名集合与各模型 `__tablename__` 一一对应；
 - 各表列名、主键（含复合主键）、可空性、外键指向、唯一约束与类型（BigInteger/Text/Boolean/Enum）；
 - 枚举列绑定的领域枚举类，以及「枚举以成员名入库存字符串、读回仍为枚举成员」的往返行为；
-- 列默认值：未赋值时由默认值填充（含显式传 None 的情况），`add_time` 为 Python 侧 callable 默认。
+- 列默认值：未赋值时由默认值填充（含显式传 None 的情况）；`add_time` **只**由 DDL 的 `DEFAULT`
+  提供（无 client default，秒级精度），其余列的 client default 都配了等价的 server_default。
 
 输入：模型类与 `Column` 元数据；`tmp_path` 下临时 SQLite 库用于落库往返验证。
 
@@ -34,7 +35,8 @@ from infra.persistence.models import (
 )
 from domain.storage.device.enum import DeviceState
 from domain.storage.file.enum import FileState
-from domain.storage.super_device.enum import RelationState, SuperDeviceState
+from domain.storage.super_device.enum import SuperDeviceRelationState, SuperDeviceState
+from domain.storage.super_volume.enum import SuperVolumeRelationState, SuperVolumeState
 from domain.storage.super_volume.enum import SuperVolumeState
 from domain.storage.volume.enum import VolumeState
 
@@ -107,7 +109,7 @@ def test_devices_columns_and_types():
     assert set(table.columns.keys()) == {
         "serial",
         "name",
-        "type",
+        "dtype",
         "add_time",
         "last_check_time",
         "state",
@@ -150,7 +152,7 @@ def test_super_devices_structure_foreign_key_only_on_parent():
         fk.target_fullname for fk in table.columns["super_device_id"].foreign_keys
     } == {"super_devices.serial"}
     assert set(table.columns["sub_device_id"].foreign_keys) == set()
-    assert table.columns["state"].default.arg is RelationState.USING
+    assert table.columns["state"].default.arg is SuperDeviceRelationState.USING
 
 
 def test_super_volumes_structure_keys_and_uniqueness():
@@ -162,14 +164,20 @@ def test_super_volumes_structure_keys_and_uniqueness():
     assert {
         fk.target_fullname for fk in table.columns["volume_id"].foreign_keys
     } == {"volumes.serial"}
+    # 注意：这条唯一约束是「不分状态」的硬约束，已知语义过强（见 models.py 的 TODO(P2)）。
+    # 本用例只如实记录当前声明；将来若改成「部分唯一索引」，这里要一并改。
     assert table.columns["volume_id"].unique is True
     assert table.columns["volume_id"].nullable is False
 
 
-def test_super_volumes_name_is_unique_and_not_null():
-    """输入 SuperVolumeModel.__table__ → 期望输出 name 唯一且非空。"""
+def test_super_volumes_name_is_not_unique_and_not_null():
+    """输入 SuperVolumeModel.__table__ → 期望输出 name 无唯一约束且非空。
+
+    无唯一约束的动机：软删除（state=REMOVED）行会永久保留，带唯一约束会永久
+    霸占名字，导致同名超级卷无法重建；且无任何代码按 name 查超级卷。
+    """
     table = SuperVolumeModel.__table__
-    assert table.columns["name"].unique is True
+    assert not table.columns["name"].unique
     assert table.columns["name"].nullable is False
     assert table.columns["state"].default.arg is SuperVolumeState.HEALTHY
 
@@ -207,10 +215,10 @@ def test_enum_columns_bind_domain_enums():
     expected = {
         (DeviceModel, "state"): DeviceState,
         (SuperDeviceModel, "state"): SuperDeviceState,
-        (SuperDeviceStructureModel, "state"): RelationState,
+        (SuperDeviceStructureModel, "state"): SuperDeviceRelationState,
         (VolumeModel, "state"): VolumeState,
         (SuperVolumeModel, "state"): SuperVolumeState,
-        (SuperVolumeStructureModel, "state"): RelationState,
+        (SuperVolumeStructureModel, "state"): SuperVolumeRelationState,
         (FileSourcesModel, "state"): FileState,
         (FileLocationsModel, "state"): FileState,
     }
@@ -283,8 +291,8 @@ def test_defaults_filled_on_insert(db_env):
         assert row.last_check_time is None
 
 
-def test_add_time_default_is_callable():
-    """输入 各表 add_time 列 → 期望输出 默认值为 callable（插入时取当前时间，而非固定值）。"""
+def test_add_time_uses_server_default_only():
+    """输入 各表 add_time 列 → 期望输出 无 client default，仅由 DDL 的 DEFAULT 提供当前时刻。"""
     for model in (
         DeviceModel,
         SuperDeviceModel,
@@ -296,8 +304,59 @@ def test_add_time_default_is_callable():
         FileLocationsModel,
         CacheModel,
     ):
-        default = model.__table__.columns["add_time"].default
-        assert default is not None, model.__name__
-        assert callable(default.arg), model.__name__
-        # SQLAlchemy 会用 ctx 包装 Python callable，调用结果即当前时间
-        assert isinstance(default.arg(None), datetime), model.__name__
+        column = model.__table__.columns["add_time"]
+        assert column.default is None, model.__name__
+        assert column.server_default is not None, model.__name__
+
+
+# ── DDL 侧默认值（server_default） ────────────────────────────────
+
+
+def test_every_client_default_has_matching_server_default():
+    """输入 Base.metadata 全部表/列 → 期望输出 凡有 client default 的列都配了 server_default。"""
+    missing = [
+        f"{table.name}.{column.name}"
+        for table in Base.metadata.tables.values()
+        for column in table.columns
+        if column.default is not None and column.server_default is None
+    ]
+    assert missing == []
+
+
+def test_enum_server_defaults_use_member_name():
+    """输入 各枚举列 → 期望输出 server_default 为枚举成员名（与库内存储格式一致）。"""
+    cases = {
+        (DeviceModel, "state"): DeviceState,
+        (SuperDeviceModel, "state"): SuperDeviceState,
+        (SuperDeviceStructureModel, "state"): SuperDeviceRelationState,
+        (VolumeModel, "state"): VolumeState,
+        (SuperVolumeModel, "state"): SuperVolumeState,
+        (SuperVolumeStructureModel, "state"): SuperVolumeRelationState,
+        (FileSourcesModel, "state"): FileState,
+        (FileLocationsModel, "state"): FileState,
+    }
+    for (model, column_name), _enum_type in cases.items():
+        column = model.__table__.columns[column_name]
+        assert column.server_default.arg == column.default.arg.name, (
+            model.__name__,
+            column_name,
+        )
+
+
+def test_server_defaults_apply_to_raw_sql_insert(db_env):
+    """输入 绕过 ORM 的裸 SQL INSERT（只给主键/非空列） → 期望输出 DDL DEFAULT 生效，不留 NULL。"""
+    factory, engine = db_env
+
+    with engine.begin() as connection:
+        connection.exec_driver_sql("insert into devices (serial) values ('RAW')")
+        connection.exec_driver_sql(
+            "insert into file_sources (sha512, md5) values ('s', 'm')"
+        )
+
+    with factory() as session:
+        device = session.get(DeviceModel, "RAW")
+        assert device.state is DeviceState.UNKNOWN
+        assert device.name == ""
+        assert device.info == ""
+        assert isinstance(device.add_time, datetime)
+        assert session.query(FileSourcesModel).one().state is FileState.ONLINE

@@ -10,7 +10,8 @@ class SingleSuperDevice(SuperDevice):
     """单设备超级设备类。
 
     继承自 SuperDevice 基类，代表仅包含单个物理设备的超级设备。
-    构造函数断言 devices 列表长度必须为 1。
+    构造时要求 devices 恰好 1 个元素；**例外**：处于 REMOVED（软删除）时允许 0 个
+    —— 软删会释放子项关联（USING → SUPER_DEVICE_REMOVED），此时 0 子项是合法中间态。
     """
     _type_key = "single"
 
@@ -39,12 +40,19 @@ class SingleSuperDevice(SuperDevice):
             state: 超级设备状态。
             capacity: 总容量（字节）。
             info: 附加信息。
-            devices: 子设备序列号列表（长度必须为 1）。
+            devices: 子设备序列号列表（须恰好 1 个；state 为 REMOVED 时允许 0 个）。
 
         Raises:
-            AssertionError: devices 列表长度不为 1 时抛出。
+            AssertionError: 非 REMOVED 状态下 devices 长度不为 1 时抛出。
         """
-        assert len(devices) == 1
         super().__init__(serial, name, sdtype, need_all_devices_online,
                          add_time, last_check_time, state, capacity, info, devices)
+        # 创建期不变式：single 必须恰好 1 个子项。
+        # 例外：REMOVED（软删除）—— 软删会释放子项关联，故此时 0 子项合法。
+        # 注：当前「摘子项」功能已停用，因此不存在「非 REMOVED 且 0 子项」的 single；
+        #    若将来恢复摘子项，此处需重新评估（届时会出现非 REMOVED 的 0 子项）。
+        assert self.is_removed() or len(devices) == 1, (
+            f"SingleSuperDevice 需要恰好 1 个子设备（REMOVED 除外）："
+            f"serial={serial}, state={state!r}, devices={devices!r}"
+        )
         

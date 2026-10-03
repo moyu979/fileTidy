@@ -77,6 +77,6 @@ def test_snapraid_is_a_super_volume():
 def test_snapraid_snapshot_type_and_info():
     """输入 snapraid 实例 → 快照 type 为 "snapraid_raid5" 且 info 原样保留。"""
     snapshot = _snapraid(["V1", "V2"]).to_snapshot()
-    assert snapshot["type"] == "snapraid_raid5"
+    assert snapshot["svtype"] == "snapraid_raid5"
     assert snapshot["info"] == '{"parity": 1}'
     assert snapshot["volumes"] == ["V1", "V2"]

@@ -380,37 +380,48 @@ restapi_host: 0.0.0.0          # API 监听地址
 
 ### 配置热重载
 
-`Config` 支持动态重载，有两种方式：
+`AppConfig` 支持动态重载与变更通知。
 
-**方式一：手动触发**
-
-```python
-config.reload()  # 重新读取所有 YAML 文件，仅文件变化时执行
-```
-
-**方式二：后台线程自动重载**
+**手动触发**
 
 ```python
-config.start_auto_reload()                # 使用 YAML 中 conf_reload_interval 的值
-config.start_auto_reload(interval=30)     # 或指定间隔（秒）
-# ...
-config.stop_auto_reload()                 # 停止重载线程
+config.reload()              # 重载全部 section，返回每个 section 的结果列表
+config.reload("restapi")     # 只重载指定 section
 ```
 
-**注册变更回调**
+**自动监听（构造即开启）**
+
+创建 `AppConfig` 时即为 `settings` 目录建立监听（watchdog，不可用时自动降级为轮询），文件保存后自动重载，无需手动启动。
 
 ```python
-def on_config_changed(changed_keys: list[str]) -> None:
-    print(f"配置节发生变化: {changed_keys}")
-
-config.on_change(on_config_changed)
+config.stop_auto_reload()            # 注销全部 section 的监听
+config.stop_auto_reload("restapi")   # 只注销指定 section
+config.is_auto_reload_running        # 共享监听器是否在运行
 ```
+
+**订阅变更通知**
+
+回调必须是**对象方法**——它得有所有者对象，才能被弱引用安全持有：
+
+```python
+class ConfigAudit:
+    def on_config_changed(self, changed_keys: list[str]) -> None:
+        print(f"配置节发生变化: {changed_keys}")
+
+audit = ConfigAudit()
+config.subscribe("log", audit.on_config_changed)     # 弱引用持有
+config.unsubscribe("log", audit.on_config_changed)   # 显式退订（幂等）
+```
+
+`audit` 被释放后订阅自动失效，无需手动退订。lambda 与普通函数没有所有者对象，会被 `TypeError` 直接拒绝——避免「弱引用注册完立即失效、回调永远不触发」这种静默故障。
 
 **行为说明：**
+
 - `reload()` 先检查文件 mtime，无变化时跳过（返回 `False`）
 - 重载是原子操作——解析成功才替换，失败则保留旧配置并记录错误
-- 后台线程重载间隔可通过 `base.conf_reload_interval` 动态调整
+- 变更回调收到的是**变化的顶层键名列表**（已排序）
 - `${key}` 占位符按 `AppConfig` 的 `workspace_path` 构造的替换表在每次重载时重新计算
+- 内置 `system` section 无热更能力：`subscribe` / `unsubscribe` 抛 `TypeError`，`reload("system")` 恒返回 `False`
 
 ---
 

@@ -37,7 +37,7 @@ def _clear_root_handlers(handlers):
 
 def test_monthly_handler_writes_current_month_file(tmp_path):
     """emit 一条日志 → 当月 app-YYYY-MM.log 出现并包含消息。"""
-    handler = MonthlyFileHandler(str(tmp_path), level=logging.INFO)
+    handler = MonthlyFileHandler(str(tmp_path))
     handler.setFormatter(logging.Formatter("%(message)s"))
     try:
         handler.emit(logging.LogRecord(
@@ -57,7 +57,7 @@ def test_setup_logging_installs_handlers(tmp_path):
     root = logging.getLogger()
     original = list(root.handlers)
     try:
-        setup_logging(_FakeLogConfig(tmp_path))
+        setup_logging(_FakeLogConfig(tmp_path)["log"])
         assert len(root.handlers) >= 2
         logging.getLogger("some.module").info("a log line for setup test")
         files = list(tmp_path.glob("app-*.log"))

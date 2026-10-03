@@ -19,12 +19,14 @@ import application.storage.device.service as service_mod
 from application.storage.device.service import DeviceService
 from domain.storage.device import Device
 from domain.storage.device.enum import DeviceState
+from domain.storage.device.errors import DeviceNotFoundError
 from domain.storage.device.events import (
     DeviceFieldUpdated,
     DeviceInfoChanged,
     DeviceInfoSet,
     DeviceRegistered,
     DeviceRemoved,
+    DeviceRevived,
     DeviceSerialChanged,
 )
 from domain.storage.device.variants.hdd import HddDevice
@@ -39,7 +41,7 @@ def service(fake_device_repo, monkeypatch):
 
 
 def _reg(service, **overrides) -> str:
-    data = {"serial": "SN-1", "type": "hdd"}
+    data = {"serial": "SN-1", "dtype": "hdd"}
     data.update(overrides)
     return service.reg_device_manual(data)
 
@@ -58,11 +60,11 @@ def test_reg_manual_success(service):
 
 
 def test_reg_manual_creates_typed_variant(service):
-    """type=ssd → SsdDevice；type=hdd → HddDevice。"""
+    """dtype=ssd → SsdDevice；dtype=hdd → HddDevice。"""
     svc, repo, _ = service
-    _reg(svc, serial="A", type="ssd")
+    _reg(svc, serial="A", dtype="ssd")
     assert isinstance(repo.get_device("A"), SsdDevice)
-    _reg(svc, serial="B", type="hdd")
+    _reg(svc, serial="B", dtype="hdd")
     assert isinstance(repo.get_device("B"), HddDevice)
 
 
@@ -130,11 +132,27 @@ def test_list_devices(service):
     assert {json.loads(x)["serial"] for x in items} == {"X1", "X2"}
 
 
+def test_list_devices_exclude_removed(service):
+    """输入 一台健康 + 一台已移除 → 默认排除后者；exclude_removed=False 时两台都在。"""
+    svc, repo, _ = service
+    _reg(svc, serial="X1")
+    _reg(svc, serial="X2")
+    repo.remove_device("X2")
+
+    default = {json.loads(x)["serial"] for x in svc.list_devices()}
+    with_removed = {
+        json.loads(x)["serial"] for x in svc.list_devices(exclude_removed=False)
+    }
+
+    assert default == {"X1"}
+    assert with_removed == {"X1", "X2"}
+
+
 @pytest.mark.parametrize(
     ("method", "field", "value"),
     [
         ("set_name", "name", "new-name"),
-        ("set_type", "type", "ssd"),
+        ("set_type", "dtype", "ssd"),
         ("set_state", "state", DeviceState.FAULT),
         ("set_capacity", "capacity", 999),
     ],
@@ -153,13 +171,13 @@ def test_setters_return_old_new_and_event(service, method, field, value):
     assert event.new_value == new
     assert old != new
     # 状态/容量等可通过仓储读回
-    assert repo.get_device("SN-1").dtype == new if field == "type" else True
+    assert repo.get_device("SN-1").dtype == new if field == "dtype" else True
 
 
 def test_setter_missing_device_raises(service):
     """不存在的设备 → ValueError。"""
     svc, _, _ = service
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(DeviceNotFoundError):
         svc.set_name("NOPE", "x")
 
 
@@ -198,5 +216,75 @@ def test_remove_device(service):
     svc, repo, events = service
     _reg(svc, state=DeviceState.HEALTHY)
     svc.remove_device("SN-1")
-    assert repo.get_device("SN-1").state == DeviceState.REMOVED
+    assert repo.get_device("SN-1", exclude_removed=False).state == DeviceState.REMOVED
     assert isinstance(events[-1], DeviceRemoved)
+
+
+def test_remove_device_event_carries_pre_image_snapshot(service):
+    """remove → DeviceRemoved 携带删除前快照（state 仍是删除前的值，不是 REMOVED）。"""
+    svc, _, events = service
+    _reg(svc, state=DeviceState.HEALTHY)
+
+    svc.remove_device("SN-1")
+
+    removed = events[-1]
+    assert isinstance(removed, DeviceRemoved)
+    assert removed.serial == "SN-1"
+    assert removed.device["serial"] == "SN-1"
+    assert removed.device["state"] is DeviceState.HEALTHY  # pre-image，非 REMOVED
+
+
+def test_remove_device_missing_raises_and_logs_nothing(service):
+    """remove 不存在的设备 → ValueError（服务层先取删除前快照，取不到即报错）且不发事件。"""
+    svc, _, events = service
+
+    with pytest.raises(DeviceNotFoundError):
+        svc.remove_device("GHOST")
+
+    assert events == []
+
+
+def test_revive_device_emits_event_and_sets_unknown(service):
+    """revive → state 回到 UNKNOWN 并发 DeviceRevived。"""
+    svc, repo, events = service
+    _reg(svc, state=DeviceState.HEALTHY)
+    svc.remove_device("SN-1")
+
+    svc.revive_device("SN-1")
+
+    assert isinstance(events[-1], DeviceRevived)
+    assert events[-1].serial == "SN-1"
+    assert repo.get_device("SN-1").state is DeviceState.UNKNOWN
+
+
+def test_reg_manual_after_removed_raises_terminal_hint(service):
+    """输入 已移除设备的 serial 再登记 → 期望输出 ValueError，报错点明「已移除/终态」
+    而不是含糊的 already exists（serial 是主键，REMOVED 行会一直占位）。"""
+    svc, repo, events = service
+    _reg(svc, state=DeviceState.HEALTHY)
+    svc.remove_device("SN-1")
+    events.clear()
+
+    with pytest.raises(ValueError, match="REMOVED"):
+        _reg(svc)
+
+    assert events == []  # 未落库、未发事件
+    assert repo.get_device("SN-1", exclude_removed=False).state == DeviceState.REMOVED
+
+
+def test_reg_manual_after_removed_raw_string_state(service):
+    """输入 替身中 state 为裸字符串 "removed" → 期望输出 同样识别为终态并报错。"""
+    svc, repo, _ = service
+    repo.reg_device(Device.create(serial="SN-1", state="removed"))
+
+    with pytest.raises(ValueError, match="REMOVED"):
+        _reg(svc)
+
+
+def test_load_device_hides_removed(service):
+    """输入 已移除设备的 serial → 期望输出 load_device 返回 None（与 list 口径一致）。"""
+    svc, _, _ = service
+    _reg(svc, state=DeviceState.HEALTHY)
+    svc.remove_device("SN-1")
+
+    assert svc.load_device(serial="SN-1") is None

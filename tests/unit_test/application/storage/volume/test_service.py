@@ -87,6 +87,22 @@ def test_register_by_info_duplicate_raises(service):
                                     volume_path="/x", file_system="ntfs")
 
 
+def test_list_volumes_exclude_removed(service):
+    """输入 一正常卷 + 一已移除卷 → 默认排除后者；exclude_removed=False 时两个都在。"""
+    svc, repo, _, _ = service
+    svc.register_volume_by_info(serial="V1", device_id="D1",
+                                volume_path="/x", file_system="ntfs")
+    svc.register_volume_by_info(serial="V2", device_id="D1",
+                                volume_path="/y", file_system="ntfs")
+    svc.remove_volume("V2")
+
+    assert [json.loads(x)["serial"] for x in svc.list_volumes()] == ["V1"]
+    assert sorted(
+        json.loads(x)["serial"] for x in svc.list_volumes(exclude_removed=False)
+    ) == ["V1", "V2"]
+    assert svc.get_volume("V2") is None
+
+
 def test_resolve_device_id(service):
     """device/super_device 存在 → 通过；都不存在 → ValueError。"""
     svc, _, _, _ = service

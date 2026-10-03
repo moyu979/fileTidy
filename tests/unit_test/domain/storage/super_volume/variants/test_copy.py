@@ -76,6 +76,6 @@ def test_copy_is_a_super_volume():
 def test_copy_snapshot_type_and_method():
     """输入 copy 实例 → 快照 type 为 "copy" 且 method 原样保留。"""
     snapshot = _copy(["V1", "V2"]).to_snapshot()
-    assert snapshot["type"] == "copy"
+    assert snapshot["svtype"] == "copy"
     assert snapshot["method"] == "rsync"
     assert snapshot["volumes"] == ["V1", "V2"]

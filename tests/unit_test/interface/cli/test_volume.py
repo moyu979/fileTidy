@@ -129,6 +129,22 @@ def test_do_list_prints_each_volume(capsys):
     assert "V1" in out and "V2" in out
 
 
+def test_do_list_default_excludes_removed(capsys):
+    """输入 list（无参数）→ 期望以 exclude_removed=True 调用服务。"""
+    service = _FakeService(list_volumes=[])
+    _cli(service).do_list("")
+
+    assert service.calls == [("list_volumes", (), {"exclude_removed": True})]
+
+
+def test_do_list_all_includes_removed(capsys):
+    """输入 list --all → 期望以 exclude_removed=False 调用服务。"""
+    service = _FakeService(list_volumes=[])
+    _cli(service).do_list("--all")
+
+    assert service.calls == [("list_volumes", (), {"exclude_removed": False})]
+
+
 def test_do_get_empty_target_falls_back_to_list(monkeypatch):
     """输入序列号留空 → 期望退回 do_list（调用 list_volumes）。"""
     service = _FakeService(list_volumes=[])

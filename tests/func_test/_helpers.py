@@ -80,3 +80,10 @@ def query_all(session_factory, model):
     """查询某模型全部行。"""
     with session_factory() as session:
         return list(session.query(model).all())
+
+
+def register_file(file_repo, new_file) -> None:
+    """按用例层契约登记文件：同一事务内先写来源、再写位置（测试辅助）。"""
+    with file_repo.transaction() as session:
+        file_repo.reg_source(new_file, session)
+        file_repo.reg_location(new_file, session)

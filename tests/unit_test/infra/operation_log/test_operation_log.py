@@ -52,7 +52,7 @@ def _reset_logger():
 
 def test_event_logger_writes_and_loads(tmp_path):
     """写入事件 → 生成 events-*.log，load_all 读回完整记录。"""
-    logger = EventLogger(_FakeConfig(tmp_path))
+    logger = EventLogger(_FakeConfig(tmp_path)["log"])
     logger.log(_SampleEvent())
 
     records = logger.load_all()
@@ -66,7 +66,7 @@ def test_event_logger_writes_and_loads(tmp_path):
 
 def test_log_file_path_contains_current_month(tmp_path):
     """日志文件名形如 events-<YYYY>-<MM>.log。"""
-    EventLogger(_FakeConfig(tmp_path)).log(_SampleEvent())
+    EventLogger(_FakeConfig(tmp_path)["log"]).log(_SampleEvent())
     now = datetime.utcnow()
     expected = tmp_path / f"events-{now.year}-{now.month:02d}.log"
     assert expected.is_file()
@@ -86,7 +86,7 @@ def test_global_api_roundtrip(tmp_path):
     """setup 后 log_event + load_events 完整往返。"""
     try:
         _reset_logger()
-        setup_event_logger(_FakeConfig(tmp_path))
+        setup_event_logger(_FakeConfig(tmp_path)["log"])
         log_event(_SampleEvent())
         records = load_events()
         assert len(records) == 1

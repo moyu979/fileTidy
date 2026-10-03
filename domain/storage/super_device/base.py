@@ -1,10 +1,10 @@
 # TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 领域层 SuperDevice 实体基类 - 超级设备核心数据模型
 
-import json
 from abc import ABC
 from datetime import datetime
 
+from domain.common.json_utils import parse_json_object
 from domain.common.mixins import JsonSerializableMixin
 from domain.storage.super_device.enum import SuperDeviceState
 
@@ -98,7 +98,7 @@ class SuperDevice(ABC, JsonSerializableMixin):
         return cls.create(
             serial=data.get("serial", ""),
             name=data.get("name", ""),
-            sdtype=data.get("type"),
+            sdtype=data.get("sdtype"),
             need_all_devices_online=data.get("need_all_devices_online", False),
             add_time=data.get("add_time"),
             last_check_time=data.get("last_check_time"),
@@ -146,18 +146,27 @@ class SuperDevice(ABC, JsonSerializableMixin):
         self.devices = devices
 
     def _parse_info(self) -> dict:
-        """解析 info（JSON 文本）为字典。
+        """解析 info（JSON 文本）为字典（薄封装，逻辑见 parse_json_object）。
 
         Returns:
-            解析后的 dict；info 为空或非法 JSON 时返回空字典 {}。
+            解析后的 dict；info 为空 / 非法 JSON / 非对象 JSON 时返回空字典 {}。
         """
-        if not self.info:
-            return {}
-        try:
-            data = json.loads(self.info)
-        except (json.JSONDecodeError, TypeError):
-            return {}
-        return data if isinstance(data, dict) else {}
+        return parse_json_object(self.info)
+
+    def is_removed(self) -> bool:
+        """当前 state 是否为 REMOVED（软删除）。
+
+        兼容枚举成员、值字符串（"removed"）与名称字符串（"REMOVED"）三种形态：
+        实体 state 正常是 SuperDeviceState 成员，但外部（脚本 / 测试替身）可能直接塞字符串。
+
+        Returns:
+            True 表示处于 REMOVED 状态。
+        """
+        if self.state is SuperDeviceState.REMOVED:
+            return True
+        if isinstance(self.state, str):
+            return self.state in (SuperDeviceState.REMOVED.value, SuperDeviceState.REMOVED.name)
+        return False
 
     def to_snapshot(self) -> dict:
         """将超级设备转换为快照字典。
@@ -168,7 +177,7 @@ class SuperDevice(ABC, JsonSerializableMixin):
         return {
             "serial": self.serial,
             "name": self.name,
-            "type": self.sdtype,
+            "sdtype": self.sdtype,
             "need_all_devices_online": self.need_all_devices_online,
             "add_time": self._ts(self.add_time),
             "last_check_time": self._ts(self.last_check_time),

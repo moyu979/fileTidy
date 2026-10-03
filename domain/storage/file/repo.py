@@ -3,6 +3,7 @@
 # NOTE: file 子系统未完成（设计未定稿），以下为探索/临时实现，勿作为稳定功能依赖；后续可能整体重写或删除。
 
 from abc import ABC, abstractmethod
+from contextlib import AbstractContextManager
 from datetime import datetime
 from typing import Any
 
@@ -29,11 +30,45 @@ class FileRepositoryABC(ABC):
         pass
 
     @abstractmethod
-    def reg_file(self, new_file: NewFile) -> None:
-        """注册（新增）文件到仓储。
+    def reg_source(self, new_file: NewFile, session: Any = None) -> None:
+        """登记文件来源（文件身份/内容）。
+
+        以 sha512 标识文件内容，回答「这个文件是什么、从哪来」。
+        一份内容一条来源，与位置记录是一对多关系。
 
         Args:
-            new_file: 待注册的新文件实例。
+            new_file: 待登记的文件实例。
+            session: 可选的外部事务会话；非空时复用该事务且不自行提交，
+                用于与 reg_location 组合成同一事务。
+        """
+        pass
+
+    @abstractmethod
+    def reg_location(self, new_file: NewFile, session: Any = None) -> None:
+        """登记文件位置（物理落位）。
+
+        以 (now_volume, now_path) 标识物理位置，回答「这个文件现在在哪」。
+        move / copy 只影响位置，不新增来源。
+
+        Args:
+            new_file: 待登记的文件实例。
+            session: 可选的外部事务会话；非空时复用该事务且不自行提交，
+                用于与 reg_source 组合成同一事务。
+        """
+        pass
+
+    @abstractmethod
+    def transaction(self) -> AbstractContextManager[Any]:
+        """返回事务上下文，用于把多个写操作组合成同一事务。
+
+        用法::
+
+            with repo.transaction() as session:
+                repo.reg_source(new_file, session)
+                repo.reg_location(new_file, session)
+
+        Returns:
+            可进入的上下文管理器；yield 出的会话需传给各写方法。
         """
         pass
 

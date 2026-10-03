@@ -98,10 +98,26 @@ class DeviceSerialChanged:
 
 
 class DeviceRemoved:
-    """设备移除（软删除）事件。"""
+    """设备移除（软删除）事件。
+
+    携带**删除前**的完整快照（pre-image）：快照里的 state 仍是删除前的状态
+    （如 HEALTHY），**不是** REMOVED；判断「已移除」请看事件类型，不要看 snapshot 的 state。
+    """
+    def __init__(self, device: Device):
+        """
+        Args:
+            device: 被移除的设备实例（尚未置为 REMOVED 的删除前形态）。
+        """
+        snapshot = device.to_snapshot()
+        self.serial = snapshot["serial"]  # 顶层冗余身份字段，便于按 serial 筛日志
+        self.device = snapshot            # 完整快照（删除前）
+
+
+class DeviceRevived:
+    """设备复活（REMOVED → UNKNOWN）事件。"""
     def __init__(self, serial: str):
         """
         Args:
-            serial: 被移除（标记 REMOVED）设备的序列号。
+            serial: 被复活设备的序列号。
         """
         self.serial = serial

@@ -17,6 +17,7 @@ import pytest
 import application.storage.super_volume.service as service_mod
 from application.storage.super_volume.service import SuperVolumeService
 from domain.storage.super_volume.enum import SuperVolumeState
+from domain.storage.super_volume.errors import SuperVolumeNotFoundError
 from domain.storage.super_volume.events import (
     SuperVolumeFieldUpdated,
     SuperVolumeInfoChanged,
@@ -27,6 +28,7 @@ from domain.storage.super_volume.events import (
 from domain.storage.super_volume.variants.copy import CopySuperVolume
 from domain.storage.volume import Volume
 from domain.storage.volume.enum import VolumeState
+from domain.storage.volume.errors import VolumeNotFoundError
 
 
 def _make_volume(serial: str) -> Volume:
@@ -80,9 +82,9 @@ def test_reg_requires_volumes(service):
 
 
 def test_reg_unknown_volume_raises(service):
-    """子卷不存在 → ValueError。"""
+    """子卷不存在 → VolumeNotFoundError。"""
     svc, _, _ = service
-    with pytest.raises(ValueError, match="不存在"):
+    with pytest.raises(VolumeNotFoundError):
         svc.reg_super_volume(svtype="copy", volumes=["NOPE"])
 
 
@@ -118,14 +120,14 @@ def test_add_and_remove_volumes(service):
 
 
 def test_add_volumes_validation(service):
-    """空参数 / 超级卷不存在 / 子卷不存在 → ValueError。"""
+    """空参数 / 超级卷不存在 / 子卷不存在 → ValueError / SuperVolumeNotFoundError / VolumeNotFoundError。"""
     svc, _, _ = service
     svc.reg_super_volume(serial="SV1", svtype="copy", volumes=["V1"])
     with pytest.raises(ValueError):
         svc.add_volumes(super_volume_serial="", volume_ids=["V2"])
-    with pytest.raises(ValueError, match="不存在"):
+    with pytest.raises(SuperVolumeNotFoundError):
         svc.add_volumes(super_volume_serial="SVX", volume_ids=["V2"])
-    with pytest.raises(ValueError, match="不存在"):
+    with pytest.raises(VolumeNotFoundError):
         svc.add_volumes(super_volume_serial="SV1", volume_ids=["VX"])
 
 

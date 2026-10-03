@@ -25,6 +25,19 @@ class FileService:
         self._hasher = hasher
         logger.info("FileService constructed")
 
+    def register_file(self, new_file: NewFile) -> None:
+        """登记单个文件：在同一事务内写入来源与位置。
+
+        来源与位置是两个独立的持久化动作，任一失败都必须整体回滚，
+        以免留下「有来源、无位置」的半成品记录。
+
+        Args:
+            new_file: 待登记的文件实例。
+        """
+        with self.file_repo.transaction() as session:
+            self.file_repo.reg_source(new_file, session)
+            self.file_repo.reg_location(new_file, session)
+
     def register_folder(
         self,
         folder_path: str,
@@ -59,7 +72,7 @@ class FileService:
                 now_path=now_path,
                 now_volume=volume_serial,
             )
-            self.file_repo.reg_file(new_file)
+            self.register_file(new_file)
             registered.append(new_file)
             log_event(FileRegistered(new_file))
         return registered
@@ -111,7 +124,7 @@ class FileService:
                 now_volume=volume_serial,
                 state=FileState.UNKNOWN,
             )
-            self.file_repo.reg_file(new_file)
+            self.register_file(new_file)
             registered.append(new_file)
             log_event(FileRegistered(new_file))
 

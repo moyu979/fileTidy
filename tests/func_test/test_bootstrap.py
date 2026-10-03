@@ -56,7 +56,7 @@ def test_bootstrap_wires_app_and_services(tmp_path, monkeypatch):
         serial = app.device_service.reg_device_manual({
             "serial": "BOOT-D1",
             "name": "bootstrap 设备",
-            "type": "ssd",
+            "dtype": "ssd",
         })
         assert app.device_service.load_device(serial=serial) is not None
 

@@ -17,7 +17,14 @@ class VolumeState(enum.Enum):
     HEALTHY = "healthy"   # 正常使用的
     DANGER = "danger"     # 危险，但暂时可用（有坏道等隐患）
     FAULT = "fault"       # 故障，无法使用
-    REMOVED = "removed"   # 已移除（软删除，记录仍保留在数据库中）
+    # 已移除（软删除，记录仍保留在数据库中）。
+    # **可逆**：用 `revive_volume` 复活 —— 原地 UPDATE（state 置回 UNKNOWN）。
+    REMOVED = "removed"
+
+
+# 处于这些状态的卷「不可用」：不能作为超级卷的子卷。
+# 判据是「能否承载数据」，与健康状况无关 —— DANGER 仍算可用。
+UNAVAILABLE_VOLUME_STATES = frozenset({VolumeState.REMOVED, VolumeState.FAULT})
 
 
 class VolumeStateMenu(_Menu):

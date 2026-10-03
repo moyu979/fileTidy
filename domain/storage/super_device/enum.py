@@ -22,20 +22,35 @@ class SuperDeviceState(enum.Enum):
     DANGER = "danger" # 危险，但暂时可用（有坏道等隐患）
     DEGRADING = "degrading" # 降级，部分子设备故障但仍在运行
     FAULT = "fault" # 故障，无法使用
-    REMOVED = "removed" # 已移除（软删除，记录仍保留在数据库中）
+    # 已移除（软删除，记录仍保留在数据库中）。
+    # **可逆**：用 `revive_super_device` 复活 —— 原地 UPDATE（state 置回 UNKNOWN），
+    # 并恢复拓扑（把软删时释放的子项重新挂回 USING）。
+    REMOVED = "removed"
+
+
+# 处于这些状态的超级设备「不可用」：不能作为超级设备的子项（层叠），
+# 也不能作为卷的挂载对象。判据是「能否承载数据」，与健康状况无关 ——
+# DANGER / DEGRADING（降级但仍在运行）仍算可用。
+UNAVAILABLE_SUPER_DEVICE_STATES = frozenset({SuperDeviceState.REMOVED, SuperDeviceState.FAULT})
 
 
 # ═══════════════════════════════════════════
 #  关联状态
 # ═══════════════════════════════════════════
 
-class RelationState(enum.Enum):
-    """关联状态枚举。
+class SuperDeviceRelationState(enum.Enum):
+    """超级设备-子项 关联状态枚举（`super_device_structures.state` 专用）。
 
-    定义设备/卷与超级设备/超级卷之间的关联关系状态。
+    按「退役原因」区分，避免复活时误恢复：
+    - REPLACED：因「换盘」退役，**不**随父行复活而恢复；
+    - SUPER_DEVICE_REMOVED：因「父行软删」退役，可随 `revive_super_device` 恢复。
+
+    注：super_volume_structures 用自己的一套（`domain/storage/super_volume/enum.py`
+    的 SuperVolumeRelationState），两者不再共用枚举。
     """
-    USING = "using"     # 正在使用
-    UNUSED = "unused"   # 未使用，一般指代发生替换后之前的设备/卷
+    USING = "using"                                  # 正在使用
+    REPLACED = "replaced"                            # 因换盘退役
+    SUPER_DEVICE_REMOVED = "super_device_removed"    # 因父行软删退役（可随复活恢复）
 
 
 # ═══════════════════════════════════════════

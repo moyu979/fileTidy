@@ -17,7 +17,16 @@ class DeviceState(enum.Enum):
     HEALTHY = "healthy" # 正常使用的
     DANGER = "danger" # 危险，但是暂时可以使用，主要用来描述有坏道等隐患的设备
     FAULT = "fault" # 故障，无法使用
-    REMOVED = "removed" # 已移除（软删除，记录仍保留在数据库中）
+    # 已移除（软删除，记录仍保留在数据库中）。
+    # **可逆**：用 `revive_device` 复活 —— 原地 UPDATE 这行（state 置回 UNKNOWN），
+    # 而不是重新 INSERT（serial 是主键，插不进去）。
+    # 复活前，该 serial 不能再被登记（_commit 会报「已被移除，请先 revive」而非直接撞 PK）。
+    REMOVED = "removed"
+
+
+# 处于这些状态的设备「不可用」：不能作为超级设备的子项，也不能作为卷的挂载对象。
+# 判据是「能否承载数据」，与健康状况无关 —— DANGER（有坏道等隐患）仍算可用。
+UNAVAILABLE_DEVICE_STATES = frozenset({DeviceState.REMOVED, DeviceState.FAULT})
 
 
 class LtoGeneration(enum.Enum):

@@ -2,7 +2,7 @@
 """单测：domain/storage/super_device/enum —— 超级设备状态 / 关联状态枚举与菜单。
 
 目的（测什么）：
-- 验证 SuperDeviceState 与 RelationState 的枚举取值集合；
+- 验证 SuperDeviceState 与 SuperDeviceRelationState 的枚举取值集合；
 - 验证 SuperDeviceStateMenu 的标题、默认值、选项数量与编号映射；
 - 验证 SuperDeviceTypeMenu 返回类型字符串（非枚举）、空输入回退默认 "single"、
   未定义编号返回 None。
@@ -22,7 +22,7 @@ from __future__ import annotations
 import pytest
 
 from domain.storage.super_device.enum import (
-    RelationState,
+    SuperDeviceRelationState,
     SuperDeviceState,
     SuperDeviceStateMenu,
     SuperDeviceTypeMenu,
@@ -37,8 +37,10 @@ def test_super_device_state_values():
 
 
 def test_relation_state_values():
-    """输入 RelationState → 取值仅 using / unused 两种。"""
-    assert [s.value for s in RelationState] == ["using", "unused"]
+    """输入 SuperDeviceRelationState → 取值仅 using / replaced / super_device_removed。"""
+    assert [s.value for s in SuperDeviceRelationState] == [
+        "using", "replaced", "super_device_removed",
+    ]
 
 
 def test_super_device_state_menu_metadata():

@@ -33,7 +33,7 @@ class ConfigContentManager(ABC):
   - 锁、热更框架、占位符替换（`${key}`，替换表由参数传入）→ 归 `SingleFileConfig`（需要并发与热更的才有）
   - 实时系统调用、方法注册表 → 归 `SystemConfig`（只读，无锁、无缓存）
   - 各自实现的差异被接口吸收，容器只认接口。
-- **热更不是通用契约**：`on_change` / `stop_auto_reload` / `is_auto_reload_running` 是 `SingleFileConfig` 的扩展能力，不放入接口——否则无热更能力的实现（如系统配置）也要被迫实现 no-op。
+- **热更不是通用契约**：`subscribe` / `unsubscribe` / `stop_auto_reload` / `is_auto_reload_running` 是 `SingleFileConfig` 的扩展能力，不放入接口——否则无热更能力的实现（如系统配置）也要被迫实现 no-op。
 - **fail-fast 语义**：`get_required` / `__getitem__` 缺失抛 `KeyError`，`get` 宽松返回默认值——统一了「必填 vs 可选」的读取约定。
 
 ## API 概览

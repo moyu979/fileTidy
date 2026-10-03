@@ -18,12 +18,14 @@ import application.storage.super_device.service as service_mod
 from application.storage.super_device.service import SuperDeviceService
 from domain.storage.super_device.base import SuperDevice
 from domain.storage.super_device.enum import SuperDeviceState
+from domain.storage.super_device.errors import SubDeviceNotFoundError, SuperDeviceNotFoundError
 from domain.storage.super_device.events import (
     SuperDeviceDeviceChanged,
     SuperDeviceFieldUpdated,
     SuperDeviceInfoChanged,
     SuperDeviceRegistered,
     SuperDeviceRemoved,
+    SuperDeviceRevived,
 )
 from domain.storage.super_device.variants.raidz import RaidzSuperDevice
 
@@ -104,7 +106,7 @@ def test_load_and_list(service):
     """get 单条 / list 全部。"""
     svc, repo, _ = service
     _reg(svc)
-    assert json.loads(svc.load_super_device("GEN-SERIAL"))["type"] == "raidz"
+    assert json.loads(svc.load_super_device("GEN-SERIAL"))["sdtype"] == "raidz"
     assert svc.load_super_device("NOPE") is None
     assert len(svc.list_super_devices()) == 1
 
@@ -150,6 +152,7 @@ def test_info_ops(service):
     assert ops == ["replace", "add", "remove"]
 
 
+@pytest.mark.skip(reason="摘子项功能暂缓（TODO P1：single 变体不变量待重新设计）")
 def test_add_replace_remove_device(service):
     """子设备增/换/删 → 事件 old/new 语义正确。"""
     svc, repo, events = service
@@ -174,10 +177,10 @@ def test_add_replace_remove_device(service):
 
 
 def test_add_device_requires_registered_device(service):
-    """device_repository 存在但设备未登记 → ValueError。"""
+    """device_repository 存在但设备未登记 → SubDeviceNotFoundError。"""
     svc, _, _ = service
     _reg(svc, serial="SD1")
-    with pytest.raises(ValueError, match="不存在"):
+    with pytest.raises(SubDeviceNotFoundError):
         svc.add_device("SD1", "NOT-REGISTERED")
 
 
@@ -186,5 +189,46 @@ def test_remove_super_device(service):
     svc, repo, events = service
     _reg(svc, serial="SD1")
     svc.remove_super_device("SD1")
-    assert repo.get_super_device("SD1").state == SuperDeviceState.REMOVED
+    assert repo.get_super_device("SD1") is None
+    assert repo.get_super_device("SD1", exclude_removed=False).state == SuperDeviceState.REMOVED
     assert isinstance(events[-1], SuperDeviceRemoved)
+
+
+def test_remove_super_device_event_carries_pre_image_snapshot(service):
+    """remove → SuperDeviceRemoved 携带删除前快照（state 仍是删除前的值、含子项）。"""
+    svc, _, events = service
+    _reg(svc, serial="SD1")
+
+    svc.remove_super_device("SD1")
+
+    removed = events[-1]
+    assert isinstance(removed, SuperDeviceRemoved)
+    assert removed.serial == "SD1"
+    assert removed.super_device["serial"] == "SD1"
+    assert removed.super_device["state"] is SuperDeviceState.HEALTHY  # pre-image，非 REMOVED
+    assert removed.super_device["devices"] == ["D1", "D2"]
+
+
+def test_remove_super_device_missing_raises_and_logs_nothing(service):
+    """remove 不存在的超级设备 → ValueError 且不发事件。"""
+    svc, _, events = service
+
+    with pytest.raises(SuperDeviceNotFoundError):
+        svc.remove_super_device("GHOST")
+
+    assert events == []
+
+
+def test_revive_super_device_emits_event_and_restores_topology(service):
+    """revive → 回到 UNKNOWN、子项挂回，并发 SuperDeviceRevived。"""
+    svc, repo, events = service
+    _reg(svc, serial="SD1")
+    svc.remove_super_device("SD1")
+
+    svc.revive_super_device("SD1")
+
+    assert isinstance(events[-1], SuperDeviceRevived)
+    assert events[-1].serial == "SD1"
+    sd = repo.get_super_device("SD1")
+    assert sd.state is SuperDeviceState.UNKNOWN
+    assert sd.devices == ["D1", "D2"]

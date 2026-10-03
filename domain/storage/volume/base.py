@@ -1,11 +1,11 @@
 # TODO: [AI生成-未检测] 本文件由 AI 生成，尚未经人工检测与审查。
 # CHECK: 待检查 - 领域层 Volume 实体基类 - 卷核心数据模型
 
-import json
 from abc import ABC
 from datetime import datetime
 from pathlib import Path
 
+from domain.common.json_utils import parse_json_object
 from domain.common.mixins import JsonSerializableMixin
 from domain.storage.volume.enum import VolumeState
 
@@ -153,18 +153,12 @@ class Volume(ABC, JsonSerializableMixin):
         self.volume_path = volume_path
 
     def _parse_info(self) -> dict:
-        """解析 info（JSON 文本）为字典。
+        """解析 info（JSON 文本）为字典（薄封装，逻辑见 parse_json_object）。
 
         Returns:
-            解析后的 dict；info 为空或非法 JSON 时返回空字典 {}。
+            解析后的 dict；info 为空 / 非法 JSON / 非对象 JSON 时返回空字典 {}。
         """
-        if not self.info:
-            return {}
-        try:
-            data = json.loads(self.info)
-        except (json.JSONDecodeError, TypeError):
-            return {}
-        return data if isinstance(data, dict) else {}
+        return parse_json_object(self.info)
 
     def to_snapshot(self) -> dict:
         """将卷转换为快照字典。

@@ -33,7 +33,7 @@ from domain.storage.super_volume.variants.copy import CopySuperVolume
 from domain.storage.super_volume.variants.snapraid_raid5 import SnapraidRaid5SuperVolume
 
 SNAPSHOT_KEYS = {
-    "serial", "name", "type", "method", "add_time",
+    "serial", "name", "svtype", "method", "add_time",
     "last_check_time", "state", "info", "volumes",
 }
 
@@ -137,7 +137,7 @@ def test_from_dict_rebuilds_variant_and_copies_volumes_snapshot():
     data = {
         "serial": "SV-2",
         "name": "sv",
-        "type": "copy",
+        "svtype": "copy",
         "method": "copy",
         "add_time": "2026-01-01T00:00:00",
         "last_check_time": None,
@@ -167,13 +167,13 @@ def test_to_snapshot_fields_and_json():
     sv = _sv("copy", ["V1", "V2"], name="超级卷")
     snapshot = sv.to_snapshot()
     assert set(snapshot) == SNAPSHOT_KEYS
-    assert snapshot["type"] == "copy"
+    assert snapshot["svtype"] == "copy"
     assert snapshot["add_time"] == "2026-01-01T00:00:00"
     assert snapshot["last_check_time"] is None
 
     payload = json.loads(sv.to_json())
     assert "超级卷" in sv.to_json()
-    assert payload["type"] == "copy"
+    assert payload["svtype"] == "copy"
     assert payload["state"] == "healthy"
 
 

@@ -455,24 +455,27 @@ class SuperDeviceCLI(cmd.Cmd):
         except Exception as e:
             print(f"错误: {e}")
 
-    def do_remove_device(self, arg: str) -> None:
-        """从超级设备移除子设备。用法: remove_device <超级设备序列号> <子设备序列号>"""
-        if self._missing_service():
-            return
-        parts = arg.strip().split()
-        if len(parts) == 2:
-            sd_serial, dev_serial = parts
-        else:
-            sd_serial = input("超级设备序列号: ").strip()
-            dev_serial = input("子设备序列号: ").strip()
-            if not sd_serial or not dev_serial:
-                print("序列号不能为空。")
-                return
-        try:
-            self.app.super_device_service.remove_device(sd_serial, dev_serial)
-            print(f"子设备 {dev_serial} 已从超级设备 {sd_serial} 移除")
-        except Exception as e:
-            print(f"错误: {e}")
+    # TODO(P1): 「摘子项」命令暂缓（服务层已同步停用）。
+    #   恢复时取消下面注释。
+    #
+    # def do_remove_device(self, arg: str) -> None:
+    #     """从超级设备移除子设备。用法: remove_device <超级设备序列号> <子设备序列号>"""
+    #     if self._missing_service():
+    #         return
+    #     parts = arg.strip().split()
+    #     if len(parts) == 2:
+    #         sd_serial, dev_serial = parts
+    #     else:
+    #         sd_serial = input("超级设备序列号: ").strip()
+    #         dev_serial = input("子设备序列号: ").strip()
+    #         if not sd_serial or not dev_serial:
+    #             print("序列号不能为空。")
+    #             return
+    #     try:
+    #         self.app.super_device_service.remove_device(sd_serial, dev_serial)
+    #         print(f"子设备 {dev_serial} 已从超级设备 {sd_serial} 移除")
+    #     except Exception as e:
+    #         print(f"错误: {e}")
 
     def do_remove(self, arg: str) -> None:
         """软删除超级设备（标记 REMOVED）。用法: remove <序列号>"""

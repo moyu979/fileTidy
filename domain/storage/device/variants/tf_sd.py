@@ -20,9 +20,9 @@ class TfSdCardDevice(Device):
     dtype: str|None,
     add_time,
     last_check_time,
+    state: str|None,
     capacity: int|None,
     info: str|None,
-    state: str|None,
     device_path: str|None,
     ) -> None:
         """初始化 TF/SD 卡设备实例。
@@ -33,20 +33,22 @@ class TfSdCardDevice(Device):
             dtype: 设备类型。
             add_time: 添加时间。
             last_check_time: 最后一次检查时间。
+            state: 设备状态。
             capacity: 设备容量（字节）。
             info: 附加信息。
-            state: 设备状态。
             device_path: 挂载路径。
         """
-        super().__init__(serial, 
-            name, 
-            dtype, 
-            add_time, 
-            last_check_time, 
-            capacity, 
-            info, 
-            state,
-            device_path)
+        super().__init__(
+            serial=serial,
+            name=name,
+            dtype=dtype,
+            add_time=add_time,
+            last_check_time=last_check_time,
+            state=state,
+            capacity=capacity,
+            info=info,
+            device_path=device_path,
+        )
 
     def check(self):
         """执行 TF/SD 卡健康检查。

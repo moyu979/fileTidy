@@ -12,7 +12,9 @@
 
 from __future__ import annotations
 
+import gc
 import os
+import weakref
 
 import pytest
 import yaml
@@ -36,6 +38,28 @@ class _FakeWatcher:
     @property
     def is_running(self):
         return False
+
+
+class _Subscriber:
+    """持有 received 列表的订阅者，用于验证弱引用自动失效。"""
+
+    def __init__(self):
+        self.received = []
+
+    def handle(self, changed_keys):
+        self.received.append(changed_keys)
+
+
+class _SlottedSubscriber:
+    """用 __slots__ 且未声明 __weakref__ → 实例不可被弱引用。"""
+
+    __slots__ = ("received",)
+
+    def __init__(self):
+        self.received = []
+
+    def handle(self, changed_keys):
+        self.received.append(changed_keys)
 
 
 @pytest.fixture
@@ -109,13 +133,129 @@ def test_change_callback_receives_changed_keys(tmp_path, fake_watcher):
     cfg_file = tmp_path / "base.yaml"
     _write(cfg_file, {"a": 1, "b": 2})
     cfg = SingleFileConfig(cfg_file, fake_watcher)
-    received = []
-    cfg.on_change(received.append)
+    subscriber = _Subscriber()
+    cfg.subscribe(subscriber.handle)
 
     _write(cfg_file, {"a": 1, "b": 3, "c": 4})
     _bump_mtime(cfg_file)
     cfg.reload()
-    assert received == [["b", "c"]]
+    assert subscriber.received == [["b", "c"]]
+
+
+def test_subscribe_rejects_non_method(tmp_path, fake_watcher):
+    """订阅 lambda / 普通函数 → TypeError（无所有者对象，弱引用会立即失效）。"""
+    cfg_file = tmp_path / "base.yaml"
+    _write(cfg_file, {"a": 1})
+    cfg = SingleFileConfig(cfg_file, fake_watcher)
+
+    with pytest.raises(TypeError, match="对象方法"):
+        cfg.subscribe(lambda keys: None)
+
+    def plain_function(keys):
+        pass
+
+    with pytest.raises(TypeError, match="对象方法"):
+        cfg.subscribe(plain_function)
+
+
+def test_subscribe_rejects_builtin_method(tmp_path, fake_watcher):
+    """C 内置方法（list.append）→ TypeError：WeakMethod 只认 Python 方法。"""
+    cfg_file = tmp_path / "base.yaml"
+    _write(cfg_file, {"a": 1})
+    cfg = SingleFileConfig(cfg_file, fake_watcher)
+    received = []
+
+    with pytest.raises(TypeError, match="对象方法"):
+        cfg.subscribe(received.append)
+
+
+def test_subscribe_rejects_non_weakrefable_owner(tmp_path, fake_watcher):
+    """所有者不可弱引用（__slots__ 未声明 __weakref__）→ TypeError。"""
+    cfg_file = tmp_path / "base.yaml"
+    _write(cfg_file, {"a": 1})
+    cfg = SingleFileConfig(cfg_file, fake_watcher)
+
+    with pytest.raises(TypeError, match="对象方法"):
+        cfg.subscribe(_SlottedSubscriber().handle)
+
+
+def test_subscriber_release_auto_unsubscribes(tmp_path, fake_watcher):
+    """订阅者被释放 → 不阻止回收，且回调自动失效不再触发。"""
+    cfg_file = tmp_path / "base.yaml"
+    _write(cfg_file, {"a": 1})
+    cfg = SingleFileConfig(cfg_file, fake_watcher)
+
+    subscriber = _Subscriber()
+    cfg.subscribe(subscriber.handle)
+    observer = weakref.ref(subscriber)
+
+    _write(cfg_file, {"a": 2})
+    _bump_mtime(cfg_file)
+    cfg.reload()
+    assert subscriber.received == [["a"]]
+
+    del subscriber
+    gc.collect()
+    assert observer() is None, "config 持有回调，阻止了订阅者被回收"
+
+    # 订阅者已释放：后续变更不应报错，也不再有回调被触发
+    _write(cfg_file, {"a": 3})
+    _bump_mtime(cfg_file)
+    assert cfg.reload() is True
+
+
+def test_unsubscribe_stops_callback(tmp_path, fake_watcher):
+    """unsubscribe 后不再触发；按 (所有者, 方法名) 匹配，重新求值也能命中。"""
+    cfg_file = tmp_path / "base.yaml"
+    _write(cfg_file, {"a": 1})
+    cfg = SingleFileConfig(cfg_file, fake_watcher)
+    subscriber = _Subscriber()
+    cfg.subscribe(subscriber.handle)
+
+    _write(cfg_file, {"a": 2})
+    _bump_mtime(cfg_file)
+    cfg.reload()
+    assert subscriber.received == [["a"]]
+
+    cfg.unsubscribe(subscriber.handle)    # 新的 bound method 对象，应能匹配
+
+    _write(cfg_file, {"a": 3})
+    _bump_mtime(cfg_file)
+    cfg.reload()
+    assert subscriber.received == [["a"]]
+
+
+def test_unsubscribe_is_idempotent(tmp_path, fake_watcher):
+    """重复 unsubscribe / 未订阅时 unsubscribe → 不报错、无副作用。"""
+    cfg_file = tmp_path / "base.yaml"
+    _write(cfg_file, {"a": 1})
+    cfg = SingleFileConfig(cfg_file, fake_watcher)
+    subscriber = _Subscriber()
+    cfg.subscribe(subscriber.handle)
+
+    cfg.unsubscribe(subscriber.handle)
+    cfg.unsubscribe(subscriber.handle)
+    cfg.unsubscribe(subscriber.handle)
+
+    _write(cfg_file, {"a": 2})
+    _bump_mtime(cfg_file)
+    cfg.reload()
+    assert subscriber.received == []
+
+
+def test_subscriber_survives_when_held(tmp_path, fake_watcher):
+    """外部仍持有订阅者引用时，回调照常触发（弱引用不误杀）。"""
+    cfg_file = tmp_path / "base.yaml"
+    _write(cfg_file, {"a": 1})
+    cfg = SingleFileConfig(cfg_file, fake_watcher)
+    subscriber = _Subscriber()
+    cfg.subscribe(subscriber.handle)
+
+    gc.collect()
+    _write(cfg_file, {"a": 2})
+    _bump_mtime(cfg_file)
+    cfg.reload()
+    assert subscriber.received == [["a"]]
 
 
 def test_reload_keeps_old_data_on_bad_yaml(tmp_path, fake_watcher):

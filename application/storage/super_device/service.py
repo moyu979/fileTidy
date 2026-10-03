@@ -5,6 +5,7 @@ from datetime import datetime
 import json
 import logging
 
+from domain.common.json_utils import parse_json_object
 from domain.storage.super_device.base import SuperDevice
 from domain.storage.super_device.events import (
     SuperDeviceDeviceChanged,
@@ -13,10 +14,17 @@ from domain.storage.super_device.events import (
     SuperDeviceInfoSet,
     SuperDeviceRegistered,
     SuperDeviceRemoved,
+    SuperDeviceRevived,
     SuperDeviceSerialChanged,
 )
 from infra.operation_log.operation_log import log_event
 from domain.storage.super_device.enum import SuperDeviceState
+from domain.storage.super_device.errors import (
+    SubDeviceNotFoundError,
+    SuperDeviceAlreadyRegisteredError,
+    SuperDeviceAlreadyRemovedError,
+    SuperDeviceNotFoundError,
+)
 from infra.persistence.storage.super_device_repository import SuperDeviceRepository
 from infra.system.path_manager.is_path import is_path
 from infra.system.storage.device.get_serial import get_serial
@@ -107,11 +115,21 @@ class SuperDeviceService:
             登记成功的超级设备序列号。
 
         Raises:
-            ValueError: 超级设备已存在。
+            ValueError: 超级设备已存在；或已存在但处于 REMOVED
+                （需先调用 revive_super_device 复活，而不是重新登记）。
         """
-        if self.super_device_repository.is_exist(super_device.serial):
-            raise ValueError(f"super_device {super_device.serial} already exists")
-        self.super_device_repository.reg_super_device(super_device)
+        # 判定与分类都已下沉到仓储：撞 REMOVED 行抛 SuperDeviceAlreadyRemovedError，
+        # 撞活跃行抛 SuperDeviceAlreadyRegisteredError。本层只负责把事实翻译成给用户的措辞
+        # —— 提示里点名 revive_super_device 属应用层编排，不应由仓储说出口。
+        try:
+            self.super_device_repository.reg_super_device(super_device)
+        except SuperDeviceAlreadyRemovedError as e:
+            raise ValueError(
+                f"super_device {e.serial} 已被移除（REMOVED），"
+                f"如要重新启用请先调用 revive_super_device"
+            ) from None
+        except SuperDeviceAlreadyRegisteredError as e:
+            raise ValueError(f"super_device {e.serial} already exists") from None
         log_event(SuperDeviceRegistered(super_device))
         return super_device.serial
 
@@ -158,7 +176,7 @@ class SuperDeviceService:
         """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
-            raise ValueError(f"super_device {serial} not found")
+            raise SuperDeviceNotFoundError(serial)
         old = sd.name
         self.super_device_repository.update_super_device(serial, name=name)
         log_event(SuperDeviceFieldUpdated(serial, "name", old, name))
@@ -176,14 +194,25 @@ class SuperDeviceService:
         """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
-            raise ValueError(f"super_device {serial} not found")
+            raise SuperDeviceNotFoundError(serial)
         old = sd.sdtype
         self.super_device_repository.update_super_device(serial, sdtype=sdtype)
         log_event(SuperDeviceFieldUpdated(serial, "sdtype", old, sdtype))
         return (old, sdtype)
 
+    # TODO(P1): set_state 目前能直接把超级设备改成 REMOVED，**绕过 remove_super_device 的引用校验**
+    #   （remove_super_device 要求：无被层叠的 USING 子项关联、无未移除的卷）。
+    #   后果：一台正被其它超级设备层叠引用、或其上仍有卷的超级设备可以被静默标成 REMOVED，
+    #   破坏引用不变式。收口方向（未定稿）：① set_state 拒绝 REMOVED，强制改走
+    #   remove_super_device；② 或在 set_state 内部复用 remove_super_device 的那套校验。
+    #   注意：仓储层已禁止 update_super_device 写入 REMOVED，因此 set_state(REMOVED)
+    #   现在会直接报错（相当于先行收口了路径 ①）；软删除走 remove_super_device，
+    #   复活走 revive_super_device。本方法自身的收口整理仍待办。
     def set_state(self, serial: str, state: SuperDeviceState) -> tuple[SuperDeviceState, SuperDeviceState]:
         """更新超级设备状态。
+
+        注意：本方法不校验超级设备是否被引用，因此**不应**用它把超级设备置为 REMOVED；
+        软删除请走 `remove_super_device`（带着引用校验）。详见上方 TODO。
 
         Args:
             serial: 超级设备序列号。
@@ -194,7 +223,7 @@ class SuperDeviceService:
         """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
-            raise ValueError(f"super_device {serial} not found")
+            raise SuperDeviceNotFoundError(serial)
         old = sd.state
         self.super_device_repository.update_super_device(serial, state=state)
         log_event(SuperDeviceFieldUpdated(serial, "state", old, state))
@@ -212,7 +241,7 @@ class SuperDeviceService:
         """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
-            raise ValueError(f"super_device {serial} not found")
+            raise SuperDeviceNotFoundError(serial)
         old = sd.capacity
         self.super_device_repository.update_super_device(serial, capacity=capacity)
         log_event(SuperDeviceFieldUpdated(serial, "capacity", old, capacity))
@@ -230,7 +259,7 @@ class SuperDeviceService:
         """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
-            raise ValueError(f"super_device {serial} not found")
+            raise SuperDeviceNotFoundError(serial)
         old = sd.need_all_devices_online
         self.super_device_repository.update_super_device(serial, need_all_devices_online=value)
         log_event(SuperDeviceFieldUpdated(serial, "need_all_devices_online", old, value))
@@ -240,20 +269,8 @@ class SuperDeviceService:
 
     @staticmethod
     def _parse_info(info_str: str | None) -> dict:
-        """解析 info JSON 文本为字典。
-
-        Args:
-            info_str: JSON 格式的 info 字符串。
-
-        Returns:
-            解析后的字典，空值返回空字典。
-        """
-        if not info_str:
-            return {}
-        try:
-            return json.loads(info_str)
-        except (json.JSONDecodeError, TypeError):
-            return {}
+        """解析 info JSON 文本为字典（薄封装，逻辑见 parse_json_object）。"""
+        return parse_json_object(info_str)
 
     def set_info(self, serial: str, info: dict) -> tuple[dict, dict]:
         """全量替换 info。
@@ -267,7 +284,7 @@ class SuperDeviceService:
         """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
-            raise ValueError(f"super_device {serial} not found")
+            raise SuperDeviceNotFoundError(serial)
         old = self._parse_info(sd.info)
         new_str = json.dumps(info, ensure_ascii=False)
         self.super_device_repository.update_super_device(serial, info=new_str)
@@ -286,7 +303,7 @@ class SuperDeviceService:
         """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
-            raise ValueError(f"super_device {serial} not found")
+            raise SuperDeviceNotFoundError(serial)
         old = self._parse_info(sd.info)
         new_info = {**old, **data}
         new_str = json.dumps(new_info, ensure_ascii=False)
@@ -310,7 +327,7 @@ class SuperDeviceService:
         """
         sd = self.super_device_repository.get_super_device(serial)
         if sd is None:
-            raise ValueError(f"super_device {serial} not found")
+            raise SuperDeviceNotFoundError(serial)
         old = self._parse_info(sd.info)
         new_info = dict(old)
         old_val = new_info.pop(key, None)
@@ -323,7 +340,7 @@ class SuperDeviceService:
     def set_serial(self, old_serial: str, new_serial: str) -> tuple[str, str]:
         """重置超级设备序列号，同步更新关联表。返回 (旧序列号, 新序列号)。"""
         if not self.super_device_repository.is_exist(old_serial):
-            raise ValueError(f"super_device {old_serial} not found")
+            raise SuperDeviceNotFoundError(old_serial)
         self.super_device_repository.update_super_device_serial(old_serial, new_serial)
         log_event(SuperDeviceSerialChanged(old_serial=old_serial, new_serial=new_serial))
         return (old_serial, new_serial)
@@ -335,13 +352,13 @@ class SuperDeviceService:
         if self.device_repository is None:
             return
         if not self.device_repository.is_exist(device_serial):
-            raise ValueError(f"子设备 {device_serial} 不存在")
+            raise SubDeviceNotFoundError(device_serial)
 
     def add_device(self, super_device_serial: str, device_serial: str) -> None:
         """向超级设备新增一个子设备。"""
         sd = self.super_device_repository.get_super_device(super_device_serial)
         if sd is None:
-            raise ValueError(f"super_device {super_device_serial} not found")
+            raise SuperDeviceNotFoundError(super_device_serial)
         self._require_device(device_serial)
         self.super_device_repository.add_device(super_device_serial, device_serial, datetime.now())
         log_event(SuperDeviceDeviceChanged(super_device_serial, old=None, new=device_serial))
@@ -350,30 +367,58 @@ class SuperDeviceService:
         """替换超级设备的子设备。"""
         sd = self.super_device_repository.get_super_device(super_device_serial)
         if sd is None:
-            raise ValueError(f"super_device {super_device_serial} not found")
+            raise SuperDeviceNotFoundError(super_device_serial)
         self._require_device(new_device_serial)
         self.super_device_repository.replace_device(
             super_device_serial, old_device_serial, new_device_serial, datetime.now(),
         )
         log_event(SuperDeviceDeviceChanged(super_device_serial, old=old_device_serial, new=new_device_serial))
 
-    def remove_device(self, super_device_serial: str, device_serial: str) -> None:
-        """从超级设备移除一个子设备。"""
-        sd = self.super_device_repository.get_super_device(super_device_serial)
-        if sd is None:
-            raise ValueError(f"super_device {super_device_serial} not found")
-        self.super_device_repository.remove_device(super_device_serial, device_serial)
-        log_event(SuperDeviceDeviceChanged(super_device_serial, old=device_serial, new=None))
+    # TODO(P1): 「摘子项」功能暂缓（仓储/ABC 已同步停用）。
+    #   恢复时取消下面注释，并同步恢复 CLI do_remove_device 与相关测试。
+    #
+    # def remove_device(self, super_device_serial: str, device_serial: str) -> None:
+    #     """从超级设备移除一个子设备。"""
+    #     sd = self.super_device_repository.get_super_device(super_device_serial)
+    #     if sd is None:
+    #         raise SuperDeviceNotFoundError(super_device_serial)
+    #     self.super_device_repository.remove_device(super_device_serial, device_serial)
+    #     log_event(SuperDeviceDeviceChanged(super_device_serial, old=device_serial, new=None))
 
     def remove_super_device(self, serial: str) -> None:
         """软删除超级设备（标记 REMOVED）。
+
+        事件携"删除前"快照，故先读一次原始实体（exclude_removed=False）再落库删除。
 
         Args:
             serial: 超级设备序列号。
 
         Raises:
-            ValueError: 超级设备不存在。
+            SuperDeviceNotFoundError: 超级设备不存在。
+            SuperDeviceAlreadyRemovedError: 超级设备已处于 REMOVED（不可重复移除，透传自仓储层）。
             SuperDeviceInUseError: 超级设备仍被引用（透传自仓储层）。
         """
+        super_device = self.super_device_repository.get_super_device(
+            serial, exclude_removed=False
+        )
+        if super_device is None:
+            raise SuperDeviceNotFoundError(serial)
         self.super_device_repository.remove_super_device(serial)
-        log_event(SuperDeviceRemoved(serial))
+        log_event(SuperDeviceRemoved(super_device))
+
+    def revive_super_device(self, serial: str) -> None:
+        """复活已移除（REMOVED）的超级设备（state 置回 UNKNOWN，拓扑一并恢复）。
+
+        删除时释放的子项会被重新挂回；若某个子项已被其它超级设备占用，
+        则整个复活流程回滚（透传仓储层的领域异常）。
+
+        Args:
+            serial: 超级设备序列号。
+
+        Raises:
+            SuperDeviceNotFoundError: 超级设备不存在（透传自仓储层）。
+            SuperDeviceNotRemovedError: 超级设备未处于 REMOVED（无需复活，透传自仓储层）。
+            SubDeviceInUseError: 待恢复的子项已被其它超级设备占用（透传自仓储层）。
+        """
+        self.super_device_repository.revive_super_device(serial)
+        log_event(SuperDeviceRevived(serial))

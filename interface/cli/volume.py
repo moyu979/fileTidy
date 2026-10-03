@@ -374,11 +374,15 @@ class VolumeCLI(cmd.Cmd):
         """
         列出所有卷
 
-        用法: list
+        用法: list [--all]
+            --all  连同已移除（REMOVED）的卷一并列出，默认不显示
         """
         if self._missing_service():
             return
-        volumes = self.app.volume_service.list_volumes()
+        exclude_removed = "--all" not in arg.split()
+        volumes = self.app.volume_service.list_volumes(
+            exclude_removed=exclude_removed
+        )
         if not volumes:
             print("（无卷）")
             return

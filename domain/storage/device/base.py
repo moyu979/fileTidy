@@ -13,10 +13,11 @@
 主要用于提供操作硬件设备的抽象
 本文件是一个抽象层，具体的实现中drivers里 
 """
-import json
 from abc import ABC
 
+from domain.common.json_utils import parse_json_object
 from domain.common.mixins import JsonSerializableMixin
+from domain.storage.device.enum import DeviceState
 
 
 class Device(ABC, JsonSerializableMixin):
@@ -58,8 +59,8 @@ class Device(ABC, JsonSerializableMixin):
 
     @classmethod
     def create(cls, *, serial: str, name: str = "", dtype: str | None = None,
-               add_time=None, last_check_time=None, capacity=None, info=None,
-               state=None, device_path=None) -> "Device":
+               add_time=None, last_check_time=None, state=None, capacity=None,
+               info=None, device_path=None) -> "Device":
         """通过显式字段创建对应子类的 Device 实例（按 dtype 分派）。
 
         Args:
@@ -68,9 +69,9 @@ class Device(ABC, JsonSerializableMixin):
             dtype: 设备类型，默认 None。
             add_time: 添加时间。
             last_check_time: 最后一次检查时间。
+            state: 设备状态。
             capacity: 设备容量（字节）。
             info: 附加信息。
-            state: 设备状态。
             device_path: 挂载路径。
 
         Returns:
@@ -83,8 +84,8 @@ class Device(ABC, JsonSerializableMixin):
             raise ValueError("Device.create: 'serial' is required")
         sub = Device._resolve(dtype)
         return sub(serial=serial, name=name, dtype=dtype, add_time=add_time,
-                   last_check_time=last_check_time, capacity=capacity, info=info,
-                   state=state, device_path=device_path)
+                   last_check_time=last_check_time, state=state, capacity=capacity,
+                   info=info, device_path=device_path)
 
     @classmethod
     def from_dict(cls, data: dict, device_path: str | None = None) -> "Device":
@@ -105,12 +106,12 @@ class Device(ABC, JsonSerializableMixin):
         return cls.create(
             serial=data.get("serial", ""),
             name=data.get("name", ""),
-            dtype=data.get("type"),
+            dtype=data.get("dtype"),
             add_time=data.get("add_time"),
             last_check_time=data.get("last_check_time"),
+            state=data.get("state"),
             capacity=data.get("capacity"),
             info=data.get("info"),
-            state=data.get("state"),
             device_path=device_path if device_path is not None else data.get("device_path"),
         )
 
@@ -120,9 +121,9 @@ class Device(ABC, JsonSerializableMixin):
     dtype: str|None,
     add_time,
     last_check_time,
+    state: str|None,
     capacity: int|None,
     info: str|None,
-    state: str|None=None,
     device_path: str|None=None,
     ) -> None:
         """初始化设备实例。
@@ -133,9 +134,9 @@ class Device(ABC, JsonSerializableMixin):
             dtype: 设备类型（如 "hdd", "ssd", "tape", "tf_sd_card" 等）。
             add_time: 设备添加时间。
             last_check_time: 设备最后一次健康检查时间。
+            state: 设备状态（如 "healthy", "fault" 等）。
             capacity: 设备存储容量（字节）。
             info: 设备的其他附加信息（JSON 字符串）。
-            state: 设备状态（如 "healthy", "fault" 等）。
             device_path: 设备挂载路径，None 表示未挂载。
         """
         self.serial = serial  # 设备的序列号
@@ -150,18 +151,27 @@ class Device(ABC, JsonSerializableMixin):
         
 
     def _parse_info(self) -> dict:
-        """解析 info（JSON 文本）为字典。
+        """解析 info（JSON 文本）为字典（薄封装，逻辑见 parse_json_object）。
 
         Returns:
-            解析后的 dict；info 为空或非法 JSON 时返回空字典 {}。
+            解析后的 dict；info 为空 / 非法 JSON / 非对象 JSON 时返回空字典 {}。
         """
-        if not self.info:
-            return {}
-        try:
-            data = json.loads(self.info)
-        except (json.JSONDecodeError, TypeError):
-            return {}
-        return data if isinstance(data, dict) else {}
+        return parse_json_object(self.info)
+
+    def is_removed(self) -> bool:
+        """当前 state 是否为 REMOVED（软删除）。
+
+        兼容枚举成员、值字符串（"removed"）与名称字符串（"REMOVED"）三种形态：
+        实体 state 正常是 DeviceState 成员，但外部（脚本 / 测试替身）可能直接塞字符串。
+
+        Returns:
+            True 表示处于 REMOVED 状态。
+        """
+        if self.state is DeviceState.REMOVED:
+            return True
+        if isinstance(self.state, str):
+            return self.state in (DeviceState.REMOVED.value, DeviceState.REMOVED.name)
+        return False
 
     def to_snapshot(self) -> dict:
         """将设备转换为快照字典。
@@ -172,11 +182,11 @@ class Device(ABC, JsonSerializableMixin):
         return {
             "serial": self.serial,
             "name": self.name,
-            "type": self.dtype,
+            "dtype": self.dtype,
             "add_time": self._ts(self.add_time),
             "last_check_time": self._ts(self.last_check_time),
+            "state": self.state,
             "capacity": self.capacity,
             "info": self.info,
-            "state": self.state,
             "device_path": self.device_path,
         }

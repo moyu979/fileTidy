@@ -20,7 +20,7 @@ def create_app() -> FastAPI:
     return FastAPI(title="fileTidy")
 
 
-def run_service(app: App | None, config: Config) -> None:
+def run_service(app: App | None, config: AppConfig) -> None:
     """根据 restapi 配置中的 host/port 启动 FastAPI 服务。
 
     Args:

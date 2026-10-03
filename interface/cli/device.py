@@ -176,7 +176,7 @@ class DeviceCLI(cmd.Cmd):
         data: dict = {
             "serial": serial,
             "name": name,
-            "type": device_type,
+            "dtype": device_type,
             "info": _merge_spec_info(info, _collect_device_spec(device_type)),
         }
 
@@ -210,13 +210,17 @@ class DeviceCLI(cmd.Cmd):
 
     def do_list(self, arg: str) -> None:
         """
-        列出所有设备
+        列出设备
 
-        用法: list
+        用法: list [--all]
+            --all  连同已移除（REMOVED）的设备一并列出，默认不显示
         """
         if self._missing_service():
             return
-        devices = self.app.device_service.list_devices()
+        exclude_removed = "--all" not in arg.split()
+        devices = self.app.device_service.list_devices(
+            exclude_removed=exclude_removed
+        )
         for device in devices:
             print(device)
 

@@ -21,7 +21,10 @@ class SuperVolumeState(enum.Enum):
     HEALTHY = "healthy"   # 正常使用的
     DANGER = "danger"     # 危险，但暂时可用（有坏道等隐患）
     FAULT = "fault"       # 故障，无法使用
-    REMOVED = "removed"   # 已移除（软删除，记录仍保留在数据库中）
+    # 已移除（软删除，记录仍保留在数据库中）。
+    # **可逆**：用 `revive_super_volume` 复活 —— 原地 UPDATE（state 置回 UNKNOWN），
+    # 并恢复拓扑（把软删时释放的子卷关联重新挂回 USING）。
+    REMOVED = "removed"
 
 
 class SuperVolumeStateMenu(_Menu):
@@ -37,6 +40,22 @@ class SuperVolumeStateMenu(_Menu):
         _MenuOption("4", SuperVolumeState.FAULT,    "FAULT",   "故障"),
         _MenuOption("5", SuperVolumeState.REMOVED,  "REMOVED", "已移除"),
     ]
+
+
+# ═══════════════════════════════════════════
+#  超级卷-子卷 关联状态
+# ═══════════════════════════════════════════
+
+class SuperVolumeRelationState(enum.Enum):
+    """超级卷-子卷 关联状态枚举（`super_volume_structures.state` 专用）。
+
+    按「退役原因」区分，避免复活时误恢复：
+    - UNUSED：因「成员被移除」退役，**不**随父行复活而恢复；
+    - SUPER_VOLUME_REMOVED：因「父行软删」退役，可随 `revive_super_volume` 恢复。
+    """
+    USING = "using"                              # 正在使用
+    UNUSED = "unused"                            # 因成员被移除退役
+    SUPER_VOLUME_REMOVED = "super_volume_removed"  # 因父行软删退役（可随复活恢复）
 
 
 # ═══════════════════════════════════════════

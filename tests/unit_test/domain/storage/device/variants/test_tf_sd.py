@@ -53,8 +53,8 @@ def test_tf_sd_has_no_set_method():
 
 
 def test_tf_sd_snapshot_keeps_type_and_serial():
-    """输入 serial + info → 快照保留 serial 与 type="tf_sd_card"。"""
+    """输入 serial + info → 快照保留 serial 与 dtype="tf_sd_card"。"""
     snapshot = _tf_sd(serial="TF-9", info='{"vendor": "sandisk"}').to_snapshot()
     assert snapshot["serial"] == "TF-9"
-    assert snapshot["type"] == "tf_sd_card"
+    assert snapshot["dtype"] == "tf_sd_card"
     assert snapshot["info"] == '{"vendor": "sandisk"}'

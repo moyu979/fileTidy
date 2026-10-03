@@ -87,7 +87,7 @@ def event_log_dir(tmp_path, monkeypatch):
 
     log_dir = tmp_path / "operation_log"
     monkeypatch.setattr(oplog, "_logger", None)
-    setup_event_logger(_LogConfig(log_dir))
+    setup_event_logger(_LogConfig(log_dir)["log"])
     yield log_dir
     monkeypatch.setattr(oplog, "_logger", None)
 

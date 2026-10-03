@@ -86,6 +86,13 @@ def new_db(db_path: Path, *, with_defaults: bool = False) -> UnitDb:
     )
 
 
+def register_file(repo, new_file: NewFile) -> None:
+    """按用例层契约登记文件：同一事务内先写来源、再写位置（测试辅助）。"""
+    with repo.transaction() as session:
+        repo.reg_source(new_file, session)
+        repo.reg_location(new_file, session)
+
+
 def query_all(db: UnitDb, model) -> list:
     """用新会话查询某模型全部行（读取已提交数据）。"""
     with db.factory() as session:

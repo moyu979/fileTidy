@@ -67,9 +67,16 @@ def test_single_constructor_passes_through_all_fields():
 
 @pytest.mark.parametrize("devices", [[], ["D1", "D2"], ["D1", "D2", "D3"]])
 def test_single_requires_exactly_one_device(devices):
-    """输入 0 个 / 2 个 / 3 个设备 → 抛 AssertionError（长度必须为 1）。"""
+    """输入 非 REMOVED + 0 个 / 2 个 / 3 个设备 → 抛 AssertionError（长度必须为 1）。"""
     with pytest.raises(AssertionError):
         _single(devices)
+
+
+def test_single_allows_zero_devices_when_removed():
+    """输入 state=REMOVED + 0 个设备 → 构造成功（软删会释放子项，0 子项合法）。"""
+    sd = _single([], state=SuperDeviceState.REMOVED)
+    assert sd.devices == []
+    assert sd.is_removed() is True
 
 
 def test_single_accepts_exactly_one_device():
@@ -86,7 +93,7 @@ def test_single_snapshot_type():
     """输入 single 实例 → 快照 type 为 "single"，state 保留枚举实例（JSON 时才转字符串）。"""
     sd = _single(["D1"])
     snapshot = sd.to_snapshot()
-    assert snapshot["type"] == "single"
+    assert snapshot["sdtype"] == "single"
     assert snapshot["devices"] == ["D1"]
     assert snapshot["state"] is SuperDeviceState.UNKNOWN
     assert json.loads(sd.to_json())["state"] == "unknown"

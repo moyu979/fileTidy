@@ -34,7 +34,7 @@ from domain.storage.super_device.variants.raidz import RaidzSuperDevice
 from domain.storage.super_device.variants.single_super_device import SingleSuperDevice
 
 SNAPSHOT_KEYS = {
-    "serial", "name", "type", "need_all_devices_online", "add_time",
+    "serial", "name", "sdtype", "need_all_devices_online", "add_time",
     "last_check_time", "state", "capacity", "info", "devices",
 }
 
@@ -146,7 +146,7 @@ def test_from_dict_rebuilds_variant_and_copies_devices_snapshot():
     data = {
         "serial": "SD-2",
         "name": "r",
-        "type": "raidz",
+        "sdtype": "raidz",
         "need_all_devices_online": True,
         "add_time": "2026-01-01T00:00:00",
         "last_check_time": None,
@@ -178,13 +178,13 @@ def test_to_snapshot_fields_and_json():
     sd = _sd("raidz", ["D1"], name="阵列")
     snapshot = sd.to_snapshot()
     assert set(snapshot) == SNAPSHOT_KEYS
-    assert snapshot["type"] == "raidz"
+    assert snapshot["sdtype"] == "raidz"
     assert snapshot["add_time"] == "2026-01-01T00:00:00"
     assert snapshot["last_check_time"] is None
 
     payload = json.loads(sd.to_json())
     assert "阵列" in sd.to_json()
-    assert payload["type"] == "raidz"
+    assert payload["sdtype"] == "raidz"
     assert payload["state"] == "healthy"
 
 

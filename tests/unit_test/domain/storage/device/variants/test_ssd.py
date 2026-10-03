@@ -69,8 +69,8 @@ def test_ssd_check_and_set_are_placeholder_noops():
 
 
 def test_ssd_snapshot_keeps_type_and_serial():
-    """输入 serial + info → 快照保留 serial 与 type="ssd"。"""
+    """输入 serial + info → 快照保留 serial 与 dtype="ssd"。"""
     snapshot = _ssd(serial="SSD-9", info='{"interface": "sata"}').to_snapshot()
     assert snapshot["serial"] == "SSD-9"
-    assert snapshot["type"] == "ssd"
+    assert snapshot["dtype"] == "ssd"
     assert snapshot["info"] == '{"interface": "sata"}'

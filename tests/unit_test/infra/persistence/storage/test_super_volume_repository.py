@@ -3,12 +3,17 @@
 
 目的（测什么）：
 - 注册/查询/列表/`is_exist`，以及超级卷与子卷关联行（USING 过滤）的读写；
-- `reg_super_volume` 的主行 + 关联行同事务写入，未知子卷触发外键 IntegrityError 并整体回滚；
+- `reg_super_volume` 的主行 + 关联行同事务写入，未知/不可用/被占用的子卷抛领域异常并整体回滚；
+  改成已存在 / 已移除的 serial → 抛领域异常（AlreadyRegistered / AlreadyRemoved）；
+  name 无唯一约束 → 同名（含与 REMOVED 行同名）可正常登记；
 - `add_volumes`：父不存在、子卷已属于其它超级卷（含 UNUSED 行，因唯一约束）→ ValueError；
   传入 UNUSED 结构的成员不会出现在 USING 视图里；
 - `remove_volumes`：全部校验通过才更新（部分失败不产生半更新）；
-- `remove_super_volume`：自身 REMOVED 且 USING 关联转 UNUSED；
-- `update_super_volume` 的 svtype→type 映射与 state 归一化；`update_super_volume_serial` 的关联迁移与同值早退；
+- `remove_super_volume`：自身 REMOVED 且 USING 关联转 SUPER_VOLUME_REMOVED；
+- `revive_super_volume`：REMOVED → UNKNOWN，恢复 SUPER_VOLUME_REMOVED 拓扑，校验子卷可用；
+- `update_super_volume` 的 svtype→type 映射、state 归一化、None 保持原值、拒绝未知字段 / 改 serial / 置 REMOVED；
+  `update_super_volume_serial` 的关联迁移、同值早退与目标 serial 冲突预检；
+- `get_super_volume` / `list_super_volume` 默认排除 REMOVED；
 - 静态 `_model_to_dict`。
 
 输入：`tmp_path` 下每个用例独占的临时 SQLite 库 + `_helpers` 构造的领域对象。
@@ -19,11 +24,19 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy.exc import IntegrityError
 
-from domain.storage.super_device.enum import RelationState
+from domain.storage.super_volume.enum import SuperVolumeRelationState
 from domain.storage.super_volume.base import SuperVolume
 from domain.storage.super_volume.enum import SuperVolumeState
+from domain.storage.super_volume.errors import (
+    SubVolumeInUseError,
+    SubVolumeNotFoundError,
+    SubVolumeUnavailableError,
+    SuperVolumeAlreadyRegisteredError,
+    SuperVolumeAlreadyRemovedError,
+    SuperVolumeNotFoundError,
+    SuperVolumeNotRemovedError,
+)
 from domain.storage.super_volume.repo import SuperVolumeRepositoryABC
 from domain.storage.super_volume.structure import SuperVolumeStructure
 from infra.persistence.models import SuperVolumeModel, SuperVolumeStructureModel
@@ -87,6 +100,13 @@ def test_reg_and_get_super_volume(db, repo, volumes):
     assert repo.is_exist("GHOST") is False
 
 
+def test_reg_super_volume_none_state_falls_back_to_column_default(db, repo, volumes):
+    """输入 state=None → 期望输出 落库为列默认 HEALTHY（不留 NULL）。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"], state=None))
+
+    assert repo.get_super_volume("SV1").state is SuperVolumeState.HEALTHY
+
+
 def test_reg_super_volume_without_volumes(db, repo):
     """输入 空子卷列表 → 期望输出 主行落库且关联行数为 0。"""
     repo.reg_super_volume(H.make_super_volume("SV1", volumes=[]))
@@ -96,25 +116,84 @@ def test_reg_super_volume_without_volumes(db, repo):
 
 
 def test_reg_super_volume_unknown_volume_rolls_back(db, repo, volumes):
-    """输入 子卷不存在 → 期望输出 IntegrityError（外键）且主行也回滚。"""
-    with pytest.raises(IntegrityError):
+    """输入 子卷不存在 → 期望输出 SubVolumeNotFoundError 且主行也回滚。"""
+    with pytest.raises(SubVolumeNotFoundError):
         repo.reg_super_volume(H.make_super_volume("SV1", volumes=["GHOST"]))
 
     assert repo.is_exist("SV1") is False
     assert _structure_rows(db) == []
 
 
-def test_reg_super_volume_duplicate_name_raises(db, repo, volumes):
-    """输入 名称与已有超级卷重复 → 期望输出 IntegrityError（name 唯一约束）且未落库。"""
+def test_reg_super_volume_rejects_removed_child(db, repo, volumes):
+    """输入 子卷已 REMOVED → 期望输出 SubVolumeUnavailableError 且整体回滚。"""
+    db.repos["volume"].remove_volume("V1")
+
+    with pytest.raises(SubVolumeUnavailableError):
+        repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
+
+    assert repo.is_exist("SV1") is False
+    assert _structure_rows(db) == []
+
+
+def test_reg_super_volume_rejects_in_use_child(db, repo, volumes):
+    """输入 子卷已属其它超级卷（USING）→ 期望输出 SubVolumeInUseError 且整体回滚。"""
     repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
 
-    with pytest.raises(IntegrityError):
-        repo.reg_super_volume(
-            H.make_super_volume("SV2", name="SV1", volumes=["V2"])
-        )
+    with pytest.raises(SubVolumeInUseError):
+        repo.reg_super_volume(H.make_super_volume("SV2", volumes=["V1"]))
 
     assert repo.is_exist("SV2") is False
+    assert H.count(db, SuperVolumeStructureModel) == 1
+
+
+def test_reg_super_volume_duplicate_serial_raises_already_registered(db, repo, volumes):
+    """输入 登记已存在的 serial（非 REMOVED）→ 期望输出 SuperVolumeAlreadyRegisteredError。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
+
+    with pytest.raises(SuperVolumeAlreadyRegisteredError) as excinfo:
+        repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V2"]))
+
+    assert excinfo.value.serial == "SV1"
+    assert excinfo.value.state is SuperVolumeState.HEALTHY
     assert H.count(db, SuperVolumeModel) == 1
+
+
+def test_reg_super_volume_duplicate_removed_serial_reports_removed(db, repo, volumes):
+    """输入 serial 已被软删行占位 → 期望输出 SuperVolumeAlreadyRemovedError（上层据此提示 revive）。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
+    repo.remove_super_volume("SV1")
+
+    with pytest.raises(SuperVolumeAlreadyRemovedError):
+        repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V2"]))
+
+    assert H.count(db, SuperVolumeModel) == 1
+
+
+def test_reg_super_volume_duplicate_name_allowed(db, repo, volumes):
+    """输入 名称与已有超级卷重复（serial 不同）→ 期望输出 两行都正常落库。
+
+    name 已去掉唯一约束（2026-10-02）：名字只是标签，查重靠 serial。
+    """
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
+    repo.reg_super_volume(H.make_super_volume("SV2", name="SV1", volumes=["V2"]))
+
+    assert repo.is_exist("SV1") is True
+    assert repo.is_exist("SV2") is True
+    assert H.count(db, SuperVolumeModel) == 2
+
+
+def test_reg_super_volume_reuses_name_after_removed(db, repo, volumes):
+    """输入 与已软删除（REMOVED）超级卷同名的超级卷 → 期望输出 可正常登记。
+
+    这是去掉 name 唯一约束的直接动机：旧行还在库里，但不应该继续霸占名字。
+    """
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
+    repo.remove_super_volume("SV1")
+
+    repo.reg_super_volume(H.make_super_volume("SV2", name="SV1", volumes=["V2"]))
+
+    assert repo.is_exist("SV2") is True
+    assert H.count(db, SuperVolumeModel) == 2
 
 
 def test_get_super_volume_missing_returns_none(repo):
@@ -130,6 +209,17 @@ def test_list_super_volume_returns_all(db, repo, volumes):
     repo.reg_super_volume(H.make_super_volume("SV2", volumes=["V2"]))
 
     assert sorted(s.serial for s in repo.list_super_volume()) == ["SV1", "SV2"]
+
+
+def test_get_and_list_exclude_removed_by_default(db, repo, volumes):
+    """输入 已软删除的超级卷 → 期望输出 默认视为不存在；exclude_removed=False 时返回 REMOVED。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
+    repo.remove_super_volume("SV1")
+
+    assert repo.get_super_volume("SV1") is None
+    assert repo.get_super_volume("SV1", exclude_removed=False).state is SuperVolumeState.REMOVED
+    assert repo.list_super_volume() == []
+    assert [s.serial for s in repo.list_super_volume(exclude_removed=False)] == ["SV1"]
 
 
 def test_list_super_volume_includes_default_placeholder(tmp_path):
@@ -174,8 +264,50 @@ def test_update_super_volume_invalid_state_raises(db, repo, volumes):
 
 def test_update_super_volume_missing_raises_value_error(repo):
     """输入 更新不存在的超级卷 → 期望输出 ValueError。"""
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(SuperVolumeNotFoundError):
         repo.update_super_volume("GHOST", name="x")
+
+
+def test_update_super_volume_none_keeps_original(db, repo, volumes):
+    """输入 state/name 传 None → 期望输出 视为「未提供」，字段保持原值而非写 NULL。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"], name="S"))
+
+    repo.update_super_volume("SV1", state=None, name=None)
+
+    got = repo.get_super_volume("SV1")
+    assert got.state is SuperVolumeState.HEALTHY
+    assert got.name == "S"
+
+
+def test_update_super_volume_rejects_removed_state(db, repo, volumes):
+    """输入 state='REMOVED' → 期望输出 ValueError 且原状态不变（软删除必须走 remove_super_volume）。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"], state=SuperVolumeState.HEALTHY))
+
+    with pytest.raises(ValueError, match="REMOVED"):
+        repo.update_super_volume("SV1", state="REMOVED")
+
+    assert repo.get_super_volume("SV1").state is SuperVolumeState.HEALTHY
+
+
+def test_update_super_volume_rejects_unknown_field(db, repo, volumes):
+    """输入 拼错的字段名 → 期望输出 ValueError（不再静默无效）且原值不变。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"], name="S"))
+
+    with pytest.raises(ValueError, match="不支持更新字段"):
+        repo.update_super_volume("SV1", nam="x")  # 拼错 name
+
+    assert repo.get_super_volume("SV1").name == "S"
+
+
+def test_update_super_volume_rejects_serial_change(db, repo, volumes):
+    """输入 试图用 update_super_volume 改序列号 → 期望输出 ValueError 且 serial 不变。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
+
+    with pytest.raises(ValueError, match="update_super_volume_serial"):
+        repo.update_super_volume("SV1", serial="SV1-X")
+
+    assert repo.is_exist("SV1") is True
+    assert repo.is_exist("SV1-X") is False
 
 
 # ── add_volumes ───────────────────────────────────────────────────
@@ -187,18 +319,18 @@ def test_add_volumes_appends_members(db, repo, volumes):
 
     repo.add_volumes(
         [
-            SuperVolumeStructure("SV1", "V2", state=RelationState.USING, info="x"),
-            SuperVolumeStructure("SV1", "V3", state=RelationState.USING, info="y"),
+            SuperVolumeStructure("SV1", "V2", state=SuperVolumeRelationState.USING, info="x"),
+            SuperVolumeStructure("SV1", "V3", state=SuperVolumeRelationState.USING, info="y"),
         ]
     )
 
     assert repo.get_super_volume("SV1").volumes == ["V1", "V2", "V3"]
-    assert {r.state for r in _structure_rows(db)} == {RelationState.USING}
+    assert {r.state for r in _structure_rows(db)} == {SuperVolumeRelationState.USING}
 
 
 def test_add_volumes_missing_parent_raises(db, repo, volumes):
-    """输入 父超级卷不存在 → 期望输出 ValueError 且无关联行写入。"""
-    with pytest.raises(ValueError, match="不存在"):
+    """输入 父超级卷不存在 → 期望输出 SuperVolumeNotFoundError 且无关联行写入。"""
+    with pytest.raises(SuperVolumeNotFoundError):
         repo.add_volumes([SuperVolumeStructure("GHOST", "V1")])
 
     assert _structure_rows(db) == []
@@ -228,11 +360,11 @@ def test_add_volumes_with_unused_state_is_not_visible_as_member(db, repo, volume
     """输入 以 UNUSED 状态追加子卷 → 期望输出 关联行落库但不计入 USING 成员视图。"""
     repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
 
-    repo.add_volumes([SuperVolumeStructure("SV1", "V2", state=RelationState.UNUSED)])
+    repo.add_volumes([SuperVolumeStructure("SV1", "V2", state=SuperVolumeRelationState.UNUSED)])
 
     assert repo.get_super_volume("SV1").volumes == ["V1"]
     row = next(r for r in _structure_rows(db) if r.volume_id == "V2")
-    assert row.state is RelationState.UNUSED
+    assert row.state is SuperVolumeRelationState.UNUSED
 
 
 # ── remove_volumes ────────────────────────────────────────────────
@@ -246,7 +378,7 @@ def test_remove_volumes_releases_members(db, repo, volumes):
 
     assert repo.get_super_volume("SV1").volumes == ["V2"]
     row = next(r for r in _structure_rows(db) if r.volume_id == "V1")
-    assert row.state is RelationState.UNUSED
+    assert row.state is SuperVolumeRelationState.UNUSED
 
 
 def test_remove_volumes_partial_failure_does_not_update_anything(db, repo, volumes):
@@ -260,8 +392,8 @@ def test_remove_volumes_partial_failure_does_not_update_anything(db, repo, volum
 
 
 def test_remove_volumes_missing_parent_raises(db, repo, volumes):
-    """输入 父超级卷不存在 → 期望输出 ValueError。"""
-    with pytest.raises(ValueError, match="不存在"):
+    """输入 父超级卷不存在 → 期望输出 SuperVolumeNotFoundError。"""
+    with pytest.raises(SuperVolumeNotFoundError):
         repo.remove_volumes("GHOST", ["V1"])
 
 
@@ -278,22 +410,104 @@ def test_remove_volumes_ignores_already_unused_member(db, repo, volumes):
 
 
 def test_remove_super_volume_marks_removed_and_releases_members(db, repo, volumes):
-    """输入 无外键冲突的超级卷 → 期望输出 自身 REMOVED、全部 USING 关联转 UNUSED。"""
+    """输入 无外键冲突的超级卷 → 期望输出 自身 REMOVED、全部 USING 关联转 SUPER_VOLUME_REMOVED。"""
     repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1", "V2"]))
 
     repo.remove_super_volume("SV1")
 
-    assert repo.get_super_volume("SV1").state is SuperVolumeState.REMOVED
+    assert (
+        repo.get_super_volume("SV1", exclude_removed=False).state
+        is SuperVolumeState.REMOVED
+    )
     rows = _structure_rows(db)
     assert len(rows) == 2
-    assert {r.state for r in rows} == {RelationState.UNUSED}
-    assert repo.get_super_volume("SV1").volumes == []
+    assert {r.state for r in rows} == {SuperVolumeRelationState.SUPER_VOLUME_REMOVED}
+    assert repo.get_super_volume("SV1", exclude_removed=False).volumes == []
 
 
 def test_remove_super_volume_missing_raises_value_error(repo):
     """输入 删除不存在的超级卷 → 期望输出 ValueError。"""
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(SuperVolumeNotFoundError):
         repo.remove_super_volume("GHOST")
+
+
+def test_remove_super_volume_already_removed_raises(db, repo, volumes):
+    """输入 对已 REMOVED 的超级卷再删一次 → 期望输出 SuperVolumeAlreadyRemovedError。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
+    repo.remove_super_volume("SV1")
+
+    with pytest.raises(SuperVolumeAlreadyRemovedError) as excinfo:
+        repo.remove_super_volume("SV1")
+
+    assert excinfo.value.serial == "SV1"
+
+
+# ── 复活（REMOVED → UNKNOWN + 拓扑恢复） ──────────────────────────
+
+
+def test_revive_super_volume_restores_unknown_and_topology(db, repo, volumes):
+    """输入 已 REMOVED 的超级卷 → 期望输出 state 置回 UNKNOWN，释放的子卷重新挂回 USING。"""
+    repo.reg_super_volume(
+        H.make_super_volume("SV1", volumes=["V1", "V2"], name="S")
+    )
+    repo.remove_super_volume("SV1")
+
+    repo.revive_super_volume("SV1")
+
+    got = repo.get_super_volume("SV1")
+    assert got is not None
+    assert got.state is SuperVolumeState.UNKNOWN
+    assert got.name == "S"
+    assert got.volumes == ["V1", "V2"]
+
+
+def test_revive_super_volume_missing_raises(repo):
+    """输入 复活不存在的超级卷 → 期望输出 SuperVolumeNotFoundError。"""
+    with pytest.raises(SuperVolumeNotFoundError):
+        repo.revive_super_volume("GHOST")
+
+
+def test_revive_super_volume_not_removed_raises(db, repo, volumes):
+    """输入 复活未处于 REMOVED 的超级卷 → 期望输出 SuperVolumeNotRemovedError 且状态不变。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
+
+    with pytest.raises(SuperVolumeNotRemovedError) as excinfo:
+        repo.revive_super_volume("SV1")
+
+    assert excinfo.value.state is SuperVolumeState.HEALTHY
+    assert repo.get_super_volume("SV1").state is SuperVolumeState.HEALTHY
+
+
+def test_revive_super_volume_does_not_restore_removed_members(db, repo, volumes):
+    """输入 先摘除一个成员、再软删并复活 → 期望输出 被摘成员保持 UNUSED（不随复活恢复）。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1", "V2"]))
+    repo.remove_volumes("SV1", ["V1"])
+    repo.remove_super_volume("SV1")
+
+    repo.revive_super_volume("SV1")
+
+    assert repo.get_super_volume("SV1").volumes == ["V2"]
+    row = next(r for r in _structure_rows(db) if r.volume_id == "V1")
+    assert row.state is SuperVolumeRelationState.UNUSED
+
+
+def test_revive_super_volume_rejects_removed_child(db, repo, volumes):
+    """输入 软删后子卷也被移除 → 期望输出 SubVolumeUnavailableError 且整体回滚。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1", "V2"]))
+    repo.remove_super_volume("SV1")
+    db.repos["volume"].remove_volume("V1")  # 已非 USING，可移除
+
+    with pytest.raises(SubVolumeUnavailableError):
+        repo.revive_super_volume("SV1")
+
+    # 回滚：超级卷仍 REMOVED，两条关联仍是 SUPER_VOLUME_REMOVED
+    assert (
+        repo.get_super_volume("SV1", exclude_removed=False).state
+        is SuperVolumeState.REMOVED
+    )
+    assert {r.state for r in _structure_rows(db)} == {
+        SuperVolumeRelationState.SUPER_VOLUME_REMOVED
+    }
 
 
 # ── 主键迁移 ──────────────────────────────────────────────────────
@@ -326,8 +540,34 @@ def test_update_serial_same_serial_is_noop(db, repo, volumes):
 
 def test_update_serial_missing_raises_value_error(repo):
     """输入 迁移不存在的超级卷 → 期望输出 ValueError。"""
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(SuperVolumeNotFoundError):
         repo.update_super_volume_serial("GHOST", "NEW")
+
+
+def test_update_serial_to_existing_serial_raises_and_rolls_back(db, repo, volumes):
+    """输入 把 SV1 改名为已存在的 SV2 → 期望输出 SuperVolumeAlreadyRegisteredError 且两条记录都还在。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
+    repo.reg_super_volume(H.make_super_volume("SV2", volumes=["V2"]))
+
+    with pytest.raises(SuperVolumeAlreadyRegisteredError):
+        repo.update_super_volume_serial("SV1", "SV2")
+
+    assert repo.is_exist("SV1") is True
+    assert repo.is_exist("SV2") is True
+
+
+def test_update_serial_to_removed_serial_raises(db, repo, volumes):
+    """输入 把 SV1 改名为一条 REMOVED 墓碑占用的 serial → 期望输出 SuperVolumeAlreadyRemovedError。"""
+    repo.reg_super_volume(H.make_super_volume("SV1", volumes=["V1"]))
+    repo.reg_super_volume(H.make_super_volume("SV2", volumes=["V2"]))
+    repo.remove_super_volume("SV2")
+
+    with pytest.raises(SuperVolumeAlreadyRemovedError):
+        repo.update_super_volume_serial("SV1", "SV2")
+
+    assert repo.is_exist("SV1") is True
+    assert repo.is_exist("SV2") is True
+    assert repo.get_super_volume("SV2") is None
 
 
 # ── 静态方法 ──────────────────────────────────────────────────────
@@ -338,7 +578,7 @@ def test_model_to_dict_is_static_and_complete():
     model = SuperVolumeModel(
         serial="SV1",
         name="n",
-        type="copy",
+        svtype="copy",
         method="copy",
         state=SuperVolumeState.HEALTHY,
         info="i",
@@ -347,7 +587,7 @@ def test_model_to_dict_is_static_and_complete():
     assert SuperVolumeRepository._model_to_dict(model, ["V1", "V2"]) == {
         "serial": "SV1",
         "name": "n",
-        "type": "copy",
+        "svtype": "copy",
         "method": "copy",
         "add_time": None,
         "last_check_time": None,

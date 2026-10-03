@@ -53,8 +53,8 @@ def bootstrap(args: argparse.Namespace):
     # system infra 初始化：注入配置以确定当前 OS，供 device 等平台分发使用
     init_sys_infra(config)
 
-    setup_logging(config)
-    setup_event_logger(config)
+    setup_logging(config["log"])
+    setup_event_logger(config["log"])
     logger.info("Bootstrap log completed")
 
     session_factory, engine = build_session_factory(config["database"]["path"])

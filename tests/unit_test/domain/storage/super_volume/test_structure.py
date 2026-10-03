@@ -2,8 +2,8 @@
 """单测：domain/storage/super_volume/structure —— SuperVolumeStructure 关联关系领域对象。
 
 目的（测什么）：
-- 验证默认构造：add_time 缺省时取当前时间、state 默认 RelationState.USING、info 默认空串；
-- 验证显式字段透传（含 RelationState.UNUSED）；
+- 验证默认构造：add_time 缺省时取当前时间、state 默认 SuperVolumeRelationState.USING、info 默认空串；
+- 验证显式字段透传（含 SuperVolumeRelationState.UNUSED）；
 - 验证 to_snapshot 字段集合与取值（state 输出枚举 value、add_time 输出 ISO 字符串）。
 
 输入：
@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from domain.storage.super_device.enum import RelationState
+from domain.storage.super_volume.enum import SuperVolumeRelationState
 from domain.storage.super_volume.structure import SuperVolumeStructure
 
 SNAPSHOT_KEYS = {"super_volume_serial", "volume_id", "add_time", "state", "info"}
@@ -50,7 +50,7 @@ def test_explicit_fields_and_unused_state():
         super_volume_serial="SV-9",
         volume_id="V9",
         add_time=datetime(2026, 5, 1, 10, 0, 0),
-        state=RelationState.UNUSED,
+        state=SuperVolumeRelationState.UNUSED,
         info='{"k": 1}',
     )
     assert st.to_snapshot() == {
@@ -70,7 +70,7 @@ def test_snapshot_key_set_is_stable():
 def test_positional_arguments_follow_signature_order():
     """按位置传参（serial, volume_id, add_time, state, info）→ 字段各就各位。"""
     st = SuperVolumeStructure(
-        "SV-1", "V1", datetime(2026, 1, 1), RelationState.UNUSED, "note"
+        "SV-1", "V1", datetime(2026, 1, 1), SuperVolumeRelationState.UNUSED, "note"
     )
     snapshot = st.to_snapshot()
     assert snapshot["super_volume_serial"] == "SV-1"
@@ -81,6 +81,6 @@ def test_positional_arguments_follow_signature_order():
 
 
 def test_state_attribute_keeps_enum_instance():
-    """传入 RelationState → 实例属性保持枚举实例（快照才转字符串）。"""
-    st = SuperVolumeStructure("SV-1", "V1", state=RelationState.USING)
-    assert st.state is RelationState.USING
+    """传入 SuperVolumeRelationState → 实例属性保持枚举实例（快照才转字符串）。"""
+    st = SuperVolumeStructure("SV-1", "V1", state=SuperVolumeRelationState.USING)
+    assert st.state is SuperVolumeRelationState.USING

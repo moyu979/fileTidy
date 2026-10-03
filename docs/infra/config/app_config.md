@@ -23,7 +23,8 @@ conf.get("system", "hostname")     # 系统配置宽松读取
 conf.data                          # {section: {键: 值}, ...} 快照（含 system）
 list(conf.keys())                  # ['base', 'database', 'log', 'restapi', 'system', ...]
 
-conf["restapi"].on_change(lambda keys: print(keys))   # 单 section 回调
+conf.subscribe("restapi", level_watcher.handle)    # 订阅单 section 变更（弱引用持有）
+conf.unsubscribe("restapi", level_watcher.handle)  # 取消订阅（幂等）
 conf.reload("restapi")             # 重载指定 section
 conf.stop_auto_reload()            # 注销全部监听
 conf.watcher.stop()                # 停止共享 watcher
@@ -36,7 +37,7 @@ conf.watcher.stop()                # 停止共享 watcher
    - 有 `workspace_path` 时内部构造替换表 `{"workspace_path": ...}`，对每个 `.yaml/.yml` 建 `SingleFileConfig(path, watcher, replacements)` → `self._sections[stem]`（各子配置构造即自行注册监听）
    - 内置 `self._sections["system"] = SystemConfig()`（懒调用实时取数，无热更能力）
 2. **查询**：`conf[section][key]` / `conf.get(section, key, default)` / `conf.get_required(section, key)` / `conf.data`
-3. **热更**：任一文件变化 → watcher 按 `src_path` 分发到对应 `SingleFileConfig.reload()` → 触发该 section 的 `on_change` 回调
+3. **热更**：任一文件变化 → watcher 按 `src_path` 分发到对应 `SingleFileConfig.reload()` → 通知该 section 已订阅的回调
 4. **停止**：`stop_auto_reload()`（注销全部监听）；`watcher.stop()`（停止监听线程）
 
 ## 设计思路
@@ -47,7 +48,7 @@ conf.watcher.stop()                # 停止共享 watcher
 - **fail-fast 传递**：某 YAML 缺失/解析失败时，其 `SingleFileConfig` 构造抛错，容器构造随之失败——避免带病启动。
 - **workspace_path → 替换表**：容器接收一次 `workspace_path`（展开 `~`、绝对化），内部自行构造替换表 `{"workspace_path": ...}` 并透传给各 YAML 子配置，仅对含占位符的配置（如 database/log）生效；不传则不替换。
 - **内置系统 section**：容器固定内置 `system`（`SystemConfig`），与 YAML 子配置共用同一套查询接口（都实现 `ConfigContentManager`），可用 `conf["system"]["cpu_count"]` 统一取系统信息；其 reload 无操作（实时取数）。
-- **热更能力区分**：`on_change` / `stop_auto_reload` 属文件源（`SingleFileConfig`）扩展能力，`system` 无此能力——容器对无热更能力的 section 自动跳过（`stop_auto_reload`）或明确报错（`on_change` 抛 `TypeError`）。
+- **热更能力区分**：`subscribe` / `unsubscribe` / `stop_auto_reload` 属文件源（`SingleFileConfig`）扩展能力，`system` 无此能力——容器对无热更能力的 section 自动跳过（`stop_auto_reload`）或明确报错（`subscribe` / `unsubscribe` 抛 `TypeError`）。
 
 ## API 概览
 
@@ -61,6 +62,7 @@ conf.watcher.stop()                # 停止共享 watcher
 | `keys()` / `items()` / `values()` | section 视图 |
 | `data` | 所有 section 配置快照 `{section: dict}` |
 | `reload(section=None)` | 重载指定或全部，返回是否有变化 |
-| `on_change(section, cb)` | 注册指定 section 变更回调 |
+| `subscribe(section, cb)` | 订阅指定 section 变更（弱引用持有；cb 必须是 bound method） |
+| `unsubscribe(section, cb)` | 取消指定 section 订阅（幂等） |
 | `stop_auto_reload(section=None)` | 注销指定或全部监听（幂等） |
 | `is_auto_reload_running` | 共享 watcher 是否运行 |

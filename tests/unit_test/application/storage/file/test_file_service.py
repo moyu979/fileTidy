@@ -32,6 +32,25 @@ def svc(fake_file_repo, fake_hasher, events):
     return FileService(file_repo=fake_file_repo, hasher=fake_hasher)
 
 
+def test_register_file_writes_source_and_location_in_one_transaction(svc, fake_file_repo):
+    """register_file → 同一事务会话内先 reg_source、再 reg_location。"""
+    nf = NewFile(
+        sha512="s1", md5="m1", size=1,
+        add_time=datetime(2026, 1, 1),
+        path="/outside/a.txt", now_path="dir/a.txt", now_volume="V1",
+    )
+
+    svc.register_file(nf)
+
+    assert fake_file_repo.calls == [
+        ("transaction", fake_file_repo.session_sentinel),
+        ("reg_source", fake_file_repo.session_sentinel),
+        ("reg_location", fake_file_repo.session_sentinel),
+    ]
+    assert fake_file_repo.sources[0]["from_path"] == "/outside/a.txt"
+    assert ("V1", "dir/a.txt") in fake_file_repo.rows
+
+
 def test_register_folder_recurses_and_relativizes(tmp_path, svc, fake_file_repo):
     """嵌套文件 → 每个文件一行，now_path 相对 datas 根。"""
     (tmp_path / "datas" / "sub").mkdir(parents=True)
@@ -75,7 +94,8 @@ def _prime_db(fake_file_repo, sha512="sha", md5="md", path="dir/a.txt"):
         add_time=datetime(2026, 1, 1),
         path=path, now_path=path, now_volume="V1",
     )
-    fake_file_repo.reg_file(nf)
+    fake_file_repo.reg_source(nf)
+    fake_file_repo.reg_location(nf)
 
 
 def test_move_file_by_csv(svc, fake_file_repo, tmp_path):

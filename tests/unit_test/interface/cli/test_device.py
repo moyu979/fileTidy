@@ -197,7 +197,7 @@ def test_do_reg_registers_and_merges_spec(monkeypatch, capsys):
     data = args[0]
     assert data["serial"] == "D1"
     assert data["name"] == "dev"
-    assert data["type"] == "ssd"
+    assert data["dtype"] == "ssd"
     assert json.loads(data["info"]) == {"note": "x", "interface": "sas"}
 
 
@@ -211,7 +211,7 @@ def test_do_reg_empty_optional_inputs_yield_none_and_empty_info(monkeypatch):
     data = service.calls[0][1][0]
     assert data["name"] is None
     assert data["info"] == "{}"
-    assert data["type"] == "ssd"
+    assert data["dtype"] == "ssd"
 
 
 def test_do_reg_requires_serial(monkeypatch, capsys):
@@ -245,6 +245,25 @@ def test_do_list_prints_each_device():
     _cli(service).do_list("")
 
     assert service.calls[0][0] == "list_devices"
+
+
+def test_do_list_default_excludes_removed(capsys):
+    """输入 list（无参数）→ 以 exclude_removed=True 调用服务。"""
+    service = _FakeService(list_devices=["D1"])
+
+    _cli(service).do_list("")
+
+    assert service.calls == [("list_devices", (), {"exclude_removed": True})]
+    assert "D1" in capsys.readouterr().out
+
+
+def test_do_list_all_includes_removed():
+    """输入 list --all → 以 exclude_removed=False 调用服务。"""
+    service = _FakeService(list_devices=["D1", "D2"])
+
+    _cli(service).do_list("--all")
+
+    assert service.calls == [("list_devices", (), {"exclude_removed": False})]
 
 
 def test_do_get_with_target_loads_device(monkeypatch, capsys):

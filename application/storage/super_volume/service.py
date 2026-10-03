@@ -11,8 +11,10 @@ import json
 import logging
 from datetime import datetime
 
+from domain.common.json_utils import parse_json_object
 from domain.storage.super_volume.base import SuperVolume
 from domain.storage.super_volume.enum import SuperVolumeState
+from domain.storage.super_volume.errors import SuperVolumeNotFoundError
 from domain.storage.super_volume.events import (
     SuperVolumeFieldUpdated,
     SuperVolumeInfoChanged,
@@ -25,6 +27,7 @@ from domain.storage.super_volume.events import (
 )
 from domain.storage.super_volume.repo import SuperVolumeRepositoryABC as SuperVolumeRepository
 from domain.storage.super_volume.structure import SuperVolumeStructure
+from domain.storage.volume.errors import VolumeNotFoundError
 from domain.storage.volume.repo import VolumeRepositoryABC as VolumeRepository
 from infra.common.id_generator import generate_id
 from infra.common.time_defaults import LAST_CHECK_TIME_ORIGIN
@@ -84,7 +87,8 @@ class SuperVolumeService:
             注册成功的超级卷 JSON 字符串。
 
         Raises:
-            ValueError: svtype 为空、子卷列表为空、子卷不存在或超级卷已存在时抛出。
+            ValueError: svtype 为空、子卷列表为空或超级卷已存在时抛出。
+            VolumeNotFoundError: 引用的子卷不存在。
         """
         # ── 默认值处理 ──
         if serial is None:
@@ -117,7 +121,7 @@ class SuperVolumeService:
         for vol_id in volumes:
             vol = self.volume_repository.get_volume(vol_id)
             if vol is None:
-                raise ValueError(f"卷 {vol_id} 不存在，无法创建超级卷")
+                raise VolumeNotFoundError(vol_id)
 
         # ── 按 svtype 分派构造对应子类 ──
         super_volume = SuperVolume.create(
@@ -180,7 +184,8 @@ class SuperVolumeService:
             更新后的超级卷 JSON 字符串。
 
         Raises:
-            ValueError: 超级卷或子卷不存在时抛出。
+            SuperVolumeNotFoundError: 超级卷不存在。
+            VolumeNotFoundError: 子卷不存在。
         """
         if not super_volume_serial:
             raise ValueError("super_volume_serial 不能为空")
@@ -190,13 +195,13 @@ class SuperVolumeService:
         # 校验超级卷存在
         sv = self.super_volume_repository.get_super_volume(super_volume_serial)
         if sv is None:
-            raise ValueError(f"超级卷 {super_volume_serial} 不存在")
+            raise SuperVolumeNotFoundError(super_volume_serial)
 
         # 校验每个子卷存在
         for vol_id in volume_ids:
             vol = self.volume_repository.get_volume(vol_id)
             if vol is None:
-                raise ValueError(f"卷 {vol_id} 不存在")
+                raise VolumeNotFoundError(vol_id)
 
         # 构建领域结构对象
         now = datetime.now()
@@ -235,7 +240,8 @@ class SuperVolumeService:
             更新后的超级卷 JSON 字符串。
 
         Raises:
-            ValueError: 超级卷不存在或存在非 USING 成员卷时抛出。
+            SuperVolumeNotFoundError: 超级卷不存在。
+            ValueError: 存在非 USING 成员卷时抛出。
         """
         if not super_volume_serial:
             raise ValueError("super_volume_serial 不能为空")
@@ -244,7 +250,7 @@ class SuperVolumeService:
 
         sv = self.super_volume_repository.get_super_volume(super_volume_serial)
         if sv is None:
-            raise ValueError(f"超级卷 {super_volume_serial} 不存在")
+            raise SuperVolumeNotFoundError(super_volume_serial)
 
         self.super_volume_repository.remove_volumes(super_volume_serial, volume_ids)
         log_event(VolumesRemovedFromSuperVolume(super_volume_serial, volume_ids))
@@ -274,7 +280,7 @@ class SuperVolumeService:
         """
         sv = self.super_volume_repository.get_super_volume(serial)
         if sv is None:
-            raise ValueError(f"super_volume {serial} not found")
+            raise SuperVolumeNotFoundError(serial)
         old = sv.name
         self.super_volume_repository.update_super_volume(serial, name=name)
         log_event(SuperVolumeFieldUpdated(serial, "name", old, name))
@@ -292,7 +298,7 @@ class SuperVolumeService:
         """
         sv = self.super_volume_repository.get_super_volume(serial)
         if sv is None:
-            raise ValueError(f"super_volume {serial} not found")
+            raise SuperVolumeNotFoundError(serial)
         old = sv.svtype
         self.super_volume_repository.update_super_volume(serial, svtype=svtype)
         log_event(SuperVolumeFieldUpdated(serial, "svtype", old, svtype))
@@ -310,7 +316,7 @@ class SuperVolumeService:
         """
         sv = self.super_volume_repository.get_super_volume(serial)
         if sv is None:
-            raise ValueError(f"super_volume {serial} not found")
+            raise SuperVolumeNotFoundError(serial)
         old = sv.state
         self.super_volume_repository.update_super_volume(serial, state=state)
         log_event(SuperVolumeFieldUpdated(serial, "state", old, state))
@@ -320,20 +326,8 @@ class SuperVolumeService:
 
     @staticmethod
     def _parse_info(info_str: str | None) -> dict:
-        """解析 info JSON 文本为字典。
-
-        Args:
-            info_str: JSON 格式的 info 字符串。
-
-        Returns:
-            解析后的字典，空值返回空字典。
-        """
-        if not info_str:
-            return {}
-        try:
-            return json.loads(info_str)
-        except (json.JSONDecodeError, TypeError):
-            return {}
+        """解析 info JSON 文本为字典（薄封装，逻辑见 parse_json_object）。"""
+        return parse_json_object(info_str)
 
     def set_info(self, serial: str, info: dict) -> tuple[dict, dict]:
         """全量替换 info。
@@ -347,7 +341,7 @@ class SuperVolumeService:
         """
         sv = self.super_volume_repository.get_super_volume(serial)
         if sv is None:
-            raise ValueError(f"super_volume {serial} not found")
+            raise SuperVolumeNotFoundError(serial)
         old = self._parse_info(sv.info)
         new_str = json.dumps(info, ensure_ascii=False)
         self.super_volume_repository.update_super_volume(serial, info=new_str)
@@ -366,7 +360,7 @@ class SuperVolumeService:
         """
         sv = self.super_volume_repository.get_super_volume(serial)
         if sv is None:
-            raise ValueError(f"super_volume {serial} not found")
+            raise SuperVolumeNotFoundError(serial)
         old = self._parse_info(sv.info)
         new_info = {**old, **data}
         new_str = json.dumps(new_info, ensure_ascii=False)
@@ -390,7 +384,7 @@ class SuperVolumeService:
         """
         sv = self.super_volume_repository.get_super_volume(serial)
         if sv is None:
-            raise ValueError(f"super_volume {serial} not found")
+            raise SuperVolumeNotFoundError(serial)
         old = self._parse_info(sv.info)
         new_info = dict(old)
         old_val = new_info.pop(key, None)
@@ -405,19 +399,22 @@ class SuperVolumeService:
     def set_serial(self, old_serial: str, new_serial: str) -> tuple[str, str]:
         """重置超级卷序列号，同步更新关联表。返回 (旧序列号, 新序列号)。"""
         if not self.super_volume_repository.is_exist(old_serial):
-            raise ValueError(f"super_volume {old_serial} not found")
+            raise SuperVolumeNotFoundError(old_serial)
         self.super_volume_repository.update_super_volume_serial(old_serial, new_serial)
         log_event(SuperVolumeSerialChanged(old_serial=old_serial, new_serial=new_serial))
         return (old_serial, new_serial)
 
     def remove_super_volume(self, serial: str) -> None:
-        """软删除超级卷（标记 REMOVED），并释放其 USING 子卷关联。
+        """软删除超级卷（标记 REMOVED），并释放其 USING 子卷关联（转 SUPER_VOLUME_REMOVED）。
+
+        释放的关联可用 `revive_super_volume`（仓储层）恢复；被 `remove_volumes` 摘除的
+        成员（UNUSED）不会随复活恢复。
 
         Args:
             serial: 超级卷序列号。
 
         Raises:
-            ValueError: 超级卷不存在（透传自仓储层）。
+            SuperVolumeNotFoundError: 超级卷不存在（透传自仓储层）。
         """
         self.super_volume_repository.remove_super_volume(serial)
         log_event(SuperVolumeRemoved(serial))
